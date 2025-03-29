@@ -1,0 +1,151 @@
+- trigger:
+    - platform: state
+      entity_id: sensor.emoncms_evse_power_kwh
+  sensor:
+    - name: "EV Electricity Spend"
+      unique_id: ev_electricity_spend
+      #device_class: monetary
+      unit_of_measurement: "€"
+      state: >
+        {% set price = float(states('sensor.template_iberdrola_bihorario_diario'),0) %}
+        {% set meter = float(states('sensor.emoncms_evse_power_kwh'),0) %}
+        {% set import = float(states('sensor.emoncms_import'),0) %}
+        {% if meter > 0 and import > 0 and this.attributes.last is defined %}
+           {% set delta = meter - float(this.attributes.last,0) %}
+        {% else %}
+           {% set delta = 0 %}
+        {% endif %}
+        {{ '%0.6f'|format( (price) * delta  ) }}
+      #Copernico está MWh {{ '%0.6f'|format( (price/1000) * delta  ) }}
+      attributes:
+        last: >
+          {% if this.attributes.last is defined %}
+            {% set lastlast = float(this.attributes.last,0) %}
+          {% else %}
+            {% set lastlast = 0 %}
+          {% endif %}
+          {% set meter = float(states('sensor.emoncms_evse_power_kwh'),0) %}
+          {% if meter > 0 %}
+            {{ meter }}
+          {% else %}
+            {{ lastlast }}
+          {% endif %}
+
+- trigger:
+    - platform: state
+      entity_id: sensor.emoncms_192_168_1_250_ev_x1_charging_kwh
+  sensor:
+    - name: "X1 Electricity Spend"
+      unique_id: X1_electricity_spend
+      #device_class: monetary
+      unit_of_measurement: "€"
+      state: >
+        {% set price = float(states('sensor.template_iberdrola_bihorario_diario'),0) %}
+        {% set meter = float(states('sensor.emoncms_192_168_1_250_ev_x1_charging_kwh'),0) %}
+        {% set import = float(states('sensor.emoncms_import'),0) %}
+        {% if meter > 0 and import > 0 and this.attributes.last is defined %}
+           {% set delta = meter - float(this.attributes.last,0) %}
+        {% else %}
+           {% set delta = 0 %}
+        {% endif %}
+        {{ '%0.6f'|format( (price) * delta  ) }}
+      #Copernico está MWh {{ '%0.6f'|format( (price/1000) * delta  ) }}
+      attributes:
+        last: >
+          {% if this.attributes.last is defined %}
+            {% set lastlast = float(this.attributes.last,0) %}
+          {% else %}
+            {% set lastlast = 0 %}
+          {% endif %}
+          {% set meter = float(states('sensor.emoncms_192_168_1_250_ev_x1_charging_kwh'),0) %}
+          {% if meter > 0 %}
+            {{ meter }}
+          {% else %}
+            {{ lastlast }}
+          {% endif %}
+
+- trigger:
+    - platform: state
+      entity_id: sensor.emoncms_192_168_1_250_ev_i4_charging_kwh
+  sensor:
+    - name: "i4 Electricity Spend"
+      unique_id: i4_electricity_spend
+      #device_class: monetary
+      unit_of_measurement: "€"
+      state: >
+        {% set price = float(states('sensor.template_iberdrola_bihorario_diario'),0) %}
+        {% set meter = float(states('sensor.emoncms_192_168_1_250_ev_i4_charging_kwh'),0) %}
+        {% set import = float(states('sensor.emoncms_import'),0) %}
+        {% if meter > 0 and import > 0 and this.attributes.last is defined %}
+           {% set delta = meter - float(this.attributes.last,0) %}
+        {% else %}
+           {% set delta = 0 %}
+        {% endif %}
+        {{ '%0.6f'|format( (price) * delta  ) }}
+      #Copernico está MWh {{ '%0.6f'|format( (price/1000) * delta  ) }}
+      attributes:
+        last: >
+          {% if this.attributes.last is defined %}
+            {% set lastlast = float(this.attributes.last,0) %}
+          {% else %}
+            {% set lastlast = 0 %}
+          {% endif %}
+          {% set meter = float(states('sensor.emoncms_192_168_1_250_ev_i4_charging_kwh'),0) %}
+          {% if meter > 0 %}
+            {{ meter }}
+          {% else %}
+            {{ lastlast }}
+          {% endif %}
+
+- trigger:
+    - platform: state
+      entity_id: sensor.emoncms_import_export
+  sensor:
+    - name: "EV Charging Solar Energy"
+      unique_id: ev_charging_solar_energy
+      #device_class: monetary
+      unit_of_measurement: "kwh"
+      state: >
+        {% set meter = float(states('sensor.emoncms_evse_power_kWh'),0) %}
+        {% set import = float(states('sensor.emoncms_import'),0) %}
+        {% if meter > 1 and import <= 300 and this.attributes.last is defined %}
+           {% set delta = meter - float(this.attributes.last,0) %}
+        {% else %}
+           {% set delta = 0 %}
+        {% endif %}
+        {{ '%0.2f'|format(  delta  ) }}
+      attributes:
+        last: >
+          {% if this.attributes.last is defined %}
+            {% set lastlast = float(this.attributes.last,0) %}
+          {% else %}
+            {% set lastlast = 0 %}
+          {% endif %}
+          {% set meter = float(states('sensor.emoncms_evse_power_kWh'),0) %}
+          {% if meter > 0 %}
+            {{ meter }}
+          {% else %}
+            {{ lastlast }}
+          {% endif %}
+
+- sensor:
+    - name: "BMW X1 Charging W"
+      unique_id: bmw_x1_charging_w
+      state: >
+        {% if is_state('sensor.x1_xdrive25e_charging_status', 'charging') and is_state('device_tracker.x1_xdrive25e', 'home') %}
+          {{ states('sensor.emoncms_evse_power_w') | float * 1.0 }}
+        {% else %}
+          0
+        {% endif %}
+      unit_of_measurement: "W"
+
+- sensor:
+    - name: "BMW i4 Charging W"
+      unique_id: bmw_i4_charging_w
+      state: >
+        {% if is_state('sensor.i4_edrive40_charging_status', 'charging') and is_state('device_tracker.i4_edrive40', 'home') %}
+          {{ states('sensor.emoncms_evse_power_w') | float * 1.0 }}
+        {% else %}
+          0
+        {% endif %}
+      unit_of_measurement: "W"

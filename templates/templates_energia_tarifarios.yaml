@@ -1,0 +1,277 @@
+#### Iberdrola ####
+- sensor:
+      - unique_id: iberdrola_bihorario_diario
+        name: "Iberdrola bi-horário Diário"
+        unit_of_measurement: '€/kWh'
+        state_class: measurement
+        device_class: monetary
+        state: >
+          {% set vazio = 0.0776 -%}
+          {% set fora_vazio = 0.2141 -%}
+          {% set IVA = 1.23 -%}
+          {% set IEC = 0.001 -%}
+          {% set desconto = 0.881 -%}
+          {% set Preço = vazio if now().hour < 8 or now().hour > 21 else fora_vazio -%}
+          {% set desconto = 0.881 -%}
+
+          {% set Preço = vazio if now().hour < 8 or now().hour > 21 else fora_vazio -%}
+          
+          {{ ((Preço * desconto) + IEC) * IVA | round(4) }}
+        attributes:
+          friendly_name: "iberdrola (tarifário bi-horário)"
+          Plano: "Plano Veículo Elétrico | Solar"
+          Valores: "sem IVA"
+          Preço Potencia: "{{ 0.7474 | round(4) }} €/dia" 
+          Vazio: "{{ 0.0776 | round(4) }} €/kWh"
+          Fora Vazio: "{{ 0.2141 | round(4) }} €/kWh"
+          Imposto Especial sobre o Consumo de eletricidade (IEC): "{{ 0.001 | round(4) }} €/kWh"
+          Desconto Potencia: "1.19%"
+          Desconto Energia: "1.19%"
+#### Coopernico ####
+- sensor:
+      - unique_id: coopernico_spot_price_bihorario
+        unit_of_measurement: '€/MWh'
+        availability: "{{ has_value('sensor.omie_spot_price_pt') }}"
+        state_class: measurement
+        device_class: monetary
+        state: >
+          {% set PM = states('sensor.omie_spot_price_pt')|float -%}
+          {% set CGS = 4 -%}
+          {% set k = 9 -%}
+          {% set FP = 0.16 -%}
+          {% set TSE = 2.8930 -%}
+          {% set TAR_vazio = 14.9 -%}
+          {% set TAR_fora_vazio = 83 -%}
+          {% set TAR = TAR_vazio if now().hour < 8 or now().hour > 21 else TAR_fora_vazio -%}
+          
+          {{ ((PM + CGS + k)*(1 + FP) + TAR) | round(2) }}
+        attributes:
+          friendly_name: "Coopérnico Base (tarifário bi-horário)"
+          formula: "(PM+CGS+K)*(1+FP)+TAR"
+          PM: "{{ states('sensor.omie_spot_price_pt')|float }}"
+          CGS: "{{ 4 | float }}"
+          k: "{{ 10 | float }}"
+          FP: "{{ 0.15 | float  }}"
+          TAR_vazio: "{{ 9.2 }}"
+          TAR_fora_vazio: "{{ 50.2 }}"
+          today_hours: >
+              {% set CGS = 4 -%}
+              {% set k = 9 -%}
+              {% set FP = 0.16 -%}
+              {% set TSE = 2.8930 -%}
+              {% set TAR_vazio = 14.9 -%}
+              {% set TAR_fora_vazio = 83 -%}
+              
+              {% set ns = namespace(hourly_data=[]) %}
+              {% for h, PM in state_attr('sensor.omie_spot_price_pt', 'today_hours').items() -%}          
+                {% if PM == None %}
+                  {% set price=PM %}
+                {% else %}
+                  {% set TAR = TAR_vazio if h.hour < 8 or h.hour > 21 else TAR_fora_vazio -%}
+                  {% set price=((PM + CGS + TSE + k)*(1 + FP) + TAR) | round(2) %}
+                {% endif %}
+                {% set ns.hourly_data=ns.hourly_data + [(h.isoformat(), price)] %}
+              {% endfor -%}
+              {{ dict(ns.hourly_data) }}
+          tomorrow_hours: >
+              {% set CGS = 4 -%}
+              {% set k = 9 -%}
+              {% set FP = 0.16 -%}
+              {% set TSE = 2.8930 -%}
+              {% set TAR_vazio = 14.9 -%}
+              {% set TAR_fora_vazio = 83 -%}
+  
+              {% set ns = namespace(hourly_data=[]) %}
+              {% for h, PM in state_attr('sensor.omie_spot_price_pt', 'tomorrow_hours').items() -%}
+                {% if PM == None %}
+                  {% set price=PM %}
+                {% else %}
+                  {% set TAR = TAR_vazio if h.hour < 8 or h.hour > 21 else TAR_fora_vazio -%}
+                  {% set price=((PM + CGS + TSE + k)*(1 + FP) + TAR) | round(2) %}
+                {% endif %}
+                {% set ns.hourly_data=ns.hourly_data + [(h.isoformat(), price)] %}
+              {% endfor -%}
+              {{ dict(ns.hourly_data) }}
+
+- sensor:
+      - unique_id: coopernico_spot_price_bihorario_kw_iva
+        unit_of_measurement: '€/KWh'
+        availability: "{{ has_value('sensor.omie_spot_price_pt') }}"
+        state_class: measurement
+        device_class: monetary
+        state: >
+          {% set PM = states('sensor.omie_spot_price_pt') | float -%}
+          {% set PM = PM / 1000 -%}
+          {% set CGS = 0.004 -%}
+          {% set k = 0.009 -%}
+          {% set FP = 0.16 -%}
+          {% set TSE = 0.0028930 -%}
+          {% set TAR_vazio = 0.0149 -%}
+          {% set TAR_fora_vazio = 0.083 -%}
+          {% set TAR = TAR_vazio if now().hour < 8 or now().hour > 21 else TAR_fora_vazio -%}
+          {% set IVA = 1.23 -%}
+          
+          {{ (((PM + CGS + k)*(1 + FP) + TAR) * IVA) | round(4) }}
+        attributes:
+          friendly_name: "Coopérnico Base (tarifário bi-horário) kW + IVA"
+          formula: "((P+CGS+K)*(1+FP)+TAR)*IVA"
+          P (preço): >
+              {% set PM = states('sensor.omie_spot_price_pt') | float -%}
+              {{ PM / 1000 }}€/kWh
+          CGS (Custos gestão sistema): "{{ 0.004 }}€/kWh"
+          k (Margem Coopérnico): "{{ 0.01 }}€/kWh"
+          FP (perdas): "{{ 15 }}%"
+          TAR_vazio: "{{ 0.0092}}€/kWh"
+          TAR_fora_vazio: "{{ 0.0502 }}€/kWh"
+          IVA: "{{ 23 }}%"
+          today_hours: >
+              {% set CGS = 0.004 -%}
+              {% set k = 0.009 -%}
+              {% set FP = 0.16 -%}
+              {% set TSE = 0.0028930 -%}
+              {% set TAR_vazio = 0.0149 -%}
+              {% set TAR_fora_vazio = 0.083 -%}
+              {% set IVA = 1.23 -%}
+              
+              {% set ns = namespace(hourly_data=[]) %}
+              {% for h, PM in state_attr('sensor.omie_spot_price_pt', 'today_hours').items() -%}
+                {% if PM == None %}
+                  {% set price=PM %}
+                {% else %}
+                  {% set PM = PM / 1000 -%}
+                  {% set TAR = TAR_vazio if h.hour < 8 or h.hour > 21 else TAR_fora_vazio -%}
+                  {% set price=(((PM + CGS + TSE + k)*(1 + FP) + TAR) * IVA) | round(4) %}
+                {% endif %}
+                {% set ns.hourly_data=ns.hourly_data + [(h.isoformat(), price)] %}
+              {% endfor -%}
+              {{ dict(ns.hourly_data) }}
+          tomorrow_hours: >
+              {% set CGS = 0.004 -%}
+              {% set k = 0.009 -%}
+              {% set FP = 0.16 -%}
+              {% set TSE = 0.0028930 -%}
+              {% set TAR_vazio = 0.0149 -%}
+              {% set TAR_fora_vazio = 0.083 -%}
+              {% set IVA = 1.23 -%}
+  
+              {% set ns = namespace(hourly_data=[]) %}
+              {% for h, PM in state_attr('sensor.omie_spot_price_pt', 'tomorrow_hours').items() -%}
+                {% if PM == None %}
+                  {% set price=PM %}
+                {% else %}
+                  {% set PM = PM / 1000 -%}
+                  {% set TAR = TAR_vazio if h.hour < 8 or h.hour > 21 else TAR_fora_vazio -%}
+                  {% set price=(((PM + CGS + TSE + k)*(1 + FP) + TAR) * IVA) | round(4) %}
+                {% endif %}
+                {% set ns.hourly_data=ns.hourly_data + [(h.isoformat(), price)] %}
+              {% endfor -%}
+              {{ dict(ns.hourly_data) }}
+
+
+- sensor:
+   - unique_id: coopernico_spot_price_simples
+     unit_of_measurement: '€/MWh'
+     availability: "{{ has_value('sensor.omie_spot_price_pt') }}"
+     state_class: measurement
+     state: >
+       {% set PM = states('sensor.omie_spot_price_pt')|float -%}
+       {% set CGS = 4 -%}
+       {% set TSE = 2.893 -%}
+       {% set k = 9 -%}
+       {% set FP = 0.16 -%}
+       {% set TAR = 36.5 if now().date().isoformat() < '2024-06-01' else 60 -%}
+       
+       {{ ((PM + CGS + TSE + k)*(1 + FP) + TAR) | round(2) }}
+     attributes:
+       friendly_name: "Coopérnico Base (tarifário simples)"
+       formula: "(PM+CGS+TSE+K)*(1+FP)+TAR"
+       PM: "{{ states('sensor.omie_spot_price_pt')|float }}"
+       CGS: "{{ 4 }}"
+       TSE: "{{ 2.893 }}"
+       k: "{{ 10 }}"
+       FP: "{{ 0.16 }}"
+       TAR: "{{ 36.5 if now().date().isoformat() < '2024-06-01' else 60 }}"
+       today_hours: >
+         {% set CGS = 4 -%}
+         {% set TSE = 2.893 -%}
+         {% set k = 9 -%}
+         {% set FP = 0.15 -%}
+         
+         {% set ns = namespace(hourly_data=[]) %}
+         {% for h, PM in state_attr('sensor.omie_spot_price_pt', 'today_hours').items() -%}
+           {% set TAR = 36.5 if h.date().isoformat() < '2024-06-01' else 60 -%}
+         
+           {% if PM == None %}
+             {% set price=PM %}
+           {% else %}
+             {% set price=((PM + CGS + TSE + k)*(1 + FP) + TAR) | round(2) %}
+           {% endif %}
+           {% set ns.hourly_data=ns.hourly_data + [(h.isoformat(), price)] %}
+         {% endfor -%}
+         {{ dict(ns.hourly_data) }}
+       tomorrow_hours: >
+         {% set CGS = 4 -%}
+         {% set TSE = 2.893 -%}
+         {% set k = 9 -%}
+         {% set FP = 0.15 -%}
+         {% set ns = namespace(hourly_data=[]) %}
+         {% for h, PM in state_attr('sensor.omie_spot_price_pt', 'tomorrow_hours').items() -%}
+           {% set TAR = 36.5 if h.date().isoformat() < '2024-06-01' else 60 -%}
+         
+           {% if PM == None %}
+             {% set price=PM %}
+           {% else %}
+             {% set price=((PM + CGS + TSE + k)*(1 + FP) + TAR) | round(2) %}
+           {% endif %}
+           {% set ns.hourly_data=ns.hourly_data + [(h.isoformat(), price)] %}
+         {% endfor -%}
+         {{ dict(ns.hourly_data) }}
+  
+- sensor:
+    - unique_id: coopernico_excedente_indexado
+      unit_of_measurement: '€/MWh'
+      state_class: measurement
+      state: >
+        {% set PM = states('sensor.omie_spot_price_pt')|float(default=None) -%}
+        {% set K = state_attr(this.entity_id, 'K') -%}
+        
+        {% if None in [PM, K] %}
+          {{ None }}
+        {% else %}
+          {{ (PM*(1-K)) | round(2) }}
+        {% endif %}
+      attributes:
+        friendly_name: "Coopérnico compra de excedentes de UPAC"
+        formula: "(PM*(1-K))"
+        PM: "{{ states('sensor.omie_spot_price_pt')|float }}"
+        K: "{{ 0.2 }}"
+        today_hours: >
+          {% set K = state_attr(this.entity_id, 'K') -%}
+          {% set ns = namespace(hourly_data=[]) %}
+          {% for h, PM in state_attr('sensor.omie_spot_price_pt', 'today_hours').items() -%}
+            {% if None in [PM, K] %}
+              {% set price=None %}
+            {% else %}
+              {% set price=(PM*(1-K)) | round(2) %}
+            {% endif %}
+            {% set ns.hourly_data=ns.hourly_data + [(h.isoformat(), price)] %}
+          {% endfor -%}
+          {{ dict(ns.hourly_data) }}
+        tomorrow_hours: >
+          {% set K = state_attr(this.entity_id, 'K') -%}
+          {% set ns = namespace(hourly_data=[]) %}
+          {% for h, PM in state_attr('sensor.omie_spot_price_pt', 'tomorrow_hours').items() -%}
+            {% if None in [PM, K] %}
+              {% set price=None %}
+            {% else %}
+              {% set price=(PM*(1-K)) | round(2) %}
+            {% endif %}
+            {% set ns.hourly_data=ns.hourly_data + [(h.isoformat(), price)] %}
+          {% endfor -%}
+          {{ dict(ns.hourly_data) }}
+
+- sensor:
+    - name: "Coopernico Spot Price Bihorario kWh"
+      unique_id: coopernico_spot_bihorario_kwh
+      unit_of_measurement: "€"
+      state: "{{ states('sensor.template_coopernico_spot_price_bihorario') | float / 1000 }}"

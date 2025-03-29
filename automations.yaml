@@ -1,0 +1,1788 @@
+- id: '1717785108600'
+  alias: SpeedTests
+  description: ''
+  trigger:
+  - platform: time
+    at: 06:30:00
+  - platform: time
+    at: '18:30:00'
+  - event: sunrise
+    offset: -00:35:00
+    platform: sun
+  condition: []
+  action:
+  - service: homeassistant.update_entity
+    data: {}
+    target:
+      entity_id: sensor.speedtest_download
+  mode: single
+- id: '1717785145333'
+  alias: "[\U0001F3E1] Callback to open gate from action"
+  description: ''
+  trigger:
+  - platform: event
+    event_type: mobile_app_notification_action
+    event_data:
+      action: ABRIR_PORTAO
+  condition: []
+  action:
+  - service: cover.open_cover
+    data: {}
+    target:
+      entity_id:
+      - cover.gate
+  mode: restart
+- id: '1717785168033'
+  alias: "[\U0001F4A1\U0001F3E1] Garage light on when gate opens/closes"
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - cover.gate
+    from: closed
+    to: open
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 2
+  - platform: state
+    entity_id:
+    - cover.gate
+    from: open
+    to: closed
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 2
+  condition:
+  - condition: state
+    entity_id: sun.sun
+    state: below_horizon
+  action:
+  - if:
+    - condition: state
+      entity_id: cover.gate
+      state: open
+    then:
+    - service: light.turn_on
+      metadata: {}
+      data: {}
+      target:
+        entity_id: light.exterior
+  - if:
+    - condition: state
+      entity_id: cover.gate
+      state: closed
+      for:
+        hours: 0
+        minutes: 5
+        seconds: 0
+    then:
+    - service: light.turn_off
+      metadata: {}
+      data: {}
+      target:
+        entity_id: light.exterior
+  mode: single
+- id: '1717785178989'
+  alias: "[\U0001F4A1\U0001F3E1]Notificação para ligar o carro ao carregador"
+  description: ''
+  triggers:
+  - entity_id:
+    - device_tracker.i4_edrive40
+    from: not_home
+    to: home
+    trigger: state
+  conditions:
+  - condition: numeric_state
+    entity_id: sensor.i4_edrive40_remaining_battery_percent
+    below: 46
+  actions:
+  - delay:
+      hours: 0
+      minutes: 10
+      seconds: 0
+      milliseconds: 0
+  - repeat:
+      sequence:
+      - parallel:
+        - if:
+          - condition: state
+            entity_id: binary_sensor.hk_presence_cmouta
+            state: 'on'
+          then:
+          - metadata: {}
+            data:
+              title: "\U0001F50B\U0001F697⚡\U0001F50CBMW i4"
+              message: "Amor, não te esqueças de ligar o carro ao carregador! ❤️\U0001F618"
+            action: notify.mobile_app_iphone_de_cristina_3
+        - if:
+          - condition: state
+            entity_id: binary_sensor.hk_presence_gblima
+            state: 'on'
+          then:
+          - metadata: {}
+            data:
+              message: O i4 não está ligado ao carregador!
+              title: "\U0001F50B\U0001F697⚡\U0001F50CBMW i4"
+            action: notify.notify
+      - delay:
+          hours: 0
+          minutes: 15
+          seconds: 0
+          milliseconds: 0
+      while:
+      - condition: state
+        entity_id: device_tracker.i4_edrive40
+        state: home
+        for:
+          hours: 0
+          minutes: 0
+          seconds: 0
+      - condition: numeric_state
+        entity_id: sensor.i4_edrive40_remaining_battery_percent
+        below: 70
+      - condition: state
+        entity_id: binary_sensor.i4_edrive40_connection_status
+        state: 'off'
+        for:
+          hours: 0
+          minutes: 0
+          seconds: 0
+      - condition: template
+        value_template: '{{ repeat.index <= 8 }}'
+  mode: single
+- id: '1717786183938'
+  alias: "[\U0001F4E3\U0001F3E1] Envia notificação para abrir o portão quando chega
+    a casa"
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id:
+    - sensor.home_glima_distance
+    below: 50
+    id: glima1
+  - platform: numeric_state
+    entity_id:
+    - sensor.home_cmouta_distance
+    below: 50
+    id: cmouta1
+  condition: []
+  action:
+  - if:
+    - condition: trigger
+      id:
+      - glima1
+    then:
+    - service: notify.mobile_app_glphone
+      metadata: {}
+      data:
+        message: Queres abrir o portão de casa?
+        title: "\U0001F3E1 \U0001F511 Bem-Vindo a casa Guilherme!"
+        data:
+          tag: open-home-gate
+          actions:
+          - action: ABRIR_PORTAO
+            title: Sim
+            authenticationRequired: true
+            activationMode: background
+            icon: sfsymbols:door.garage.closed
+    - delay:
+        hours: 0
+        minutes: 10
+        seconds: 0
+        milliseconds: 0
+    - service: notify.mobile_app_glphone
+      metadata: {}
+      data:
+        data:
+          tag: open-home-gate
+        message: clear_notification
+  - if:
+    - condition: trigger
+      id:
+      - cmouta1
+    then:
+    - service: notify.mobile_app_iphone_de_cristina_3
+      metadata: {}
+      data:
+        message: Queres abrir o portão de casa?
+        title: "\U0001F3E1 \U0001F511 Bem-Vinda a casa Cristina!"
+        data:
+          tag: open-home-gate
+          actions:
+          - action: ABRIR_PORTAO
+            title: Sim
+            authenticationRequired: true
+            activationMode: background
+            icon: sfsymbols:door.garage.closed
+    - delay:
+        hours: 0
+        minutes: 10
+        seconds: 0
+        milliseconds: 0
+    - service: notify.mobile_app_iphone_de_cristina_3
+      metadata: {}
+      data:
+        message: clear_notification
+        data:
+          tag: open-home-gate
+  mode: single
+- id: '1717786217050'
+  alias: "[\U0001F4E3\U0001F3E1] Notify when garage door was left open for too long"
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - cover.gate
+    to: open
+    for:
+      hours: 0
+      minutes: 5
+      seconds: 0
+    from: closed
+  condition: []
+  action:
+  - service: notify.notify
+    data:
+      title: "\U0001F699 Portão de casa aberto!"
+      message: Está aberto a mais de 5 minutos. Fechar?
+  mode: single
+- id: '1717786230999'
+  alias: "[\U0001F4E3\U0001F4F2] Callback notification to open garage"
+  description: ''
+  trigger:
+  - platform: event
+    event_type: ios.action_fired
+    event_data:
+      actionID: 06BE95EF-F583-440C-9BED-C5FEB7684C15
+    context:
+      user_id:
+      - fc76053283b948f39e0979158ba02875
+    alias: gblima
+    id: gblima2
+  - platform: event
+    event_type: ios.action_fired
+    event_data:
+      actionID: EA13513A-5C16-44C1-B9ED-8AEC747DC1D0
+    context:
+      user_id:
+      - 7df539210ca3465e9ca91c3e2f1bd7e0
+    alias: cmouta
+    id: cmouta2
+  condition: []
+  action:
+  - service: cover.open_cover
+    data: {}
+    target:
+      entity_id:
+      - cover.gate
+  - delay:
+      hours: 0
+      minutes: 2
+      seconds: 0
+      milliseconds: 0
+  - alias: gblima notificações
+    if:
+    - condition: and
+      conditions:
+      - condition: trigger
+        id:
+        - gblima2
+      - condition: state
+        entity_id: cover.gate
+        state: closed
+      - condition: state
+        entity_id: input_boolean.gblima_present
+        state: 'off'
+    then:
+    - service: notify.mobile_app_glphone
+      metadata: {}
+      data:
+        message: "O portão está fechado.✅\U0001F512"
+        title: "\U0001F697 Ate Logo! \U0001F642"
+        data:
+          tag: open-home-gate
+    - delay:
+        hours: 0
+        minutes: 5
+        seconds: 0
+        milliseconds: 0
+    - service: notify.mobile_app_glphone
+      metadata: {}
+      data:
+        message: clear_notification
+        data:
+          tag: open-home-gate
+    else:
+    - if:
+      - condition: and
+        conditions:
+        - condition: trigger
+          id:
+          - gblima2
+        - condition: state
+          entity_id: input_boolean.gblima_present
+          state: 'off'
+      then:
+      - service: notify.mobile_app_glphone
+        metadata: {}
+        data:
+          message: "⚠️O portão não fechou!!!⚠️\U0001F513"
+          data:
+            push:
+              interruption-level: critical
+          title: '------------'
+  - alias: cmouta notificações
+    if:
+    - condition: and
+      conditions:
+      - condition: trigger
+        id:
+        - cmouta2
+      - condition: state
+        entity_id: cover.gate
+        state: closed
+      - condition: state
+        entity_id: input_boolean.cmouta_present
+        state: 'off'
+    then:
+    - service: notify.mobile_app_iphone_de_cristina_3
+      data:
+        data:
+          tag: open-home-gate
+        message: "O portão está fechado.✅\U0001F512"
+        title: "\U0001F697 Ate Logo! \U0001F642"
+    - delay:
+        hours: 0
+        minutes: 5
+        seconds: 0
+        milliseconds: 0
+    - service: notify.mobile_app_iphone_de_cristina_3
+      metadata: {}
+      data:
+        message: clear_notification
+        data:
+          tag: open-home-gate
+    else:
+    - if:
+      - condition: and
+        conditions:
+        - condition: trigger
+          id:
+          - cmouta2
+        - condition: state
+          entity_id: input_boolean.cmouta_present
+          state: 'off'
+      then:
+      - service: notify.mobile_app_iphone_de_cristina_3
+        data:
+          data:
+            push:
+              interruption-level: critical
+          message: "⚠️O portão não fechou!!!⚠️\U0001F513"
+          title: '------------'
+  mode: single
+- id: '1717786241528'
+  alias: "\U0001F3CA\U0001F3FB Bomba Piscina Noite"
+  description: ''
+  trigger:
+  - platform: time
+    at: sensor.bomba_piscina_noite_horario
+  condition:
+  - condition: numeric_state
+    entity_id: sensor.filtragem_piscina_historico_s
+    below: 10800
+  action:
+  - if:
+    - condition: or
+      conditions:
+      - condition: state
+        entity_id: sensor.season
+        state: spring
+      - condition: state
+        entity_id: sensor.season
+        state: summer
+    then:
+    - service: automation.turn_off
+      metadata: {}
+      data:
+        stop_actions: true
+      target:
+        entity_id: automation.new_automation_3
+    - service: switch.turn_on
+      metadata: {}
+      data: {}
+      target:
+        entity_id:
+        - switch.bomba_piscina_switch_0
+    - repeat:
+        sequence:
+        - delay:
+            hours: 0
+            minutes: 0
+            seconds: 5
+            milliseconds: 0
+        - type: turn_on
+          device_id: e5f1b9b1d10308b32ef8f69bc0d20d74
+          entity_id: 43f5cd2f7257fed3e55788df58ce96de
+          domain: switch
+        while:
+        - condition: device
+          type: is_off
+          device_id: e5f1b9b1d10308b32ef8f69bc0d20d74
+          entity_id: 43f5cd2f7257fed3e55788df58ce96de
+          domain: switch
+        - condition: template
+          value_template: '{{ repeat.index <= 10 }}'
+    - delay: '{{ [10800 - states(''sensor.filtragem_piscina_historico_s'') | float(0),0]
+        | max }}'
+    - service: switch.turn_off
+      target:
+        entity_id:
+        - switch.bomba_piscina_switch_0
+      data: {}
+    else:
+    - service: automation.turn_off
+      target:
+        entity_id:
+        - automation.new_automation_3
+      data:
+        stop_actions: true
+    - service: switch.turn_on
+      metadata: {}
+      data: {}
+      target:
+        entity_id:
+        - switch.bomba_piscina_switch_0
+    - repeat:
+        sequence:
+        - delay:
+            hours: 0
+            minutes: 0
+            seconds: 5
+            milliseconds: 0
+        - type: turn_on
+          device_id: e5f1b9b1d10308b32ef8f69bc0d20d74
+          entity_id: 43f5cd2f7257fed3e55788df58ce96de
+          domain: switch
+        while:
+        - condition: device
+          type: is_off
+          device_id: e5f1b9b1d10308b32ef8f69bc0d20d74
+          entity_id: 43f5cd2f7257fed3e55788df58ce96de
+          domain: switch
+        - condition: template
+          value_template: '{{ repeat.index <= 10 }}'
+    - delay: '{{ [5400 - states(''sensor.filtragem_piscina_historico_s'') | float(0),0]
+        | max }}'
+    - service: switch.turn_off
+      target:
+        entity_id:
+        - switch.bomba_piscina_switch_0
+      data: {}
+  mode: single
+- id: '1717786251723'
+  alias: "\U0001F3CA\U0001F3FB Cascata"
+  description: Inicia ou para a Cascata na piscina com 1 click no botão shelly
+  trigger:
+  - platform: device
+    device_id: 50eb20ac53472c3cc1b1da733634d1c8
+    domain: bthome
+    type: button
+    subtype: press
+  condition: []
+  action:
+  - type: toggle
+    device_id: ed7ccde197e708b2a6b6cd25ef2e60c5
+    entity_id: 44b25a719c3fa50cbbd4ebd6e57fcdb9
+    domain: switch
+  mode: single
+- id: '1717786261877'
+  alias: "\U0001F3CA\U0001F3FB Hidrojet"
+  description: ''
+  trigger:
+  - platform: device
+    device_id: 50eb20ac53472c3cc1b1da733634d1c8
+    domain: bthome
+    type: button
+    subtype: double_press
+  condition: []
+  action:
+  - if:
+    - condition: device
+      type: is_off
+      device_id: 8be4eb1cd22d4bd03d7c70c99e84930b
+      entity_id: a282d1ef3a0591beb9ddf1392c8e3e42
+      domain: switch
+    then:
+    - type: turn_off
+      device_id: e5f1b9b1d10308b32ef8f69bc0d20d74
+      entity_id: 43f5cd2f7257fed3e55788df58ce96de
+      domain: switch
+    - service: automation.turn_off
+      data:
+        stop_actions: true
+      target:
+        entity_id: automation.new_automation_3
+    - delay:
+        hours: 0
+        minutes: 0
+        seconds: 5
+        milliseconds: 0
+    - type: turn_on
+      device_id: 8be4eb1cd22d4bd03d7c70c99e84930b
+      entity_id: a282d1ef3a0591beb9ddf1392c8e3e42
+      domain: switch
+    - repeat:
+        sequence:
+        - delay:
+            hours: 0
+            minutes: 0
+            seconds: 30
+            milliseconds: 0
+        while:
+        - condition: device
+          type: is_on
+          device_id: 8be4eb1cd22d4bd03d7c70c99e84930b
+          entity_id: a282d1ef3a0591beb9ddf1392c8e3e42
+          domain: switch
+    - service: automation.turn_on
+      data: {}
+      target:
+        entity_id: automation.new_automation_3
+    else:
+    - type: turn_off
+      device_id: 8be4eb1cd22d4bd03d7c70c99e84930b
+      entity_id: a282d1ef3a0591beb9ddf1392c8e3e42
+      domain: switch
+    - service: automation.turn_on
+      data: {}
+      target:
+        entity_id: automation.new_automation_3
+  mode: restart
+- id: '1717786272132'
+  alias: "\U0001F3CA\U0001F3FB Ligar/Desligar Automação Piscina"
+  description: Liga e desliga a Wallbox
+  triggers:
+  - minutes: /5
+    trigger: time_pattern
+  conditions: []
+  actions:
+  - if:
+    - condition: and
+      conditions:
+      - condition: sun
+        after: sunrise
+        before: sunset
+      - condition: numeric_state
+        entity_id: sensor.duracao_filtragem_piscina_diario_em_segundos
+        above: 10800
+      - condition: state
+        entity_id: device_tracker.i4_edrive40
+        state: home
+      - condition: state
+        entity_id: binary_sensor.i4_edrive40_connection_status
+        state: 'on'
+      - condition: numeric_state
+        entity_id: sensor.i4_edrive40_remaining_battery_percent
+        below: 100
+    then:
+    - data:
+        stop_actions: true
+      target:
+        entity_id: automation.new_automation_3
+      action: automation.turn_off
+    - metadata: {}
+      data: {}
+      target:
+        entity_id:
+        - switch.bomba_piscina_switch_0
+      action: switch.turn_off
+    - metadata: {}
+      data: {}
+      target:
+        entity_id: switch.wallbox_charging_enabled
+      action: switch.turn_on
+    else:
+    - if:
+      - condition: time
+        after: 09:00:00
+        before: '18:00:00'
+      then:
+      - data: {}
+        target:
+          entity_id: automation.new_automation_3
+        action: automation.turn_on
+      - metadata: {}
+        data: {}
+        target:
+          entity_id: switch.wallbox_charging_enabled
+        enabled: false
+        action: switch.turn_off
+      - metadata: {}
+        data:
+          skip_condition: true
+        target:
+          entity_id: automation.new_automation_3
+        action: automation.trigger
+      else:
+      - data:
+          stop_actions: true
+        target:
+          entity_id: automation.new_automation_3
+        action: automation.turn_off
+      - target:
+          entity_id:
+          - switch.wallbox_charging_enabled
+        data: {}
+        enabled: false
+        action: switch.turn_on
+  mode: single
+- id: '1717786282800'
+  alias: "\U0001F3CA\U0001F3FB Variable Piscina timer"
+  description: ''
+  trigger:
+  - platform: time
+    at: '21:00:00'
+  condition: []
+  action:
+  - service: variable.update_sensor
+    metadata: {}
+    data:
+      replace_attributes: false
+      value: '{{ states(''sensor.duracao_filtragem_piscina_diario_em_segundos'') |
+        float }}'
+      attributes:
+        today-1: '{{ states(''sensor.filtragem_piscina_historico_s'') }}'
+        today-2: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-1'')
+          }}'
+        today-3: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-2'')
+          }}'
+        today-4: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-3'')
+          }}'
+        today-5: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-4'')
+          }}'
+        today-6: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-5'')
+          }}'
+        today-7: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-6'')
+          }}'
+        today-8: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-7'')
+          }}'
+        today_9: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-8'')
+          }}'
+        today-10: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-9'')
+          }}'
+    target:
+      entity_id: sensor.filtragem_piscina_historico_s
+  mode: single
+- id: '1717786439250'
+  alias: "\U0001F50B\U0001F697⚡Change charge completion time"
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - sensor.ev_smart_charging_charging
+    attribute: raw_two_days
+  condition: []
+  action:
+  - if:
+    - condition: time
+      after: 00:00:00
+      before: 00:00:00
+      weekday:
+      - sat
+      - fri
+    then:
+    - service: select.select_option
+      metadata: {}
+      data:
+        option: None
+      target:
+        entity_id: select.ev_smart_charging_charge_completion_time
+    - service: switch.turn_off
+      metadata: {}
+      data: {}
+      target:
+        entity_id: switch.ev_smart_charging_continuous_charging_preferred
+    else:
+    - service: select.select_option
+      metadata: {}
+      data:
+        option: 08:00
+      target:
+        entity_id: select.ev_smart_charging_charge_completion_time
+    - service: switch.turn_on
+      metadata: {}
+      data: {}
+      target:
+        entity_id: switch.ev_smart_charging_continuous_charging_preferred
+  mode: single
+- id: '1717786450595'
+  alias: "\U0001F50B\U0001F697⚡Disable i4 Climate if not home"
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - switch.i4_edrive40_climate
+    from: 'off'
+    to: 'on'
+  condition:
+  - condition: device
+    device_id: 73087b9e1e3a0ceb0fc6d4024bd9ffe1
+    domain: device_tracker
+    entity_id: 17973f520f671f084cc637505d0c747d
+    type: is_not_home
+  - condition: time
+    after: 07:40:00
+    before: 08:00:00
+    weekday:
+    - mon
+    - tue
+    - wed
+    - thu
+    - fri
+  action:
+  - service: switch.turn_off
+    metadata: {}
+    data: {}
+    target:
+      entity_id: switch.i4_edrive40_climate
+  mode: single
+- id: '1717786462808'
+  alias: "\U0001F50B\U0001F697⚡EV Connected to Charger"
+  description: ''
+  triggers:
+  - entity_id:
+    - binary_sensor.i4_edrive40_connection_status
+    trigger: state
+    id: i4
+  - entity_id:
+    - sensor.ev_smart_charging_status_2
+    trigger: state
+    id: x1
+  conditions: []
+  actions:
+  - if:
+    - condition: and
+      conditions:
+      - condition: trigger
+        id:
+        - i4
+      - condition: state
+        entity_id: binary_sensor.i4_edrive40_connection_status
+        state: 'on'
+    then:
+    - data: {}
+      target:
+        entity_id: switch.ev_smart_charging_ev_connected
+      action: switch.turn_on
+    else:
+    - data: {}
+      target:
+        entity_id: switch.ev_smart_charging_ev_connected
+      action: switch.turn_off
+  - if:
+    - condition: and
+      conditions:
+      - condition: trigger
+        id:
+        - x1
+      - condition: state
+        entity_id: binary_sensor.x1_xdrive25e_connection_status
+        state: 'on'
+    then:
+    - data: {}
+      target:
+        entity_id:
+        - switch.ev_smart_charging_ev_connected_2
+      action: switch.turn_on
+    else:
+    - data: {}
+      target:
+        entity_id:
+        - switch.ev_smart_charging_ev_connected_2
+      action: switch.turn_off
+  mode: single
+- id: '1717786472626'
+  alias: "\U0001F50B\U0001F697⚡EV Set SOC to 80% "
+  description: sempre que chega a casa e é ligado ao carregador.
+  trigger:
+  - platform: device
+    device_id: 73087b9e1e3a0ceb0fc6d4024bd9ffe1
+    domain: device_tracker
+    entity_id: 17973f520f671f084cc637505d0c747d
+    type: enters
+    zone: zone.home
+  condition:
+  - condition: time
+    after: '18:00:00'
+    before: 08:00:00
+    weekday:
+    - sun
+    - mon
+    - tue
+    - wed
+    - thu
+    - fri
+    - sat
+  action:
+  - delay:
+      hours: 0
+      minutes: 5
+      seconds: 0
+      milliseconds: 0
+  - service: number.set_value
+    metadata: {}
+    data:
+      value: '80'
+    target:
+      entity_id: number.i4_edrive40_target_soc
+  mode: single
+- id: '1717786483857'
+  alias: "\U0001F50B\U0001F697⚡EV Set Target SOC Dia"
+  description: ''
+  trigger:
+  - platform: time_pattern
+    minutes: /5
+  condition:
+  - condition: and
+    conditions:
+    - condition: time
+      after: 08:00:00
+      before: '18:00:00'
+      weekday:
+      - sun
+      - mon
+      - tue
+      - wed
+      - thu
+      - fri
+      - sat
+    - condition: state
+      entity_id: automation.new_automation_3
+      state: 'off'
+    - condition: state
+      entity_id: device_tracker.i4_edrive40
+      state: home
+    - condition: state
+      entity_id: binary_sensor.i4_edrive40_connection_status
+      state: 'on'
+      enabled: true
+  action:
+  - if:
+    - condition: and
+      conditions:
+      - condition: numeric_state
+        entity_id: number.i4_edrive40_target_soc
+        above: 79
+      - condition: numeric_state
+        entity_id: sensor.i4_edrive40_remaining_battery_percent
+        above: 79
+        enabled: true
+    then:
+    - service: number.set_value
+      metadata: {}
+      data:
+        value: '100'
+      target:
+        entity_id: number.i4_edrive40_target_soc
+  mode: single
+- id: '1717786494527'
+  alias: "\U0001F50B\U0001F697⚡EV Smart Charging - Start"
+  description: ''
+  triggers:
+  - entity_id:
+    - sensor.ev_smart_charging_charging
+    from: 'Off'
+    to: 'On'
+    trigger: state
+  - entity_id:
+    - sensor.ev_smart_charging_charging_2
+    from: 'Off'
+    to: 'On'
+    trigger: state
+  conditions: []
+  actions:
+  - data: {}
+    target:
+      entity_id: switch.evse_admin_rules_inverted
+    action: switch.turn_on
+  mode: single
+- id: '1717786503067'
+  alias: "\U0001F50B\U0001F697⚡EV Smart Charging - Stop"
+  description: ''
+  triggers:
+  - entity_id:
+    - sensor.ev_smart_charging_charging
+    from: 'On'
+    to: 'Off'
+    trigger: state
+  - entity_id:
+    - sensor.ev_smart_charging_charging_2
+    from: 'On'
+    to: 'Off'
+    trigger: state
+  conditions: []
+  actions:
+  - data: {}
+    target:
+      entity_id: switch.evse_admin_rules_inverted
+    action: switch.turn_off
+  mode: single
+- id: '1717786511680'
+  alias: "\U0001F50B\U0001F697⚡EV Smart Charging Set AC Current Limit"
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - binary_sensor.i4_edrive40_charging_status
+    from:
+    to: 'on'
+  condition:
+  - condition: device
+    device_id: 73087b9e1e3a0ceb0fc6d4024bd9ffe1
+    domain: device_tracker
+    entity_id: 17973f520f671f084cc637505d0c747d
+    type: is_home
+  action:
+  - repeat:
+      sequence:
+      - service: select.select_option
+        metadata: {}
+        data:
+          option: '32'
+        target:
+          entity_id: select.i4_edrive40_ac_charging_limit
+      - delay:
+          hours: 0
+          minutes: 1
+          seconds: 0
+          milliseconds: 0
+      while:
+      - condition: numeric_state
+        entity_id: sensor.i4_edrive40_ac_current_limit
+        above: 5
+        below: 32
+      - condition: template
+        value_template: '{{ repeat.index <= 30 }}'
+  mode: single
+- id: '1717786521476'
+  alias: "\U0001F50B\U0001F697⚡Help for charging at home"
+  description: ''
+  triggers:
+  - entity_id:
+    - sensor.ev_smart_charging_charging
+    to: 'on'
+    trigger: state
+    for:
+      hours: 0
+      minutes: 5
+      seconds: 0
+    id: i4
+  - entity_id:
+    - sensor.ev_smart_charging_charging_2
+    to: 'on'
+    trigger: state
+    for:
+      hours: 0
+      minutes: 5
+      seconds: 0
+    id: x1
+  conditions:
+  - condition: or
+    conditions:
+    - condition: and
+      conditions:
+      - condition: state
+        entity_id: device_tracker.i4_edrive40
+        state: home
+      - condition: state
+        entity_id: binary_sensor.i4_edrive40_connection_status
+        state: 'on'
+      - condition: numeric_state
+        entity_id: sensor.wallbox_charging_power
+        below: 2
+      - condition: trigger
+        id:
+        - i4
+    - condition: and
+      conditions:
+      - condition: state
+        entity_id: device_tracker.x1_xdrive25e
+        state: Home
+      - condition: state
+        entity_id: binary_sensor.x1_xdrive25e_connection_status
+        state: 'on'
+      - condition: numeric_state
+        entity_id: sensor.wallbox_charging_power
+        below: 2
+      - condition: trigger
+        id:
+        - x1
+  actions:
+  - if:
+    - condition: trigger
+      id:
+      - i4
+    then:
+    - device_id: 73087b9e1e3a0ceb0fc6d4024bd9ffe1
+      domain: lock
+      entity_id: 4cad819e94c6b23041776358896b68a0
+      type: unlock
+    - delay:
+        hours: 0
+        minutes: 1
+        seconds: 0
+        milliseconds: 0
+    - device_id: 73087b9e1e3a0ceb0fc6d4024bd9ffe1
+      domain: lock
+      entity_id: 4cad819e94c6b23041776358896b68a0
+      type: lock
+    - delay:
+        hours: 0
+        minutes: 1
+        seconds: 0
+        milliseconds: 0
+    - action: button.press
+      metadata: {}
+      data: {}
+      target:
+        entity_id: button.ev_smart_charging_manually_start_charging
+  - if:
+    - condition: trigger
+      id:
+      - x1
+    then:
+    - device_id: d2b7376b62ba76e3cebf5d2479e76922
+      domain: lock
+      entity_id: 2574b858b69f29422a37da5a8a6db887
+      type: unlock
+    - delay:
+        hours: 0
+        minutes: 1
+        seconds: 0
+        milliseconds: 0
+    - device_id: d2b7376b62ba76e3cebf5d2479e76922
+      domain: lock
+      entity_id: 2574b858b69f29422a37da5a8a6db887
+      type: lock
+    - delay:
+        hours: 0
+        minutes: 1
+        seconds: 0
+        milliseconds: 0
+    - action: button.press
+      metadata: {}
+      data: {}
+      target:
+        entity_id: button.ev_smart_charging_manually_start_charging
+  mode: single
+- id: '1717786531178'
+  alias: "\U0001F6CB️ Sala: Baixar Estores Sunset"
+  description: Baixar os estores quando o sol se põe
+  trigger:
+  - platform: sun
+    event: sunset
+    offset: -00:15:00
+  condition: []
+  action:
+  - if:
+    - condition: state
+      entity_id: group.alguem_em_casa
+      state: home
+    then:
+    - service: cover.close_cover
+      metadata: {}
+      data: {}
+      target:
+        entity_id:
+        - cover.estore_3_estore_3
+    - service: light.turn_on
+      metadata: {}
+      data: {}
+      target:
+        entity_id: light.candeeiros_sala_inferior
+    - delay:
+        hours: 0
+        minutes: 0
+        seconds: 5
+        milliseconds: 0
+    - service: cover.close_cover
+      metadata: {}
+      data: {}
+      target:
+        entity_id: cover.estore_2_estore_2
+    else:
+    - service: cover.close_cover
+      metadata: {}
+      data: {}
+      target:
+        entity_id:
+        - cover.estore_3_estore_3
+    - delay:
+        hours: 0
+        minutes: 0
+        seconds: 5
+        milliseconds: 0
+    - service: cover.close_cover
+      metadata: {}
+      data: {}
+      target:
+        entity_id: cover.estore_2_estore_2
+  mode: single
+- id: '1717786542943'
+  alias: "\U0001F6CB️ Sala: Subir estores manhã"
+  description: Subir os estores quando as 07:45
+  trigger:
+  - platform: time
+    at: 07:45:00
+  condition: []
+  action:
+  - service: cover.open_cover
+    metadata: {}
+    data: {}
+    target:
+      entity_id: cover.estore_3_estore_3
+  - service: cover.stop_cover
+    metadata: {}
+    data: {}
+    target:
+      entity_id: cover.estore_2_estore_2
+  - service: python_script.set_state
+    data_template:
+      entity_id: cover.estore_2_estore_2
+      state: Open
+  mode: single
+- id: '1717786571925'
+  alias: Smart Grid Auto on
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - sensor.template_coopernico_spot_price_bihorario
+  condition: []
+  action:
+  - if:
+    - condition: numeric_state
+      entity_id: sensor.template_coopernico_spot_price_bihorario
+      below: 76
+    then:
+    - type: turn_on
+      device_id: fdb41e98b294e9204d61b1a6320f6c91
+      entity_id: 812cfe69bc952bc3c627fef200856b27
+      domain: switch
+    else:
+    - type: turn_off
+      device_id: fdb41e98b294e9204d61b1a6320f6c91
+      entity_id: 812cfe69bc952bc3c627fef200856b27
+      domain: switch
+  mode: single
+- id: '1717786590629'
+  alias: Status Portão
+  description: Status do portão de casa, para resolver o flapping do sensor e o switch
+    do shelly ter temporizador de 1 segundo.
+  trigger:
+  - platform: state
+    entity_id:
+    - switch.portao
+    from: 'off'
+    to: 'on'
+  condition: []
+  action:
+  - service: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.portao_status
+    data: {}
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 50
+      milliseconds: 0
+  - service: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.portao_status
+    data: {}
+  mode: single
+- id: '1717929670853'
+  alias: Automatic Backups
+  description: ''
+  trigger:
+  - id: daily
+    platform: time
+    at: 01:00:00
+  - id: hourly
+    enabled: true
+    platform: time_pattern
+    hours: /12
+  condition: []
+  action:
+  - if:
+    - condition: trigger
+      id: daily
+    then:
+    - choose:
+      - conditions:
+        - condition: template
+          value_template: '{{ enable_yearly }}'
+        - condition: template
+          value_template: '{{ now().day == 1 and now().month == 1 }}'
+        sequence:
+        - variables:
+            backup_type: yearly
+            keep_days: 365
+        - variables:
+            name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A,
+              \"\n    ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~
+              \"%B %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2,
+              2006 #}\n{# DailyBackup: Monday, January 2, 2006 #}\n"
+            backup_action:
+            - service: auto_backup.backup
+              data:
+                name: '{{ name }}'
+                password: '{{ password }}'
+                keep_days: '{{ keep_days }}'
+                include_folders:
+                - config
+        - if:
+          - condition: template
+            value_template: '{{ not use_action_hourly }}'
+          - condition: template
+            value_template: '{{ backup_action | length > 0 }}'
+          then:
+          - service: auto_backup.backup
+            data:
+              name: '{{ name }}'
+              password: '{{ password }}'
+              keep_days: '{{ keep_days }}'
+              include_folders:
+              - config
+          else:
+          - alias: Creating a full backup (default action)
+            service: auto_backup.backup
+            data:
+              name: '{{ name }}'
+              password: '{{ password }}'
+              keep_days: '{{ keep_days }}'
+      - conditions:
+        - condition: template
+          value_template: '{{ enable_monthly }}'
+        - condition: template
+          value_template: '{{ now().day == 1 }}'
+        sequence:
+        - variables:
+            backup_type: monthly
+            keep_days: 90
+        - variables:
+            name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A,
+              \"\n    ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~
+              \"%B %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2,
+              2006 #}\n{# DailyBackup: Monday, January 2, 2006 #}\n"
+            backup_action:
+            - service: auto_backup.backup
+              data:
+                name: '{{ name }}'
+                password: '{{ password }}'
+                keep_days: '{{ keep_days }}'
+                include_folders:
+                - config
+        - if:
+          - condition: template
+            value_template: '{{ not use_action_hourly }}'
+          - condition: template
+            value_template: '{{ backup_action | length > 0 }}'
+          then:
+          - service: auto_backup.backup
+            data:
+              name: '{{ name }}'
+              password: '{{ password }}'
+              keep_days: '{{ keep_days }}'
+              include_folders:
+              - config
+          else:
+          - alias: Creating a full backup (default action)
+            service: auto_backup.backup
+            data:
+              name: '{{ name }}'
+              password: '{{ password }}'
+              keep_days: '{{ keep_days }}'
+      - conditions:
+        - condition: template
+          value_template: '{{ enable_weekly }}'
+        - condition: template
+          value_template: '{{ now().weekday() == 0 }}'
+        sequence:
+        - variables:
+            backup_type: weekly
+            keep_days: 30
+        - variables:
+            name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A,
+              \"\n    ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~
+              \"%B %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2,
+              2006 #}\n{# DailyBackup: Monday, January 2, 2006 #}\n"
+            backup_action:
+            - service: auto_backup.backup
+              data:
+                name: '{{ name }}'
+                password: '{{ password }}'
+                keep_days: '{{ keep_days }}'
+                include_folders:
+                - config
+        - if:
+          - condition: template
+            value_template: '{{ not use_action_hourly }}'
+          - condition: template
+            value_template: '{{ backup_action | length > 0 }}'
+          then:
+          - service: auto_backup.backup
+            data:
+              name: '{{ name }}'
+              password: '{{ password }}'
+              keep_days: '{{ keep_days }}'
+              include_folders:
+              - config
+          else:
+          - alias: Creating a full backup (default action)
+            service: auto_backup.backup
+            data:
+              name: '{{ name }}'
+              password: '{{ password }}'
+              keep_days: '{{ keep_days }}'
+      - conditions:
+        - condition: template
+          value_template: '{{ enable_daily }}'
+        sequence:
+        - variables:
+            backup_type: daily
+            keep_days: 7
+        - variables:
+            name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A,
+              \"\n    ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~
+              \"%B %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2,
+              2006 #}\n{# DailyBackup: Monday, January 2, 2006 #}\n"
+            backup_action:
+            - service: auto_backup.backup
+              data:
+                name: '{{ name }}'
+                password: '{{ password }}'
+                keep_days: '{{ keep_days }}'
+                include_folders:
+                - config
+        - if:
+          - condition: template
+            value_template: '{{ not use_action_hourly }}'
+          - condition: template
+            value_template: '{{ backup_action | length > 0 }}'
+          then:
+          - service: auto_backup.backup
+            data:
+              name: '{{ name }}'
+              password: '{{ password }}'
+              keep_days: '{{ keep_days }}'
+              include_folders:
+              - config
+          else:
+          - alias: Creating a full backup (default action)
+            service: auto_backup.backup
+            data:
+              name: '{{ name }}'
+              password: '{{ password }}'
+              keep_days: '{{ keep_days }}'
+    else:
+    - variables:
+        backup_type: hourly
+        keep_days: 1
+    - variables:
+        name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A, \"\n
+          \   ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~ \"%B
+          %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2, 2006 #}\n{#
+          DailyBackup: Monday, January 2, 2006 #}\n"
+        backup_action:
+        - service: auto_backup.backup
+          data:
+            name: '{{ name }}'
+            password: '{{ password }}'
+            keep_days: '{{ keep_days }}'
+            include_folders:
+            - config
+    - if:
+      - condition: template
+        value_template: '{{ backup_action | length > 0 }}'
+      then:
+      - service: auto_backup.backup
+        data:
+          name: '{{ name }}'
+          password: '{{ password }}'
+          keep_days: '{{ keep_days }}'
+          include_folders:
+          - config
+      else:
+      - alias: Creating a partial backup (default action)
+        service: auto_backup.backup
+        data:
+          name: '{{ name }}'
+          password: '{{ password }}'
+          keep_days: '{{ keep_days }}'
+          include_folders:
+          - config
+  mode: single
+  variables:
+    password: ''
+    enable_hourly: true
+    enable_daily: true
+    enable_weekly: true
+    enable_monthly: false
+    enable_yearly: false
+    use_action_hourly: true
+- id: '1718129262036'
+  alias: "\U0001F3CA\U0001F3FBBomba Piscina Dia"
+  description: ''
+  use_blueprint:
+    path: PVExcessControl/pv_excess_control.yaml
+    input:
+      automation_id: automation.new_automation_3
+      grid_voltage: 230
+      pv_power: sensor.emoncms_solar
+      export_power: sensor.emoncms_export_power_positive
+      load_power: sensor.emoncms_use
+      actual_power: sensor.bomba_piscina_switch_0_power
+      power_toggle_margin: 10
+      appliance_switch: switch.bomba_piscina_switch_0
+      inverter_limit: 0
+- id: '1718180786151'
+  alias: "\U0001F4A1Luz Corredor auto"
+  description: ''
+  use_blueprint:
+    path: Blackshome/sensor-light.yaml
+    input:
+      motion_trigger:
+      - binary_sensor.bthome_sensor_9179_motion
+      - binary_sensor.corredor_superior_corredor_superior_motion_alarm
+      light_switch:
+        entity_id:
+        - light.shellyplus2pm_c82e180d5f10_switch_1
+      include_sun: sun_enabled
+      ambient_light_sensor: sensor.shelly_b_0114_illuminance
+      include_ambient: ambient_enabled
+- id: '1718181298382'
+  alias: "\U0001F4A1Luz Exterior Auto"
+  description: ''
+  use_blueprint:
+    path: Blackshome/sensor-light.yaml
+    input:
+      motion_trigger:
+      - binary_sensor.shelly_b_0114_window
+      light_switch:
+        entity_id: light.exterior
+      time_delay: 10
+      include_sun: sun_enabled
+- id: '1718533356578'
+  alias: Update Coopernico Prices
+  description: ''
+  trigger:
+  - platform: time_pattern
+    minutes: /5
+  condition: []
+  action:
+  - service: homeassistant.update_entity
+    data: {}
+    target:
+      entity_id: sensor.coopernico_prices
+  - service: homeassistant.update_entity
+    data: {}
+    target:
+      entity_id: sensor.coopernico_injection
+  mode: single
+- id: '1718718997708'
+  alias: Solcast update
+  description: ''
+  trigger:
+  - platform: template
+    value_template: "{% set nr = as_datetime(state_attr('sun.sun','next_rising'))
+      | as_local %} {% set ns = as_datetime(state_attr('sun.sun','next_setting'))
+      | as_local %} {% set api_request_limit = 10 %} {% if nr > ns %}\n  {% set nr
+      = nr - timedelta(hours = 24) %} \n{% endif %} {% set hours_difference = (ns
+      - nr) %} {% set interval_hours = hours_difference / api_request_limit %} {%
+      set ns = namespace(match = false) %} {% for i in range(api_request_limit) %}\n
+      \ {% set start_time = nr + (i * interval_hours) %}\n  {% if ((start_time - timedelta(seconds=30))
+      <= now()) and (now() <= (start_time + timedelta(seconds=30))) %}\n    {% set
+      ns.match = true %}\n  {% endif %}\n{% endfor %} {{ ns.match }}"
+  condition:
+  - condition: sun
+    before: sunset
+    after: sunrise
+  action:
+  - delay:
+      seconds: '{{ range(30, 360)|random|int }}'
+  - service: solcast_solar.update_forecasts
+    data: {}
+  mode: single
+- id: '1718905487958'
+  alias: "\U0001F4A1Luz Escadas Superior Auto"
+  description: ''
+  use_blueprint:
+    path: Blackshome/sensor-light.yaml
+    input:
+      light_switch:
+        entity_id: light.luzes_sala_superior_channel_1
+      motion_trigger:
+      - binary_sensor.motion_sensor_z_wave_plus_motion_sensor_z_wave_plus_motion_alarm
+      include_sun: sun_enabled
+      include_ambient: ambient_disabled
+      ambient_light_sensor: sensor.motion_sensor_z_wave_plus_motion_sensor_z_wave_plus_luminance
+      ambient_light_options: ambient_light_option_enabled
+- id: '1728665169529'
+  alias: "\U0001F50BUPS - Notification"
+  description: ''
+  triggers:
+  - entity_id:
+    - sensor.mclima_ups_informacao_do_estado
+    - sensor.net_ups_informacao_do_estado
+    id: battery
+    trigger: state
+    for:
+      hours: 0
+      minutes: 1
+      seconds: 0
+    to: OB DISCHRG
+  - entity_id:
+    - sensor.mclima_ups_informacao_do_estado
+    - sensor.net_ups_informacao_do_estado
+    to: OL CHRG
+    id: online
+    trigger: state
+  - entity_id:
+    - sensor.mclima_ups_informacao_do_estado
+    - sensor.net_ups_informacao_do_estado
+    id: replace_battery
+    trigger: state
+    for:
+      hours: 0
+      minutes: 5
+      seconds: 0
+    to: RB
+  conditions: []
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: battery
+      sequence:
+      - action: notify.mobile_app_glphone
+        data:
+          message: "A UPS está em modo de bateria!!! \U0001F50B"
+          title: "\U0001F6A8Energia"
+          data:
+            push:
+              interruption-level: time-sensitive
+              sound:
+                name: default
+                critical: 1
+                volume: 1
+    - conditions:
+      - condition: trigger
+        id: online
+      sequence:
+      - action: notify.mobile_app_glphone
+        data:
+          message: "A UPS já está online.\U0001F50B⚡"
+          title: ✅Energia
+    - conditions:
+      - condition: trigger
+        id:
+        - replace_battery
+      sequence:
+      - action: notify.mobile_app_glphone
+        data:
+          title: ❗Trocar baterias na UPS.❗
+          message: As baterias da UPS têm de ser substituías.
+  mode: single
+- id: '1728983716594'
+  alias: Ventilador Cave Solar
+  description: ''
+  use_blueprint:
+    path: PVExcessControl/pv_excess_control.yaml
+    input:
+      automation_id: automation.ventilador_cave
+      appliance_priority: 2
+      pv_power: sensor.emoncms_solar
+      export_power: sensor.emoncms_export_power_positive
+      load_power: sensor.emoncms_use
+      appliance_switch: switch.ventilador_cave_switch
+      appliance_switch_interval: 2
+      actual_power: sensor.ventilador_cave_switch_0_power
+      defined_current: 0.2
+- id: '1730368547136'
+  alias: Bomba de Calor Power MQTT Publish
+  description: ''
+  triggers:
+  - trigger: time_pattern
+    seconds: /10
+    enabled: true
+  conditions: []
+  actions:
+  - action: mqtt.publish
+    metadata: {}
+    data:
+      evaluate_payload: false
+      qos: '2'
+      topic: homeassistant/sensor/heating
+      payload: '"{{ states(''sensor.hpsu_can_heating_emoncms'') }}"'
+  - action: mqtt.publish
+    metadata: {}
+    data:
+      qos: '2'
+      topic: homeassistant/sensor/dhw
+      payload: '"{{ states(''sensor.hpsu_can_dhw_emoncms'') }}"'
+  - action: mqtt.publish
+    metadata: {}
+    data:
+      evaluate_payload: false
+      qos: '2'
+      topic: homeassistant/sensor/t_outside
+      payload: '"{{ states(''sensor.hpsu_can_outside_temperature'') }}"'
+  - action: mqtt.publish
+    metadata: {}
+    data:
+      evaluate_payload: false
+      qos: '2'
+      topic: homeassistant/sensor/target_room_temp
+      payload: '"{{ states(''sensor.hspu_can_target_room_emoncms'') }}"'
+  - action: mqtt.publish
+    metadata: {}
+    data:
+      evaluate_payload: false
+      qos: '2'
+      topic: homeassistant/sensor/bomba_de_calor_flow_rate
+      payload: '"{{ states(''sensor.hpsu_can_flow_rate'') }}"'
+  - action: mqtt.publish
+    metadata: {}
+    data:
+      evaluate_payload: false
+      qos: '2'
+      topic: homeassistant/sensor/thermal_power
+      payload: '"{{ states(''sensor.hpsu_can_thermal_power_2'') }}"'
+  - action: mqtt.publish
+    metadata: {}
+    data:
+      evaluate_payload: false
+      qos: '2'
+      topic: homeassistant/sensor/flow_temperature_tv
+      payload: '"{{ states(''sensor.hpsu_can_flow_temperature_tv'') }}"'
+  - action: mqtt.publish
+    metadata: {}
+    data:
+      evaluate_payload: false
+      qos: '2'
+      topic: homeassistant/sensor/flow_return_temperature_heating
+      payload: '"{{ states(''sensor.hpsu_can_return_temperature_heating'') }}"'
+  mode: single
+- id: '1731784846271'
+  alias: New automation
+  description: ''
+  triggers:
+  - trigger: event
+    event_type: telegram_command
+    event_data:
+      command: /dircasa
+  conditions: []
+  actions:
+  - action: light.turn_on
+    target:
+      entity_id: light.shelly1pmmini_6055f99ff118_switch_0
+    data: {}
+  mode: single
+- id: '1732289985472'
+  alias: MQTT  Publish
+  description: ''
+  triggers:
+  - trigger: state
+    entity_id:
+    - sensor.bmw_x1_charging_w_2
+    id: '1'
+  - trigger: state
+    entity_id:
+    - sensor.bmw_i4_charging_w
+    id: '2'
+  conditions: []
+  actions:
+  - if:
+    - condition: trigger
+      id:
+      - '1'
+    then:
+    - action: mqtt.publish
+      metadata: {}
+      data:
+        evaluate_payload: false
+        qos: '2'
+        topic: homeassistant/sensor/ev/bmwx1_charging_w
+        payload: '"{{ states(''sensor.bmw_x1_charging_w_2'') | round(0) }}"'
+  - if:
+    - condition: trigger
+      id:
+      - '2'
+    then:
+    - action: mqtt.publish
+      metadata: {}
+      data:
+        evaluate_payload: false
+        qos: '2'
+        topic: homeassistant/sensor/ev/bmwi4_charging_w
+        payload: '"{{ states(''sensor.bmw_i4_charging_w'') | round(0) }}"'
+  mode: single
+- id: '1742729233913'
+  alias: 'Telegram Bot: Conversation with Assist'
+  description: ''
+  use_blueprint:
+    path: marc-romu/telegram-bot--conversation.yaml
+    input:
+      conversation_agent: conversation.chatgpt
+- id: '1742733934795'
+  alias: 'OpenAI Daily: Environmental Notification'
+  description: ''
+  triggers:
+  - at: 08:05:00
+    trigger: time
+  - at: '12:40:00'
+    trigger: time
+  - at: '18:30:00'
+    trigger: time
+  conditions: []
+  actions:
+  - alias: 'Call a service ''Weather: Get Forecast'''
+    action: weather.get_forecasts
+    target:
+      entity_id: weather.forecast_home
+    data:
+      type: daily
+    response_variable: daily_forecast
+  - data:
+      agent_id: conversation.chatgpt
+      text: '"Para esta tarefa, es um consultor meteorológico e es responsavel por
+        garantir a qualidade do ar no interior da casa. Please provide your thoughts
+        on our indoor air quality as it relates to the weather outside and our current
+        heating / cooling system settings.  Podes e deves usar um tom humorista. Podes
+        usar emojis. Responde em portugues de portugal sem gerúndio.  \_ Current time
+        {{now()}} Current thermostat setting {{states(''select.hpsu_can_target_room_1_temperature'')}}
+        Current Home temperature {{states(''sensor.emoncms_home_temperature'')}} °C
+        Current Home average temperature is {{states(''sensor.casa_temperatura_media'')}}
+        °C Current Home average humidity is {{states(''sensor.casa_humidade_media_relativa'')}}
+        % Exterior Weather Data Temperature is {{ states(''sensor.bthome_sensor_6a2b_temperature'')
+        }} °C Exterior Feels like temperature is {{ states(''sensor.home_temperatura_aparente'')
+        }} °C Exterior Weather Data Humidity is {{ states(''sensor.bthome_sensor_6a2b_humidity'')
+        }} % Current Rain Intensity {{ states(''sensor.home_precipitacao'') }} mm/h
+        Forecasted Conditions for Today {{states(''sensor.home_condicao_dia_0'')}}
+        Forecasted High Tempterature for Today {{states(''sensor.home_temperatura_max_realfeel_dia_0'')}}
+        °C Forecasted Low Temperature for Today {{states(''sensor.home_temperatura_min_realfeel_dia_0'')}}
+        °C'
+      language: pt-pt
+    enabled: true
+    response_variable: agent
+    action: conversation.process
+  - action: telegram_bot.send_message
+    metadata: {}
+    data:
+      title: Qualidade do Ar em Casa
+      message: '{{agent.response.speech.plain.speech}}'
+  mode: single

@@ -1,0 +1,49 @@
+- sensor:
+    - name: "Casa Temperatura Media"
+      unique_id: "casa_temp_media"
+      unit_of_measurement: '°C'
+      state_class: measurement
+      device_class: temperature
+      state: >
+        {% set cave = states('sensor.bthome_sensor_25e6_temperature') | float %}
+        {% set cozinha = states('sensor.bthome_sensor_508c_temperature') | float %}
+        {% set quarto_gui = states('sensor.quarto_miudos_temperature') | float %}
+        {% set quarto_luisa = states('sensor.bthome_sensor_f9de_temperature') | float %}
+        {% set sala = states('sensor.bthome_sensor_4ee3_temperature') | float %}
+        {% set sala_superior = states('sensor.sala_superior_temperature') | float %}
+        {% set suite = states('sensor.meu_quarto_temperature') | float %}
+
+        {{ ((cave + cozinha + quarto_gui + quarto_luisa + sala + sala_superior + suite) / 7) | round(2) }}
+      attributes:
+        Cave: "{{ float(states('sensor.bthome_sensor_25e6_temperature') ) }} °C"
+        Cozinha: "{{ float(states('sensor.bthome_sensor_508c_temperature') ) }} °C"
+        Quarto Gui: "{{ float(states('sensor.quarto_miudos_temperature') ) }} °C"
+        Quarto Luisa: "{{ float(states('sensor.bthome_sensor_f9de_temperature') ) }} °C"
+        Sala: "{{ float(states('sensor.bthome_sensor_4ee3_temperature') ) }} °C"
+        Sala Superior: "{{ float(states('sensor.sala_superior_temperature') ) }} °C"
+        Suite: "{{ float(states('sensor.meu_quarto_temperature') ) }} °C"
+
+- sensor:
+    - name: "Casa Humidade Media Relativa"
+      unique_id: "casa_hum_media"
+      unit_of_measurement: '%'
+      state_class: measurement
+      device_class: humidity
+      state: >
+        {% set cave = states('sensor.bthome_sensor_25e6_humidity') | float %}
+        {% set cozinha = states('sensor.bthome_sensor_508c_humidity') | float %}
+        {% set quarto_gui = states('sensor.quarto_miudos_humidity') | float %}
+        {% set quarto_luisa = states('sensor.bthome_sensor_f9de_humidity') | float %}
+        {% set sala = states('sensor.bthome_sensor_4ee3_humidity') | float %}
+        {% set sala_superior = states('sensor.sala_superior_humidity') | float %}
+        {% set suite = states('sensor.meu_quarto_humidity') | float %}
+
+        {{ ((cave + cozinha + quarto_gui + quarto_luisa + sala + sala_superior + suite) / 7) | round(2) }}
+      attributes:
+        Cave: "{{ float(states('sensor.bthome_sensor_25e6_humidity') ) }} %"
+        Cozinha: "{{ float(states('sensor.bthome_sensor_508c_humidity') ) }} %"
+        Quarto Gui: "{{ float(states('sensor.quarto_miudos_humidity') ) }} %"
+        Quarto Luisa: "{{ float(states('sensor.bthome_sensor_f9de_humidity') ) }} %"
+        Sala: "{{ float(states('sensor.bthome_sensor_4ee3_humidity') ) }} %"
+        Sala Superior: "{{ float(states('sensor.sala_superior_humidity') ) }} %"
+        Suite: "{{ float(states('sensor.meu_quarto_humidity') ) }} %"

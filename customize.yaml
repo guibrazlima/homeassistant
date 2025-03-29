@@ -1,0 +1,4 @@
+sensor.emoncms_solar: {}
+
+cover.garage_door:
+  device_class: garage

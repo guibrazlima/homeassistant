@@ -1,0 +1,83 @@
+- sensor:
+    - name: "ESPaltherma Operation mode"
+      unique_id: "espaltherma_operation"
+      state: "{{ state_attr('sensor.none_althermasensors','Operation Mode') }}"
+    - name: "ESPaltherma Indoor Operation mode"
+      unique_id: "espaltherma_iuoperation"
+      state: "{{ state_attr('sensor.none_althermasensors','I/U operation mode') }}"
+    - name: "ESPaltherma Defrost Operation"
+      unique_id: "espaltherma_defrostoperation"
+      state: "{{ state_attr('sensor.none_althermasensors','Defrost Operation') }}"
+    - name: "ESPaltherma DHW Temp"
+      unique_id: "espaltherma_dhw"
+      state: "{{ state_attr('sensor.none_althermasensors','DHW tank temp. (R5T)') }}"
+      unit_of_measurement: '°C'
+    - name: "ESPaltherma Inverter primary current"
+      unique_id: "espaltherma_inv_primary_current"
+      state: "{{ state_attr('sensor.none_althermasensors','INV primary current (A)') | default(0) }}"
+      unit_of_measurement: 'A'
+      device_class: current
+    - name: "ESPaltherma Outgoing water temp"
+      unique_id: "espaltherma_leaving_water_temp_R2T"
+      state: "{{ state_attr('sensor.none_althermasensors','Leaving water temp. after BUH (R2T)') }}"
+      unit_of_measurement: '°C'
+    - name: "ESPaltherma Return Flow water temp"
+      unique_id: "espaltherma_return_water_temp_R4T"
+      state: "{{ state_attr('sensor.none_althermasensors','Inlet water temp.(R4T)') }}"
+      unit_of_measurement: '°C'
+    - name: "ESPaltherma Outdoor air temp"
+      unique_id: "espaltherma_outdoor_air_temp."
+      state: "{{ state_attr('sensor.none_althermasensors','R1T-Outdoor air temp.') }}"
+      unit_of_measurement: '°C'
+    - name: "ESPaltherma Delta T"
+      unique_id: "espaltherma_delta_t"
+      state: "{{ state_attr('sensor.none_althermasensors','Leaving water temp. after BUH (R2T)') - state_attr('sensor.none_althermasensors','Inlet water temp.(R4T)') }}"
+      unit_of_measurement: '°C'
+    - name: "ESPaltherma Inverter primary realtime power"
+      unique_id: "espaltherma_inv_primary_realtime_power"
+      unit_of_measurement: 'W'
+      state: >
+        {% set current = float(states('sensor.espaltherma_inverter_primary_current')) %}
+        {% set voltage = float(states('sensor.emoncms_voltage_main_house')) %}
+
+        {{ current * voltage | round(1) }}
+      device_class: power
+    - name: "ESPaltherma COP"
+      unique_id: "espaltherma_cop"
+      unit_of_measurement: 'COP'
+      state: >
+        {% set deltat = float(states('sensor.espaltherma_delta_t')) %}
+        {% set opmode = states('sensor.espaltherma_indoor_operation_mode') %}
+        {% set defrost = states('sensor.espaltherma_defrost_operation') %}
+        {% set heatpump = float(states('sensor.emoncms_heat_pump_watts')) %}
+        {% if opmode == 'Heating' and defrost == 'OFF' and deltat < 6 and heatpump <= 1500 %}
+            {% set flow = 15 %}
+        {% elif opmode == 'Heating' and defrost == 'OFF' and deltat < 6 and heatpump > 1500 %}
+            {% set flow = 20 %}
+        {% elif opmode == 'Heating' and defrost == 'OFF' and deltat >= 6 and heatpump %}
+            {% set flow = 25 %}
+        {% else %}
+            {% set flow = 0 %}
+        {% endif %}
+          {{ (flow | float * 0.06 * 1.16 * deltat / (heatpump / 1000)) | round(2) }}
+      attributes:
+        formula: (flow * 0.06 * 1.16 * deltaT) / (heatpump_power / 1000)
+        flow: >
+          {% set deltat = float(states('sensor.espaltherma_delta_t')) %}
+          {% set opmode = states('sensor.espaltherma_indoor_operation_mode') %}
+          {% set defrost = states('sensor.espaltherma_defrost_operation') %}
+          {% set heatpump = float(states('sensor.emoncms_heat_pump_watts')) %}
+          {% if opmode == 'Heating' and defrost == 'OFF' and deltat < 6 and heatpump <= 1500 %}
+              {% set flow = 15 %}
+          {% elif opmode == 'Heating' and defrost == 'OFF' and deltat < 6 and heatpump > 1500 %}
+              {% set flow = 20 %}
+          {% elif opmode == 'Heating' and defrost == 'OFF' and deltat >= 6 and heatpump > 1500 %}
+              {% set flow = 25 %}
+          {% else %}
+              {% set flow = 0 %}
+          {% endif %}
+            {{ flow }} l/min
+        delta: "{{ float(states('sensor.espaltherma_delta_t')) }} °C"
+        opmode: "{{ states('sensor.espaltherma_indoor_operation_mode') }}"
+        defrost: "{{ states('sensor.espaltherma_defrost_operation') }}"
+        heatpump power: "{{ float(states('sensor.emoncms_heat_pump_watts')) }} W"

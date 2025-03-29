@@ -1,0 +1,27 @@
+- platform: tod
+  name: Night
+  after: sunset
+  before: sunrise
+
+- platform: template
+  sensors:
+    hk_presence_gblima:
+       friendly_name: "gblima(HK)"
+       device_class: presence
+       value_template: >-
+         {{ is_state('input_boolean.gblima_present', 'on') }}      
+    hk_presence_cmouta:
+       friendly_name: "cmouta(HK)"
+       device_class: presence
+       value_template: >-
+         {{ is_state('input_boolean.cmouta_present', 'on') }}
+    hk_presence_emouta:
+        friendly_name: "emouta(HK)"
+        device_class: presence
+        value_template: >-
+          {{ is_state('input_boolean.emouta_present', 'on') }}
+    hk_presence_gvasconcelos:
+        friendly_name: "gvasconvelos(HK)"
+        device_class: presence
+        value_template: >-
+          {{ is_state('input_boolean.gvasconcelos_present', 'on') }}

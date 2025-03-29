@@ -1,0 +1,20 @@
+- sensor:
+    - name: "Destination address"
+      state: >-
+         {%- if is_state("input_select.destination", "Home")  -%}
+           zone.home
+         {%- elif is_state("input_select.destination", "Farfetch")  -%}
+           Centro Empresarial Lionesa, Portugal
+         {%- elif is_state("input_select.destination", "Parents")  -%}
+           Travessa da Cruz das Almas 10 Vila Real, Portugal
+         {%- elif is_state("input_select.destination", "ESEIG")  -%}
+           Escola Superior De Estudos Industriais E Gestão, Portugal
+         {%- elif is_state("input_select.destination", "Efanor")  -%}
+           Colégio EFANOR Pólo II, Portugal
+         {%- elif is_state("input_select.destination", "JEJD")  -%}
+           Rua 1º de Maio 322 Matosinhos, Portugal
+         {%- elif is_state("input_select.destination", "SCPORTO")  -%}
+           Estrada da Circunvalação 15687 Porto, Portugal
+         {%- else -%}
+           Unknown
+         {%- endif %}

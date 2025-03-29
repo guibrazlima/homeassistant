@@ -1,0 +1,22 @@
+- custom_icons: true  # global option for the entry
+  sensor:
+  - name: Outside Eira
+    temperature_sensor: sensor.bthome_sensor_6a2b_temperature
+    humidity_sensor: sensor.bthome_sensor_6a2b_humidity
+    unique_id: 2f842c63-051a-4c49-9da2-4f04ee677514
+  - name: Cave
+    temperature_sensor: sensor.bthome_sensor_25e6_temperature
+    humidity_sensor: sensor.bthome_sensor_25e6_humidity
+    unique_id: 11adccb5-5029-4d26-bbec-c1b45910c27c
+  - name: Sala Superior
+    temperature_sensor: sensor.sala_superior_temperature
+    humidity_sensor: sensor.sala_superior_humidity
+    unique_id: 2f842c63-051a-4c49-9da2-4f04ee673456
+  - name: Suite Principal
+    temperature_sensor: sensor.meu_quarto_temperature
+    humidity_sensor: sensor.meu_quarto_humidity
+    unique_id: 2f842c63-051a-4c49-9da2-4f05fe673456
+  - name: Quarto Miudos
+    temperature_sensor: sensor.quarto_miudos_temperature
+    humidity_sensor: sensor.quarto_miudos_humidity
+    unique_id: 2f842c63-051a-4c49-9da2-4f05fr553453

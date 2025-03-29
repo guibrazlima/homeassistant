@@ -1,0 +1,41 @@
+- sensor:
+    - name: energy_export_positive_kwh
+      unique_id: d2b98ec4-4fa1-43d9-a721-ea81163f3e7d
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: measurement
+      state: "{{ (states('sensor.emoncms_export_power_positive') | float(0)) | abs }}"
+      attributes:
+        last_reset: '1970-01-01T00:00:00+00:00'
+
+- trigger:
+    - platform: state
+      entity_id: sensor.emoncms_import_kwh
+  sensor:
+    - name: "Electricity Spend"
+      unique_id: electricity_spend
+      #device_class: monetary
+      unit_of_measurement: "€"
+      state: >
+        {% set price = float(states('sensor.template_iberdrola_bihorario_diario'),0) %}
+        {% set meter = float(states('sensor.emoncms_import_kwh'),0) %}
+        {% if meter > 0 and this.attributes.last is defined %}
+           {% set delta = meter - float(this.attributes.last,0) %}
+        {% else %}
+           {% set delta = 0 %}
+        {% endif %}
+        {{ '%0.6f'|format( (price) * delta  ) }}
+      #Copernico está MWh {{ '%0.6f'|format( (price/1000) * delta  ) }}
+      attributes:
+        last: >
+          {% if this.attributes.last is defined %}
+            {% set lastlast = float(this.attributes.last,0) %}
+          {% else %}
+            {% set lastlast = 0 %}
+          {% endif %}
+          {% set meter = float(states('sensor.emoncms_import_kwh'),0) %}
+          {% if meter > 0 %}
+            {{ meter }}
+          {% else %}
+            {{ lastlast }}
+          {% endif %}

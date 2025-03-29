@@ -1,0 +1,33 @@
+
+#- platform: pvoutput
+#system_id: 44534
+#api_key: c837c006ae003d835315d3a807d7ed53835c5b4c
+#scan_interval: 120
+  
+#- platform: alpha_vantage
+#  api_key: WZRP5YVOR5K3CERE
+#  symbols:
+#    - name: Farfetch
+#      currency: EUR
+#      symbol: FTCH
+#  foreign_exchange:
+#    - from: BTC
+#      to: EUR
+#      name: Bitcoin
+
+#- platform: rest
+#  resource: https://api.hetzner.cloud/v1/servers/21485654
+#  name: algo_server_status
+# force_update: true
+#value_template: '{{ value_json["server"]["status"] }}'
+#json_attributes:
+#  - "status"
+#headers:
+#   Authorization: 'Bearer Fu2OOzgJ3xEpBNfnnH0Fw2Fsk0ixDx4Bm3UQRwONTL8sk4TAFsSedkWrxIhIfQtz'
+
+
+
+#- platform: command_line
+#  name: algo_server_status
+#  scan_interval: 5
+#  command: "curl -s -H 'Authorization: Bearer Fu2OOzgJ3xEpBNfnnH0Fw2Fsk0ixDx4Bm3UQRwONTL8sk4TAFsSedkWrxIhIfQtz' 'https://api.hetzner.cloud/v1/servers?name=algo' | jq -r '.servers[].status'"

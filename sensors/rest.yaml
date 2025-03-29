@@ -1,0 +1,53 @@
+- platform: rest
+  name: Coopernico Prices Ciclo Diario BI
+  unique_id: coopernico_prices_diario_bi
+  resource: http://coopernico.home-assistant.live/egetprices.php
+  scan_interval: 3600
+  verify_ssl: false
+  unit_of_measurement: "EUR/kWh"
+  params:
+    ciclo:
+      dia
+    contador:
+      bi
+  value_template: >
+      {{value_json.current_price}}
+  json_attributes:
+    - Prices
+    - current_price
+
+- platform: rest
+  name: Coopernico Prices Ciclo Semanal BI
+  unique_id: coopernico_prices_semanal_bi
+  resource: http://coopernico.home-assistant.live/egetprices.php
+  scan_interval: 3600
+  verify_ssl: false
+  unit_of_measurement: "EUR/kWh"
+  params:
+    ciclo:
+      semanal
+    contador:
+      bi
+  value_template: >
+      {{value_json.current_price}}
+  json_attributes:
+    - Prices
+    - current_price
+
+- platform: rest
+  name: Coopernico Prices Ciclo Semanal Simples
+  unique_id: coopernico_prices_simples
+  resource: http://coopernico.home-assistant.live/egetprices.php
+  scan_interval: 3600
+  verify_ssl: false
+  unit_of_measurement: "EUR/kWh"
+  params:
+    ciclo:
+      dia
+    contador:
+      simples
+  value_template: >
+      {{value_json.current_price}}
+  json_attributes:
+    - Prices
+    - current_price

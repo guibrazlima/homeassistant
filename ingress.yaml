@@ -1,0 +1,67 @@
+portainer:
+  require_admin: true
+  ui_mode: toolbar
+  title: Portainer
+  icon: mdi:docker
+  url: portainer:9000
+nodered:
+  require_admin: true
+  ui_mode: toolbar
+  title: Node-RED
+  icon: mdi:resistor-nodes
+  url: node-red:1880
+vscode:
+  require_admin: true
+  ui_mode: toolbar
+  title: VSCode
+  icon: mdi:microsoft-visual-studio-code
+  url: vscode:8443
+openwrt:
+  require_admin: true
+  title: OpenWrt
+  icon: mdi:router-wireless
+  url: 192.168.1.1
+  # "fix" absolute URLs by rewriting the response body
+  # also disable streaming, or it won't work
+  #disable_stream: True
+  rewrite:
+    # for HTML response
+    - mode: body
+      match: /(luci-static|cgi-bin)/
+      replace: $http_x_ingress_path/\1/
+    # for JS init code
+    - mode: body
+      match: \\/(luci-static|cgi-bin|ubus)\\/
+      replace: $http_x_ingress_path\/\1\/
+    # for login response
+    - mode: header
+      name: "(Location|Set-Cookie)"
+      match: /cgi-bin/
+      replace: $http_x_ingress_path/cgi-bin/    
+mqtt_explorer:
+  require_admin: true
+  ui_mode: toolbar
+  title: MQTT Explorer
+  icon: mdi:cloud-check-variant-outline
+  url: mqtt_explorer:4000
+smokeping:
+  require_admin: true
+  ui_mode: toolbar
+  title: Smokeping
+  icon: mdi:wan
+  url: http://smokeping
+  index: /smokeping/
+adguard:
+  work_mode: auth
+  require_admin: true
+  ui_mode: toolbar
+  title: Adguard
+  icon: mdi:shield-check
+  url: https://adguard.moutas.casa
+wallbox:
+  work_mode: auth
+  require_admin: true
+  ui_mode: toolbar
+  title: Wallbox
+  icon: mdi:ev-station
+  url: https://wallbox.moutas.casa

@@ -1,0 +1,9 @@
+destination:
+  name: destination
+  options:
+    - Home
+    - Farfetch
+    - SCPORTO
+    - Parents
+    - ESEIG
+    - Efanor

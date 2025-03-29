@@ -1,0 +1,47 @@
+##### Conversão Piscina ####
+
+- sensor:
+    - name: "Duração Filtragem Piscina Diário"
+      unique_id: sensor.filtragem_piscina_horas
+      state: >
+        {% set duration_hours = float(states('sensor.bomba_piscina_horas_ligada_diario')) %}
+        {{ (duration_hours * 3600)|timestamp_custom("%H:%M:%S", False) }}
+
+- sensor:
+    - name: "Duração Aquecimento Piscina Diário"
+      unique_id: sensor.aquecimento_piscina_horas
+      state: >
+        {% set duration_hours = float(states('sensor.aquecimento_piscina_horas_ligada_diario')) %}
+        {{ (duration_hours * 3600)|timestamp_custom("%H:%M:%S", False) }}
+
+- sensor:
+    - name: "Duração Filtragem Piscina Diário em segundos"
+      unique_id: sensor.filtragem_piscina_segundos
+      state: >
+        {% set duration_hours = float(states('sensor.bomba_piscina_horas_ligada_diario')) %}
+        {{ (duration_hours * 3600) }}
+
+- trigger:
+    -  platform: time
+       at:
+         - '19:00'
+  sensor:
+    - unique_id: f8853830-bf81-46d4-85a9-379c25c37344
+      name: Bomba Piscina Noite Horario
+      device_class: timestamp
+      state: >
+        {%- set sensor = 'sensor.energy_prices' -%}
+        {% from 'cheapest_energy_hours.jinja' import cheapest_energy_hours %}
+        {{ cheapest_energy_hours(sensor=sensor.pt_average_electricity_price_today, attr_today='prices_today', attr_tomorrow='prices_tomorrow', time_key='time', value_key='price', hours=3, include_tomorrow=true, look_ahead=true) }}
+
+- trigger:
+    -  platform: time_pattern
+       hours: /1
+  sensor:
+    - unique_id: f8853830-bf81-46d4-85a9-379c25c44c44c33
+      name: Bomba Piscina Noite Horario ES
+      device_class: timestamp
+      state: >
+        {%- set sensor = 'sensor.energy_prices' -%}
+        {% from 'cheapest_energy_hours.jinja' import cheapest_energy_hours %}
+        {{ cheapest_energy_hours(sensor=sensor.espanha_average_electricity_price_today, attr_today='prices_today', attr_tomorrow='prices_tomorrow', time_key='time', value_key='price', hours=3, include_tomorrow=true, look_ahead=true) }}

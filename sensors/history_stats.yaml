@@ -1,0 +1,17 @@
+- platform: history_stats
+  name: Bomba Piscina horas ligada Diario
+  unique_id: Bomba_Piscina_horas_ligada_Diario
+  entity_id: switch.bomba_piscina_switch_0
+  state: 'on'
+  type: time
+  start: '{{ now().replace(hour=6).replace(minute=0).replace(second=0) }}'
+  end: '{{ now() }}'
+  
+- platform: history_stats
+  name: Aquecimento Piscina horas ligada Diario
+  unique_id: Aquecimento_Piscina_horas_ligada:Diario
+  entity_id: switch.aquecimento_piscina_channel_1
+  state: 'on'
+  type: time
+  start: '{{ now().replace(hour=0).replace(minute=0).replace(second=0) }}'
+  end: '{{ now() }}'
