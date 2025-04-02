@@ -8,6 +8,50 @@
         {{ (duration_hours * 3600)|timestamp_custom("%H:%M:%S", False) }}
 
 - sensor:
+    - name: "pool_pump_remaining_time"
+      availability: "{{ (states('sensor.bomba_piscina_horas_ligada_diario') | float(-1)) >= 0 }}"
+      unique_id: "pool_pump_remaining_time"
+      state: >-
+        {% set time = (((states('input_number.pool_pump_duration_lower_threshold') | float(0))*60 - (states('sensor.bomba_piscina_horas_ligada_diario')|float(-1))*3600)| round | int, 0)|max %}
+        {% set minutes = ((time % 3600) / 60) | int %}
+        {% set hours = ((time % 86400) / 3600) | int %}
+        {%- if hours < 10 -%}
+          0{{ hours }}
+        {%- else -%}
+          {{ hours }}
+        {%- endif -%}
+        :
+        {%- if minutes < 10 -%}
+          0{{ minutes }}
+        {%- else -%}
+          {{ minutes }}
+        {%- endif -%}
+      attributes: 
+        seconds: "{{ (((states('input_number.pool_pump_duration_lower_threshold') | float(-1))*60 - (states('sensor.bomba_piscina_horas_ligada_diario')|float(-1))*3600)| round, 0)|max }}"
+
+- sensor:      
+    - name: "pool_pump_time"
+      availability: "{{ (states('sensor.bomba_piscina_horas_ligada_diario') | float(-1)) >= 0 }}"
+      unique_id: "pool_pump_time_today"
+      state: >-
+        {% set time = ((states('sensor.bomba_piscina_horas_ligada_diario') | float(-1))*3600) | round %}
+        {% set minutes = ((time % 3600) / 60) | int %}
+        {% set hours = ((time % 86400) / 3600) | int %}
+        {%- if hours < 10 -%}
+          0{{ hours }}
+        {%- else -%}
+          {{ hours}}
+        {%- endif -%}
+        :
+        {%- if minutes < 10 -%}
+          0{{ minutes }}
+        {%- else -%}
+          {{ minutes }}
+        {%- endif -%}
+      attributes:
+        minutes: "{{ ((states('sensor.bomba_piscina_horas_ligada_diario') | float(0))*60) | round }}"
+
+- sensor:
     - name: "Duração Aquecimento Piscina Diário"
       unique_id: sensor.aquecimento_piscina_horas
       state: >

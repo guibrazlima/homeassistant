@@ -1,0 +1,8 @@
+pool_pump_duration_lower_threshold:
+  name: Pool Pump Duration Lower Threshold
+  initial: 360
+  min: 60
+  max: 1440
+  step: 1
+  unit_of_measurement: minutes
+  mode: box
