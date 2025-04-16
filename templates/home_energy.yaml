@@ -3,7 +3,7 @@
       unique_id: d2b98ec4-4fa1-43d9-a721-ea81163f3e7d
       unit_of_measurement: "kWh"
       device_class: energy
-      state_class: measurement
+      state_class: total
       state: "{{ (states('sensor.emoncms_export_power_positive') | float(0)) | abs }}"
       attributes:
         last_reset: '1970-01-01T00:00:00+00:00'

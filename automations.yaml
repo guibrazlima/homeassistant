@@ -386,14 +386,15 @@
 - id: '1717786241528'
   alias: "\U0001F3CA\U0001F3FB Bomba Piscina Noite"
   description: ''
-  trigger:
-  - platform: time
-    at: sensor.bomba_piscina_noite_horario
-  condition:
+  triggers:
+  - at: sensor.bomba_piscina_noite_horario
+    trigger: time
+  conditions:
   - condition: numeric_state
     entity_id: sensor.filtragem_piscina_historico_s
-    below: 10800
-  action:
+    below: 18000
+    attribute: today-1
+  actions:
   - if:
     - condition: or
       conditions:
@@ -404,18 +405,18 @@
         entity_id: sensor.season
         state: summer
     then:
-    - service: automation.turn_off
-      metadata: {}
+    - metadata: {}
       data:
         stop_actions: true
       target:
         entity_id: automation.new_automation_3
-    - service: switch.turn_on
-      metadata: {}
+      action: automation.turn_off
+    - metadata: {}
       data: {}
       target:
         entity_id:
         - switch.bomba_piscina_switch_0
+      action: switch.turn_on
     - repeat:
         sequence:
         - delay:
@@ -435,26 +436,26 @@
           domain: switch
         - condition: template
           value_template: '{{ repeat.index <= 10 }}'
-    - delay: '{{ [10800 - states(''sensor.filtragem_piscina_historico_s'') | float(0),0]
-        | max }}'
-    - service: switch.turn_off
-      target:
+    - delay: '{{ [18000 - state_attr(''sensor.filtragem_piscina_historico_s'', ''today-1'')
+        | int(0),0] | max }}'
+    - target:
         entity_id:
         - switch.bomba_piscina_switch_0
       data: {}
+      action: switch.turn_off
     else:
-    - service: automation.turn_off
-      target:
+    - target:
         entity_id:
         - automation.new_automation_3
       data:
         stop_actions: true
-    - service: switch.turn_on
-      metadata: {}
+      action: automation.turn_off
+    - metadata: {}
       data: {}
       target:
         entity_id:
         - switch.bomba_piscina_switch_0
+      action: switch.turn_on
     - repeat:
         sequence:
         - delay:
@@ -474,13 +475,13 @@
           domain: switch
         - condition: template
           value_template: '{{ repeat.index <= 10 }}'
-    - delay: '{{ [5400 - states(''sensor.filtragem_piscina_historico_s'') | float(0),0]
-        | max }}'
-    - service: switch.turn_off
-      target:
+    - delay: '{{ [7200 - state_attr(''sensor.filtragem_piscina_historico_s'', ''today-1'')
+        | int(0),0] | max }}'
+    - target:
         entity_id:
         - switch.bomba_piscina_switch_0
       data: {}
+      action: switch.turn_off
   mode: single
 - id: '1717786251723'
   alias: "\U0001F3CA\U0001F3FB Cascata"
@@ -642,39 +643,40 @@
 - id: '1717786282800'
   alias: "\U0001F3CA\U0001F3FB Variable Piscina timer"
   description: ''
-  trigger:
-  - platform: time
-    at: '21:00:00'
-  condition: []
-  action:
-  - service: variable.update_sensor
-    metadata: {}
+  triggers:
+  - at: 00:00:00
+    trigger: time
+  conditions: []
+  actions:
+  - metadata: {}
     data:
       replace_attributes: false
       value: '{{ states(''sensor.duracao_filtragem_piscina_diario_em_segundos'') |
-        float }}'
+        float | int }}'
       attributes:
-        today-1: '{{ states(''sensor.filtragem_piscina_historico_s'') }}'
+        today-1: '{{ states(''sensor.duracao_filtragem_piscina_diario_em_segundos'')
+          | float | int }}'
         today-2: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-1'')
-          }}'
+          | default(0) | int }}'
         today-3: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-2'')
-          }}'
+          | default(0) | int }}'
         today-4: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-3'')
-          }}'
+          | default(0) | int }}'
         today-5: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-4'')
-          }}'
+          | default(0) | int }}'
         today-6: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-5'')
-          }}'
+          | default(0) | int }}'
         today-7: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-6'')
-          }}'
+          | default(0) | int }}'
         today-8: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-7'')
-          }}'
-        today_9: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-8'')
-          }}'
+          | default(0) | int }}'
+        today-9: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-8'')
+          | default(0) | int }}'
         today-10: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-9'')
-          }}'
+          | default(0) | int }}'
     target:
       entity_id: sensor.filtragem_piscina_historico_s
+    action: variable.update_sensor
   mode: single
 - id: '1717786439250'
   alias: "\U0001F50B\U0001F697⚡Change charge completion time"
@@ -1717,7 +1719,8 @@
         evaluate_payload: false
         qos: '2'
         topic: homeassistant/sensor/ev/bmwx1_charging_w
-        payload: '"{{ states(''sensor.bmw_x1_charging_w_2'') | round(0) }}"'
+        payload: '"{{ states(''sensor.bmw_x1_charging_w_2'') | float(0) | round(0)
+          }}"'
   - if:
     - condition: trigger
       id:
@@ -1729,7 +1732,7 @@
         evaluate_payload: false
         qos: '2'
         topic: homeassistant/sensor/ev/bmwi4_charging_w
-        payload: '"{{ states(''sensor.bmw_i4_charging_w'') | round(0) }}"'
+        payload: '"{{ states(''sensor.bmw_i4_charging_w'') | float(0) | round(0) }}"'
   mode: single
 - id: '1742729233913'
   alias: 'Telegram Bot: Conversation with Assist'
@@ -1785,4 +1788,58 @@
     data:
       title: Qualidade do Ar em Casa
       message: '{{agent.response.speech.plain.speech}}'
+  mode: single
+- id: '1744301274357'
+  alias: "\U0001F3CA\U0001F3FB Automação Bomba Piscina"
+  description: ''
+  triggers:
+  - trigger: numeric_state
+    entity_id:
+    - sensor.potencia_emonpi_import_export_media_5_minutos
+    below: -750
+    id: 'ON'
+  - trigger: numeric_state
+    entity_id:
+    - sensor.potencia_emonpi_import_export_media_5_minutos
+    id: 'OFF'
+    above: 750
+  conditions:
+  - condition: sun
+    after: sunrise
+    before: sunset
+  actions:
+  - if:
+    - condition: trigger
+      id:
+      - 'ON'
+    then:
+    - type: turn_on
+      device_id: e5f1b9b1d10308b32ef8f69bc0d20d74
+      entity_id: 43f5cd2f7257fed3e55788df58ce96de
+      domain: switch
+  - if:
+    - condition: trigger
+      id:
+      - 'OFF'
+    then:
+    - type: turn_off
+      device_id: e5f1b9b1d10308b32ef8f69bc0d20d74
+      entity_id: 43f5cd2f7257fed3e55788df58ce96de
+      domain: switch
+  mode: single
+- id: '1744308459186'
+  alias: "\U0001F3CA\U0001F3FB Bomba piscina botão"
+  description: ''
+  triggers:
+  - device_id: e6ae30b2d7855ae2d2b83b4497674bfb
+    domain: bthome
+    type: button
+    subtype: press
+    trigger: device
+  conditions: []
+  actions:
+  - type: toggle
+    device_id: e5f1b9b1d10308b32ef8f69bc0d20d74
+    entity_id: 43f5cd2f7257fed3e55788df58ce96de
+    domain: switch
   mode: single

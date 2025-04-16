@@ -63,7 +63,7 @@
       unique_id: sensor.filtragem_piscina_segundos
       state: >
         {% set duration_hours = float(states('sensor.bomba_piscina_horas_ligada_diario')) %}
-        {{ (duration_hours * 3600) }}
+        {{ (duration_hours * 3600) | int }}
 
 - trigger:
     -  platform: time

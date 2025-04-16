@@ -3,7 +3,7 @@
       - unique_id: iberdrola_bihorario_diario
         name: "Iberdrola bi-horário Diário"
         unit_of_measurement: '€/kWh'
-        state_class: measurement
+        state_class: total
         device_class: monetary
         state: >
           {% set vazio = 0.0776 -%}
@@ -32,7 +32,7 @@
       - unique_id: coopernico_spot_price_bihorario
         unit_of_measurement: '€/MWh'
         availability: "{{ has_value('sensor.omie_spot_price_pt') }}"
-        state_class: measurement
+        state_class: total
         device_class: monetary
         state: >
           {% set PM = states('sensor.omie_spot_price_pt')|float -%}
@@ -97,7 +97,7 @@
       - unique_id: coopernico_spot_price_bihorario_kw_iva
         unit_of_measurement: '€/KWh'
         availability: "{{ has_value('sensor.omie_spot_price_pt') }}"
-        state_class: measurement
+        state_class: total
         device_class: monetary
         state: >
           {% set PM = states('sensor.omie_spot_price_pt') | float -%}
@@ -172,7 +172,8 @@
    - unique_id: coopernico_spot_price_simples
      unit_of_measurement: '€/MWh'
      availability: "{{ has_value('sensor.omie_spot_price_pt') }}"
-     state_class: measurement
+     state_class: total
+     device_class: monetary
      state: >
        {% set PM = states('sensor.omie_spot_price_pt')|float -%}
        {% set CGS = 4 -%}
@@ -230,7 +231,8 @@
 - sensor:
     - unique_id: coopernico_excedente_indexado
       unit_of_measurement: '€/MWh'
-      state_class: measurement
+      state_class: total
+      device_class: monetary
       state: >
         {% set PM = states('sensor.omie_spot_price_pt')|float(default=None) -%}
         {% set K = state_attr(this.entity_id, 'K') -%}
