@@ -390,10 +390,17 @@
   - at: sensor.bomba_piscina_noite_horario
     trigger: time
   conditions:
-  - condition: numeric_state
-    entity_id: sensor.filtragem_piscina_historico_s
-    below: 18000
-    attribute: today-1
+  - condition: template
+    value_template: '{%- set filtragemdiaria = states(''sensor.filtragem_piscina_historico_s'')
+      | int -%}
+
+      {%- set duration = states(''input_number.pool_pump_duration_lower_threshold'')
+      | int -%}
+
+      {%- set durationt = duration * 60 -%}
+
+
+      {{ filtragemdiaria < durationt }}'
   actions:
   - if:
     - condition: or
@@ -436,8 +443,9 @@
           domain: switch
         - condition: template
           value_template: '{{ repeat.index <= 10 }}'
-    - delay: '{{ [18000 - state_attr(''sensor.filtragem_piscina_historico_s'', ''today-1'')
-        | int(0),0] | max }}'
+    - delay: '{{ [(states(''input_number.pool_pump_duration_lower_threshold'') | int)
+        * 60 - state_attr(''sensor.filtragem_piscina_historico_s'', ''today-1'') |
+        int(0),0] | max }}'
     - target:
         entity_id:
         - switch.bomba_piscina_switch_0
@@ -1562,7 +1570,17 @@
       hours: 0
       minutes: 5
       seconds: 0
-    to: RB
+    to: ALARM OL RB
+  - entity_id:
+    - sensor.mclima_ups_informacao_do_estado
+    - sensor.net_ups_informacao_do_estado
+    id: replace_battery
+    trigger: state
+    for:
+      hours: 0
+      minutes: 5
+      seconds: 0
+    to: ALARM OL CHRH RB
   conditions: []
   actions:
   - choose:
@@ -1842,4 +1860,38 @@
     device_id: e5f1b9b1d10308b32ef8f69bc0d20d74
     entity_id: 43f5cd2f7257fed3e55788df58ce96de
     domain: switch
+  mode: single
+- id: '1744915008704'
+  alias: 'OpenAI Daily: Piscina'
+  description: ''
+  triggers:
+  - at: '20:30:00'
+    trigger: time
+  conditions: []
+  actions:
+  - data:
+      agent_id: conversation.chatgpt
+      text: Para esta tarefa, es um consultor de piscinas e queres garantir sempre
+        que a piscina está limpa e pronta a usar. Mostra quando vai ser iniciada a
+        filtragem da noite. Calcula se a horas de filtragem são suficientes, usa os
+        dados que são enviados.  Podes e deves usar um tom humorista. Podes usar emojis.
+        Responde em portugues de portugal sem gerúndio.  \_ Current time {{now()}}
+        tempo que a bomba da piscina esteve a trabalhar em {{states('sensor.duracao_filtragem_piscina_diario')}}
+        tempo que o aquecimento da piscina esteve a funcionar {{states('sensor.duracao_aquecimento_piscina_diario')}}  temperatura
+        da piscina {{states('sensor.bomba_piscina_temperature')}}  tempo que falta
+        filtrar a piscina {{states('sensor.pool_pump_remaining_time')}}  horario que
+        vai ser iniciada a filtragem de noite {{states('sensor.bomba_piscina_noite_horario')}}   Quantidade
+        maxima em minutos que a piscina filtra por dia, tranforma em horas {{states('input_number.pool_pump_duration_lower_threshold')}}  Energia
+        gasta pela bomba da piscina {{states('sensor.energia_emonpi_piscina_use_total_kwhd')}}
+        A bomba da piscina tem uma potencia de 1,5 CV. o volume da piscina é de 66
+        metros cubicos.  calcula se a tempo de filtragem foi suficiente.
+      language: pt-pt
+    enabled: true
+    response_variable: agent
+    action: conversation.process
+  - action: telegram_bot.send_message
+    metadata: {}
+    data:
+      title: Piscina
+      message: '{{agent.response.speech.plain.speech}}'
   mode: single

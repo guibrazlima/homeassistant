@@ -65,18 +65,47 @@
         {% set duration_hours = float(states('sensor.bomba_piscina_horas_ligada_diario')) %}
         {{ (duration_hours * 3600) | int }}
 
+#- trigger:
+#    -  platform: time
+#       at:
+#         - '19:00'
+#  sensor:
+#    - unique_id: f8853830-bf81-46d4-85a9-379c25c37344
+#      name: Bomba Piscina Noite Horario
+#      device_class: timestamp
+#      state: >
+#        {%- set sensor = 'sensor.energy_prices' -%}
+#        {% from 'cheapest_energy_hours.jinja' import cheapest_energy_hours %}
+#        {{ cheapest_energy_hours(sensor=sensor.pt_average_electricity_price_today, attr_today='prices_today', attr_tomorrow='prices_tomorrow', time_key='time', value_key='price', hours=3, include_tomorrow=true, look_ahead=true) }}
+
 - trigger:
-    -  platform: time
-       at:
-         - '19:00'
+    - platform: time_pattern
+      hours: "/1"  # A cada hora
   sensor:
     - unique_id: f8853830-bf81-46d4-85a9-379c25c37344
       name: Bomba Piscina Noite Horario
       device_class: timestamp
       state: >
+        {%- set tempo = states('sensor.pool_pump_remaining_time') -%}
+        {%- set partes = tempo.split(':') -%}
+        {%- set horas = partes[0] | int -%}
+        {%- set minutos = partes[1] | int -%}
+        {%- set total = horas + (minutos / 60) -%}
+        {%- set arredondado = total | round(0, 'ceil') -%}
         {%- set sensor = 'sensor.energy_prices' -%}
         {% from 'cheapest_energy_hours.jinja' import cheapest_energy_hours %}
-        {{ cheapest_energy_hours(sensor=sensor.pt_average_electricity_price_today, attr_today='prices_today', attr_tomorrow='prices_tomorrow', time_key='time', value_key='price', hours=3, include_tomorrow=true, look_ahead=true) }}
+        {{ cheapest_energy_hours(
+            sensor=sensor.pt_average_electricity_price_today, 
+            attr_today='prices_today', 
+            attr_tomorrow='prices_tomorrow', 
+            time_key='time', 
+            value_key='price', 
+            hours=arredondado, 
+            start='22:00', 
+            end='08:00', 
+            include_tomorrow=true, 
+            look_ahead=true
+        ) }}
 
 - trigger:
     -  platform: time_pattern
@@ -88,4 +117,4 @@
       state: >
         {%- set sensor = 'sensor.energy_prices' -%}
         {% from 'cheapest_energy_hours.jinja' import cheapest_energy_hours %}
-        {{ cheapest_energy_hours(sensor=sensor.espanha_average_electricity_price_today, attr_today='prices_today', attr_tomorrow='prices_tomorrow', time_key='time', value_key='price', hours=3, include_tomorrow=true, look_ahead=true) }}
+        {{ cheapest_energy_hours(sensor=sensor.espanha_average_electricity_price_today, attr_today='prices_today', attr_tomorrow='prices_tomorrow', time_key='time', value_key='price', hours=3, start='22:00', end='08:00', include_tomorrow=true, look_ahead=true) }}
