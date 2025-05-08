@@ -1,0 +1,48 @@
+alternar_modo_automacao_piscina:
+    alias: "Alternar Entre Modo Piscina Manual e Automático"
+    sequence:
+      # Verifica o estado atual do input_boolean
+      - choose:
+          # Se estiver em modo automático (true), muda para manual
+          - conditions:
+              - condition: state
+                entity_id: input_boolean.modo_automatico
+                state: 'on'
+            sequence:
+              # Desativa o input_boolean (modo manual)
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.modo_automatico
+              # Desativa as duas automações
+              - service: automation.turn_off
+                target:
+                  entity_id:
+                    - automation.automacao_bomba_piscina
+                    - automation.bomba_piscina_noite
+              # Notificação opcional
+              - service: persistent_notification.create
+                data:
+                  message: "Modo Manual ativado. Automações desativadas."
+                  title: "Alteração de Modo"
+
+          # Se estiver em modo manual (false), muda para automático
+          - conditions:
+              - condition: state
+                entity_id: input_boolean.modo_automatico
+                state: 'off'
+            sequence:
+              # Ativa o input_boolean (modo automático)
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.modo_automatico
+              # Ativa as duas automações
+              - service: automation.turn_on
+                target:
+                  entity_id:
+                    - automation.automacao_bomba_piscina
+                    - automation.bomba_piscina_noite
+              # Notificação opcional
+              - service: persistent_notification.create
+                data:
+                  message: "Modo Automático ativado. Automações ativadas."
+                  title: "Alteração de Modo"

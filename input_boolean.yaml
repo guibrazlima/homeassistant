@@ -1,16 +1,21 @@
 #################################################################
 ## Input_boolean
 #################################################################
-  
-  gblima_present:
-    name: gblima
-    icon: mdi:account
-  cmouta_present:
-    name: cmouta
-    icon: mdi:account
-  emouta_present:
-    name: emouta
-    icon: mdi:account
-  gvasconcelos_present:
-    name: gvasconcelos
-    icon: mdi:account
+
+gblima_present:
+  name: gblima
+  icon: mdi:account
+cmouta_present:
+  name: cmouta
+  icon: mdi:account
+emouta_present:
+  name: emouta
+  icon: mdi:account
+gvasconcelos_present:
+  name: gvasconcelos
+  icon: mdi:account
+
+modo_automatico:
+  name: "Modo Automático"
+  icon: mdi:robot
+  initial: true 

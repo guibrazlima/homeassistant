@@ -6,3 +6,12 @@ pool_pump_duration_lower_threshold:
   step: 1
   unit_of_measurement: minutes
   mode: box
+
+pool_pump_duration_inverno:
+  name: Pool Pump Duration inverno
+  initial: 180
+  min: 60
+  max: 1440
+  step: 1
+  unit_of_measurement: minutes
+  mode: box

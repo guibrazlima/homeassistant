@@ -390,17 +390,31 @@
   - at: sensor.bomba_piscina_noite_horario
     trigger: time
   conditions:
-  - condition: template
-    value_template: '{%- set filtragemdiaria = states(''sensor.filtragem_piscina_historico_s'')
-      | int -%}
+  - condition: and
+    conditions:
+    - condition: template
+      value_template: '{%- set filtragemdiaria = state_attr(''sensor.filtragem_piscina_historico_s'',
+        ''today-1'') | int -%}
 
-      {%- set duration = states(''input_number.pool_pump_duration_lower_threshold'')
-      | int -%}
+        {%- set duration = states(''input_number.pool_pump_duration_lower_threshold'')
+        | int -%}
 
-      {%- set durationt = duration * 60 -%}
+        {%- set durationt = duration * 60 -%}
 
 
-      {{ filtragemdiaria < durationt }}'
+        {{ filtragemdiaria < durationt }}'
+    - condition: or
+      conditions:
+      - condition: numeric_state
+        entity_id: sensor.home_cobertura_de_nuvens_dia_1
+        above: 35
+      - condition: template
+        value_template: '{%- set filtragemdiaria = states(''sensor.filtragem_piscina_historico_s'')
+          | int -%}
+
+
+
+          {{ filtragemdiaria <= 3600 }}'
   actions:
   - if:
     - condition: or
@@ -412,12 +426,6 @@
         entity_id: sensor.season
         state: summer
     then:
-    - metadata: {}
-      data:
-        stop_actions: true
-      target:
-        entity_id: automation.new_automation_3
-      action: automation.turn_off
     - metadata: {}
       data: {}
       target:
@@ -452,12 +460,6 @@
       data: {}
       action: switch.turn_off
     else:
-    - target:
-        entity_id:
-        - automation.new_automation_3
-      data:
-        stop_actions: true
-      action: automation.turn_off
     - metadata: {}
       data: {}
       target:
@@ -483,8 +485,9 @@
           domain: switch
         - condition: template
           value_template: '{{ repeat.index <= 10 }}'
-    - delay: '{{ [7200 - state_attr(''sensor.filtragem_piscina_historico_s'', ''today-1'')
-        | int(0),0] | max }}'
+    - delay: '{{ [(states(''input_number.pool_pump_duration_inverno'') | int) * 60
+        -  state_attr(''sensor.filtragem_piscina_historico_s'', ''today-1'') | int(0),0]
+        | max }}'
     - target:
         entity_id:
         - switch.bomba_piscina_switch_0
@@ -494,18 +497,19 @@
 - id: '1717786251723'
   alias: "\U0001F3CA\U0001F3FB Cascata"
   description: Inicia ou para a Cascata na piscina com 1 click no botão shelly
-  trigger:
-  - platform: device
-    device_id: 50eb20ac53472c3cc1b1da733634d1c8
+  triggers:
+  - device_id: 50eb20ac53472c3cc1b1da733634d1c8
     domain: bthome
     type: button
     subtype: press
-  condition: []
-  action:
+    trigger: device
+  conditions: []
+  actions:
   - type: toggle
     device_id: ed7ccde197e708b2a6b6cd25ef2e60c5
     entity_id: 44b25a719c3fa50cbbd4ebd6e57fcdb9
     domain: switch
+    enabled: true
   mode: single
 - id: '1717786261877'
   alias: "\U0001F3CA\U0001F3FB Hidrojet"
@@ -660,10 +664,10 @@
     data:
       replace_attributes: false
       value: '{{ states(''sensor.duracao_filtragem_piscina_diario_em_segundos'') |
-        float | int }}'
+        default(0) | int }}'
       attributes:
-        today-1: '{{ states(''sensor.duracao_filtragem_piscina_diario_em_segundos'')
-          | float | int }}'
+        today-1: '{{ states(''sensor.filtragem_piscina_historico_s'') |  default(0)|
+          int }}'
         today-2: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-1'')
           | default(0) | int }}'
         today-3: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-2'')
@@ -1144,25 +1148,16 @@
 - id: '1717786542943'
   alias: "\U0001F6CB️ Sala: Subir estores manhã"
   description: Subir os estores quando as 07:45
-  trigger:
-  - platform: time
-    at: 07:45:00
-  condition: []
-  action:
-  - service: cover.open_cover
+  triggers:
+  - at: 07:45:00
+    trigger: time
+  conditions: []
+  actions:
+  - action: cover.open_cover
     metadata: {}
     data: {}
     target:
-      entity_id: cover.estore_3_estore_3
-  - service: cover.stop_cover
-    metadata: {}
-    data: {}
-    target:
-      entity_id: cover.estore_2_estore_2
-  - service: python_script.set_state
-    data_template:
-      entity_id: cover.estore_2_estore_2
-      state: Open
+      entity_id: cover.estores
   mode: single
 - id: '1717786571925'
   alias: Smart Grid Auto on
@@ -1486,6 +1481,7 @@
         entity_id: light.exterior
       time_delay: 10
       include_sun: sun_enabled
+      night_lights_conditions: []
 - id: '1718533356578'
   alias: Update Coopernico Prices
   description: ''
@@ -1633,7 +1629,7 @@
       actual_power: sensor.ventilador_cave_switch_0_power
       defined_current: 0.2
 - id: '1730368547136'
-  alias: Bomba de Calor Power MQTT Publish
+  alias: ♨️ Bomba de Calor Power MQTT Publish
   description: ''
   triggers:
   - trigger: time_pattern
@@ -1696,21 +1692,6 @@
       qos: '2'
       topic: homeassistant/sensor/flow_return_temperature_heating
       payload: '"{{ states(''sensor.hpsu_can_return_temperature_heating'') }}"'
-  mode: single
-- id: '1731784846271'
-  alias: New automation
-  description: ''
-  triggers:
-  - trigger: event
-    event_type: telegram_command
-    event_data:
-      command: /dircasa
-  conditions: []
-  actions:
-  - action: light.turn_on
-    target:
-      entity_id: light.shelly1pmmini_6055f99ff118_switch_0
-    data: {}
   mode: single
 - id: '1732289985472'
   alias: MQTT  Publish
@@ -1894,4 +1875,243 @@
     data:
       title: Piscina
       message: '{{agent.response.speech.plain.speech}}'
+  mode: single
+- id: '1744969812713'
+  alias: Pool Pump Solar Optimizationsdsdsd
+  description: Gerencia a bomba da piscina priorizando energia solar e garantindo
+    filtragem diária
+  triggers:
+  - minutes: /15
+    trigger: time_pattern
+  - entity_id: sensor.solar_power
+    trigger: state
+  - at: 08:00:00
+    trigger: time
+  - at: '22:00:00'
+    trigger: time
+  conditions:
+  - condition: template
+    value_template: '{{ not is_state(''binary_sensor.pool_pump_malfunction'', ''on'')
+      }}
+
+      '
+  actions:
+  - target:
+      entity_id: sensor.pool_pump_daily_runtime
+    action: homeassistant.update_entity
+  - choose:
+    - conditions:
+      - condition: time
+        after: 08:00:00
+        before: '22:00:00'
+      - condition: template
+        value_template: '{{ states(''sensor.solar_power'')|float > min_solar_power
+          }}
+
+          '
+      sequence:
+      - target:
+          entity_id: switch.pool_pump
+        action: switch.turn_on
+      - target:
+          entity_id: input_number.pool_pump_priority
+        data:
+          value: 1
+        action: input_number.set
+    - conditions:
+      - condition: time
+        after: '22:00:00'
+        before: 08:00:00
+      - condition: template
+        value_template: '{% set daily_runtime = states(''sensor.pool_pump_daily_runtime'')|float
+          %} {% set tomorrow_forecast = states(''sensor.tomorrow_solar_forecast'')|float
+          %} {{ daily_runtime < min_daily_hours and tomorrow_forecast < 0.7 }}
+
+          '
+      sequence:
+      - target:
+          entity_id: switch.pool_pump
+        action: switch.turn_on
+      - target:
+          entity_id: input_number.pool_pump_priority
+        data:
+          value: 2
+        action: input_number.set
+    default:
+    - target:
+        entity_id: switch.pool_pump
+      action: switch.turn_off
+  variables:
+    min_daily_hours: 5
+    min_solar_power: 1000
+    pump_power: 800
+  mode: restart
+- id: '1745084857676'
+  alias: "\U0001F4A1Candeeiros Ligar/Desligar"
+  description: ''
+  triggers:
+  - device_id: e8a6c706997d87b98183e26e7598ae8b
+    domain: shelly
+    type: single
+    subtype: button
+    trigger: device
+  conditions: []
+  actions:
+  - action: light.toggle
+    metadata: {}
+    data: {}
+    target:
+      entity_id: light.candeeiros_sala_inferior
+  mode: single
+- id: '1745085627460'
+  alias: "\U0001F3E1Botão Sala Portão"
+  description: ''
+  triggers:
+  - device_id: e8a6c706997d87b98183e26e7598ae8b
+    domain: shelly
+    type: triple
+    subtype: button
+    trigger: device
+  conditions: []
+  actions:
+  - type: toggle
+    device_id: c943a1b7851c56da555470902baf07a1
+    entity_id: 9e3a402090766bb2d314909658c4ee90
+    domain: switch
+  mode: single
+- id: '1745085892451'
+  alias: 'Desligar tudo Sala '
+  description: ''
+  triggers:
+  - device_id: e8a6c706997d87b98183e26e7598ae8b
+    domain: shelly
+    type: long
+    subtype: button
+    trigger: device
+  conditions: []
+  actions:
+  - action: light.turn_off
+    metadata: {}
+    data: {}
+    target:
+      entity_id:
+      - light.sala_inferior
+  - action: media_player.turn_off
+    metadata: {}
+    data: {}
+    target:
+      device_id: a5dd3a6582b27b004323486771a64137
+  - action: light.turn_on
+    metadata: {}
+    data: {}
+    target:
+      entity_id: light.shellyplus2pm_c82e180d5f10_switch_1
+  - delay:
+      hours: 0
+      minutes: 1
+      seconds: 0
+      milliseconds: 0
+  - action: light.turn_off
+    metadata: {}
+    data: {}
+    target:
+      entity_id: light.shellyplus2pm_c82e180d5f10_switch_1
+  mode: single
+- id: '1745225774697'
+  alias: ♨️ Heat Pump Error
+  description: ''
+  triggers:
+  - trigger: state
+    entity_id:
+    - sensor.hpsu_can_error_code
+    from: No Error
+    id: Error
+  - trigger: state
+    entity_id:
+    - sensor.hpsu_can_error_code
+    id: ok
+    to: No Error
+  conditions: []
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id:
+        - Error
+      sequence:
+      - action: telegram_bot.send_message
+        metadata: {}
+        data:
+          message: 'A bomba de calor está em Erro.
+
+            *ERROR:* {{states(''sensor.hpsu_can_error_code'') }}
+
+            '
+          title: ❌ Error Bomba de Calor ❌
+    - conditions:
+      - condition: trigger
+        id:
+        - ok
+      sequence:
+      - action: telegram_bot.send_message
+        metadata: {}
+        data:
+          message: 'A bomba de calor está em {{states(''sensor.hpsu_can_error_code'')
+            }}
+
+            '
+          title: ✅ OK Bomba de Calor ✅
+  mode: single
+- id: '1745483501867'
+  alias: ♨️ Hot Water Production Best price
+  description: ''
+  triggers:
+  - at: sensor.bomba_piscina_noite_horario
+    trigger: time
+  conditions:
+  - type: is_temperature
+    condition: device
+    device_id: dbbed3fc0849f129296b804033d10b74
+    entity_id: 869298e5bb3f09e40bb45c5ab1d10091
+    domain: sensor
+    below: 45
+  actions:
+  - device_id: dbbed3fc0849f129296b804033d10b74
+    domain: select
+    entity_id: aa534d8176126b2ad55749fb0cc47992
+    type: select_option
+    option: 'On'
+  mode: single
+- id: '1745509795599'
+  alias: "[\U0001F3E1] Botão shelly Abrir Portão"
+  description: ''
+  triggers:
+  - device_id: f3ec058f8ec36d128a8eaf0dd7286320
+    domain: bthome
+    type: button
+    subtype: press
+    trigger: device
+  conditions: []
+  actions:
+  - type: toggle
+    device_id: c943a1b7851c56da555470902baf07a1
+    entity_id: 9e3a402090766bb2d314909658c4ee90
+    domain: switch
+  mode: single
+- id: '1745945849501'
+  alias: 'Botão Sala Estore1 '
+  description: ''
+  triggers:
+  - device_id: e8a6c706997d87b98183e26e7598ae8b
+    domain: shelly
+    type: double
+    subtype: button
+    trigger: device
+  conditions: []
+  actions:
+  - action: cover.toggle
+    metadata: {}
+    data: {}
+    target:
+      entity_id: cover.estore1_cover_0
   mode: single
