@@ -1,0 +1,13 @@
+- sensor:
+    - name: "Média de Nuvens Próximas 8h"
+      unique_id: f8853830-bf81-46d4-85a9-37ddf33434daaa
+      state: "{{ states('input_number.average_cloud_cover') }}"
+      unit_of_measurement: "%"
+      icon: mdi:weather-cloudy-clock
+
+- sensor:
+    - name: "Média de Cobertura de Nuvens (10:00 - 18:00)"
+      unique_id: f8853830-bf81-46d4-85a9-37ddwd3340kms
+      state: "{{ states('input_number.average_cloud_cover_piscina') }}"
+      unit_of_measurement: "%"
+      icon: mdi:weather-cloudy-clock

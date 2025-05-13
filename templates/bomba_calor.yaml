@@ -1,0 +1,22 @@
+- trigger:
+    -  platform: time_pattern
+       hours: /16
+  sensor:
+    - unique_id: f8853830-bf81-46d4-85a9-379c25cdd33d7
+      name: Aquecimento Agua Noite
+      device_class: timestamp
+      state: >
+        {%- set sensor = 'sensor.energy_prices' -%}
+        {% from 'cheapest_energy_hours.jinja' import cheapest_energy_hours %}
+        {{ cheapest_energy_hours(
+            sensor=sensor.pt_average_electricity_price_today,
+            attr_today='prices_today', 
+            attr_tomorrow='prices_tomorrow', 
+            time_key='time', 
+            value_key='price', 
+            hours=1, 
+            start='22:00', 
+            end='08:00', 
+            include_tomorrow=true, 
+            look_ahead=true
+        ) }}

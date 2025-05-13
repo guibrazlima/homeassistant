@@ -118,7 +118,18 @@
       state: >
         {%- set sensor = 'sensor.energy_prices' -%}
         {% from 'cheapest_energy_hours.jinja' import cheapest_energy_hours %}
-        {{ cheapest_energy_hours(sensor=sensor.espanha_average_electricity_price_today, attr_today='prices_today', attr_tomorrow='prices_tomorrow', time_key='time', value_key='price', hours=3, start='22:00', end='08:00', include_tomorrow=true, look_ahead=true) }}
+        {{ cheapest_energy_hours(
+            sensor=sensor.espanha_average_electricity_price_today,
+            attr_today='prices_today', 
+            attr_tomorrow='prices_tomorrow', 
+            time_key='time', 
+            value_key='price', 
+            hours=3, 
+            start='22:00', 
+            end='08:00', 
+            include_tomorrow=true, 
+            look_ahead=true
+        ) }}
 
 
 - sensor:
@@ -128,10 +139,46 @@
       state_class: measurement
       device_class: ph
       state: >
-        {% set voltage = states('sensor.phsensor_ph_sensor_voltage') | float(0) %}
+        {% set voltage = states('sensor.phsensor_ph_voltage') | float(0) %}
         {% set temp = states('sensor.bomba_piscina_temperature') | float(25) %}
         
         {% set T = temp + 273.15 %}
         {% set slope = ((2.303 * 8.314 * T) / 96485) * 1000 %}  {# mV/pH #}
-        {% set offset = 0.57 %}  {# Ajusta com tua calibração para pH 7.0 #}
-        {{ 7.0 - ((voltage - offset) * 1000 / slope) | round(2) }}
+        {% set offset = 0.55 %}  {# Ajusta com tua calibração para pH 7.2 #}
+        {{ 7.2 - ((voltage - offset) * 1000 / slope) | round(2) }}
+
+- sensor:
+    - name: "pH Corrigido Filtrado"
+      unique_id: f8853830-bf81-46d4-85a9-37ddf334g4f
+      state_class: measurement
+      unit_of_measurement: "pH"
+      state: >
+        {% if is_state('switch.bomba_piscina', 'on') %}
+          {{ states('sensor.ph_corrigido') | float }}
+        {% else %}
+          {{ states('input_number.ph_filtrado') | float(states('sensor.ph_corrigido')) }}
+        {% endif %}
+
+- sensor:
+    - name: "pH Sensor Filtrado"
+      unique_id: f8853830-bf81-46d4-85a9-37ddfasd334d
+      state_class: measurement
+      unit_of_measurement: "pH"
+      state: >
+        {% if is_state('switch.bomba_piscina', 'on') %}
+          {{ states('sensor.ph_sensor') | float }}
+        {% else %}
+          {{ states('input_number.ph_sensor_filtrado') | float(states('sensor.ph_sensor')) }}
+        {% endif %}
+
+- sensor:
+    - name: "Temperatura Piscina Filtrado"
+      unique_id: f8853830-bf81-46d4-85a9-37ddfasd4561d
+      state_class: measurement
+      unit_of_measurement: "°C"
+      state: >
+        {% if is_state('switch.bomba_piscina', 'on') %}
+          {{ states('sensor.bomba_piscina_temperature') | float }}
+        {% else %}
+          {{ states('input_number.temperatura_piscina_filtrado') | float(states('sensor.bomba_piscina_temperature')) }}
+        {% endif %}

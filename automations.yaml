@@ -231,9 +231,8 @@
 - id: '1717786217050'
   alias: "[\U0001F4E3\U0001F3E1] Notify when garage door was left open for too long"
   description: ''
-  trigger:
-  - platform: state
-    entity_id:
+  triggers:
+  - entity_id:
     - cover.gate
     to: open
     for:
@@ -241,12 +240,40 @@
       minutes: 5
       seconds: 0
     from: closed
-  condition: []
-  action:
-  - service: notify.notify
+    trigger: state
+  conditions: []
+  actions:
+  - repeat:
+      sequence:
+      - action: telegram_bot.send_message
+        metadata: {}
+        data:
+          message: Está aberto a mais de 5 minutos. Fechar?
+          title: "\U0001F699\U0001F6A8 Portão de casa aberto!\U0001F6A8"
+      - data:
+          title: "\U0001F699 Portão de casa aberto!"
+          message: Está aberto a mais de 5 minutos. Fechar?
+        action: notify.notify
+        enabled: true
+      - delay:
+          hours: 0
+          minutes: 5
+          seconds: 0
+          milliseconds: 0
+      while:
+      - condition: state
+        entity_id: cover.gate
+        state: open
+  - action: telegram_bot.send_message
+    metadata: {}
     data:
-      title: "\U0001F699 Portão de casa aberto!"
-      message: Está aberto a mais de 5 minutos. Fechar?
+      message: O portão está fechado.
+      title: "\U0001F699✅Portão de casa fechado.✅"
+  - data:
+      title: "\U0001F699✅Portão de casa fechado.✅"
+      message: O portão está fechado.
+    action: notify.notify
+    enabled: true
   mode: single
 - id: '1717786230999'
   alias: "[\U0001F4E3\U0001F4F2] Callback notification to open garage"
@@ -406,7 +433,7 @@
     - condition: or
       conditions:
       - condition: numeric_state
-        entity_id: sensor.home_cobertura_de_nuvens_dia_1
+        entity_id: sensor.media_de_cobertura_de_nuvens_10_00_18_00
         above: 35
       - condition: template
         value_template: '{%- set filtragemdiaria = states(''sensor.filtragem_piscina_historico_s'')
@@ -2066,7 +2093,7 @@
   alias: ♨️ Hot Water Production Best price
   description: ''
   triggers:
-  - at: sensor.bomba_piscina_noite_horario
+  - at: sensor.aquecimento_agua_noite
     trigger: time
   conditions:
   - type: is_temperature
@@ -2114,4 +2141,182 @@
     data: {}
     target:
       entity_id: cover.estore1_cover_0
+  mode: single
+- id: '1746728025652'
+  alias: "\U0001F3CA\U0001F3FBAtualizar pH filtrado com bomba ligada"
+  description: ''
+  triggers:
+  - entity_id:
+    - switch.bomba_piscina_switch_0
+    to: 'on'
+    trigger: state
+    id: bomba
+    from: 'off'
+  - entity_id: sensor.ph_corrigido
+    trigger: state
+    enabled: true
+  conditions:
+  - condition: state
+    entity_id: switch.bomba_piscina_switch_0
+    state: 'on'
+    for:
+      hours: 0
+      minutes: 10
+      seconds: 0
+  - condition: template
+    value_template: '{{ states(''sensor.ph_corrigido'') not in [''unavailable'', ''unknown'']
+      }}'
+  actions:
+  - target:
+      entity_id:
+      - input_number.ph_sensor_filtrado
+    data:
+      value: '{{ states(''sensor.ph_sensor'') | float(2) }}'
+    action: input_number.set_value
+  - target:
+      entity_id: input_number.ph_filtrado
+    data:
+      value: '{{ states(''sensor.ph_corrigido'') | float(2) }}'
+    action: input_number.set_value
+  mode: single
+- id: '1746780173077'
+  alias: "\U0001F3CA\U0001F3FBAtualizar Temperatura Piscina filtrado com bomba de
+    aquecimentoligada"
+  description: ''
+  triggers:
+  - entity_id:
+    - switch.aquecimento_piscina_channel_1
+    to: 'on'
+    trigger: state
+    id: bomba
+    from: 'off'
+  - entity_id:
+    - sensor.bomba_piscina_temperature
+    trigger: state
+    enabled: true
+  conditions:
+  - condition: state
+    entity_id: switch.aquecimento_piscina_channel_1
+    state: 'on'
+    for:
+      hours: 0
+      minutes: 10
+      seconds: 0
+  - condition: template
+    value_template: '{{ states(''sensor.bomba_piscina_temperature'') not in [''unavailable'',
+      ''unknown''] }}'
+  actions:
+  - target:
+      entity_id:
+      - input_number.temperatura_piscina_filtrado
+    data:
+      value: '{{ states(''sensor.bomba_piscina_temperature'') | float(2) }}'
+    action: input_number.set_value
+  mode: single
+- id: '1747047245923'
+  alias: New automation
+  description: ''
+  triggers:
+  - trigger: time_pattern
+    seconds: '30'
+  conditions: []
+  actions:
+  - action: weather.get_forecasts
+    metadata: {}
+    data:
+      type: hourly
+    target:
+      entity_id: weather.forecast_home
+    response_variable: forecast_data
+  mode: single
+- id: '1747047675015'
+  alias: ☁️Atualiza média de nuvens nas próximas 8h
+  description: ''
+  triggers:
+  - hours: /1
+    trigger: time_pattern
+  actions:
+  - target:
+      entity_id: weather.forecast
+    data:
+      type: hourly
+    response_variable: forecast
+    action: weather.get_forecasts
+  - variables:
+      clouds: "{{ forecast['weather.forecast']['forecast'][:8]\n   | map(attribute='cloud_coverage')\n
+        \  | reject('none')\n   | list }}\n"
+      avg_clouds: "{% if clouds | length > 0 %}\n  {{ (clouds | map('float') | sum
+        / clouds | length)\n     | round(1) }}\n{% else %}\n  0\n{% endif %}\n"
+  - data:
+      entity_id: input_number.average_cloud_cover
+      value: '{{ avg_clouds }}'
+    action: input_number.set_value
+- id: '1747048335609'
+  alias: ☁️Atualiza média de nuvens entre as 10:00 e as 18:00
+  description: ''
+  triggers:
+  - hours: /1
+    trigger: time_pattern
+  conditions: []
+  actions:
+  - if:
+    - condition: time
+      after: 00:00:00
+      before: '19:00:00'
+    then:
+    - target:
+        entity_id: weather.forecast
+      data:
+        type: hourly
+      response_variable: forecast
+      action: weather.get_forecasts
+    - variables:
+        entries: '{{ forecast[''weather.forecast''][''forecast''] }}
+
+          '
+        start: '{{ utcnow().replace(hour=10, minute=0, second=0, microsecond=0).isoformat(sep=''T'')
+          }}
+
+          '
+        end: '{{ utcnow().replace(hour=18, minute=0, second=0, microsecond=0).isoformat(sep=''T'')
+          }}
+
+          '
+        clouds: "{{ entries\n   | selectattr('datetime', '>=', start)\n   | selectattr('datetime',
+          '<=', end)\n   | map(attribute='cloud_coverage')\n   | reject('none')\n
+          \  | list }}\n"
+        avg_clouds: "{% if clouds | length > 0 %}\n  {{ (clouds | map('float') | sum
+          / clouds | length) | round(1) }}\n{% else %}\n  0\n{% endif %}\n"
+    - data:
+        entity_id: input_number.average_cloud_cover_piscina
+        value: '{{ avg_clouds }}'
+      action: input_number.set_value
+    else:
+    - target:
+        entity_id: weather.forecast
+      data:
+        type: hourly
+      response_variable: forecast
+      action: weather.get_forecasts
+    - variables:
+        entries: '{{ forecast[''weather.forecast''][''forecast''] }}
+
+          '
+        start: '{{ (utcnow() + timedelta(days=1)).replace(hour=10, minute=0, second=0,
+          microsecond=0).isoformat(sep=''T'') }}
+
+          '
+        end: '{{ (utcnow() + timedelta(days=1)).replace(hour=18, minute=0, second=0,
+          microsecond=0).isoformat(sep=''T'') }}
+
+          '
+        clouds: "{{ entries\n   | selectattr('datetime', '>=', start)\n   | selectattr('datetime',
+          '<=', end)\n   | map(attribute='cloud_coverage')\n   | reject('none')\n
+          \  | list }}\n"
+        avg_clouds: "{% if clouds | length > 0 %}\n  {{ (clouds | map('float') | sum
+          / clouds | length) | round(1) }}\n{% else %}\n  0\n{% endif %}\n"
+    - data:
+        entity_id: input_number.average_cloud_cover_piscina
+        value: '{{ avg_clouds }}'
+      action: input_number.set_value
   mode: single
