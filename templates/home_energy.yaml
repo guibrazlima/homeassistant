@@ -39,3 +39,24 @@
           {% else %}
             {{ lastlast }}
           {% endif %}
+
+- sensor:
+    - unique_id: fa408bd9-458d-4104-94a2-8d76a5065f80
+      name: Omie prices for macro
+      state: >
+        {% set sensor = 'sensor.omie_spot_price_pt' %}
+        {{ states(sensor) if sensor | has_value else 'source sensor not available' }}
+      attributes:
+        tomorrow_valid: >
+          {% set sensor = 'sensor.omie_spot_price_pt' %}
+          {{ (state_attr(sensor, 'tomorrow_hours') | default({'na': none}, true)).values() | first is not none }}
+        raw_today: >
+          {% set sensor = 'sensor.omie_spot_price_pt' %}
+          {% if sensor and sensor | has_value and state_attr(sensor, 'today_hours') is mapping %}
+            {% set ns = namespace(today=[]) %}
+            {% for k, v in state_attr('sensor.omie_spot_price_es', 'today_hours').items() %}
+              {% set ns.today = ns.today + [dict(start=k.isoformat(), price=v)] %}
+            {% endfor %}
+            {{ ns.today }}
+          {% else %}
+          {% endif %}

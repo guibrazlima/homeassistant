@@ -1,6 +1,6 @@
 - trigger:
     -  platform: time_pattern
-       hours: /16
+       hours: 18
   sensor:
     - unique_id: f8853830-bf81-46d4-85a9-379c25cdd33d7
       name: Aquecimento Agua Noite

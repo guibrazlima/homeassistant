@@ -88,15 +88,15 @@
   alias: "[\U0001F4A1\U0001F3E1]Notificação para ligar o carro ao carregador"
   description: ''
   triggers:
-  - entity_id:
-    - device_tracker.i4_edrive40
-    from: not_home
-    to: home
-    trigger: state
+  - trigger: time_pattern
+    minutes: /15
   conditions:
   - condition: numeric_state
     entity_id: sensor.i4_edrive40_remaining_battery_percent
     below: 46
+  - condition: state
+    entity_id: device_tracker.i4_edrive40
+    state: home
   actions:
   - delay:
       hours: 0
@@ -245,11 +245,22 @@
   actions:
   - repeat:
       sequence:
+      - action: camera.snapshot
+        metadata: {}
+        data:
+          filename: /config/www/camera_snapshots/mysnap_portao.jpg
+        target:
+          entity_id: camera.patio_exterior_hd_stream
       - action: telegram_bot.send_message
         metadata: {}
         data:
           message: Está aberto a mais de 5 minutos. Fechar?
           title: "\U0001F699\U0001F6A8 Portão de casa aberto!\U0001F6A8"
+      - action: telegram_bot.send_photo
+        metadata: {}
+        data:
+          authentication: digest
+          file: /config/www/camera_snapshots/mysnap_portao.jpg
       - data:
           title: "\U0001F699 Portão de casa aberto!"
           message: Está aberto a mais de 5 minutos. Fechar?
@@ -264,11 +275,22 @@
       - condition: state
         entity_id: cover.gate
         state: open
+  - action: camera.snapshot
+    metadata: {}
+    data:
+      filename: /config/www/camera_snapshots/mysnap_portao.jpg
+    target:
+      entity_id: camera.patio_exterior_hd_stream
   - action: telegram_bot.send_message
     metadata: {}
     data:
       message: O portão está fechado.
       title: "\U0001F699✅Portão de casa fechado.✅"
+  - action: telegram_bot.send_photo
+    metadata: {}
+    data:
+      authentication: digest
+      file: /config/www/camera_snapshots/mysnap_portao.jpg
   - data:
       title: "\U0001F699✅Portão de casa fechado.✅"
       message: O portão está fechado.
@@ -414,7 +436,7 @@
   alias: "\U0001F3CA\U0001F3FB Bomba Piscina Noite"
   description: ''
   triggers:
-  - at: sensor.bomba_piscina_noite_horario
+  - at: input_datetime.horario_piscina_noite
     trigger: time
   conditions:
   - condition: and
@@ -1843,6 +1865,10 @@
       device_id: e5f1b9b1d10308b32ef8f69bc0d20d74
       entity_id: 43f5cd2f7257fed3e55788df58ce96de
       domain: switch
+    - type: turn_on
+      device_id: 1cb87651e79e117ef2610fc7e5c6a170
+      entity_id: d1b3ca4d6a019622064ef94336bbd650
+      domain: switch
   - if:
     - condition: trigger
       id:
@@ -1851,6 +1877,10 @@
     - type: turn_off
       device_id: e5f1b9b1d10308b32ef8f69bc0d20d74
       entity_id: 43f5cd2f7257fed3e55788df58ce96de
+      domain: switch
+    - type: turn_off
+      device_id: 1cb87651e79e117ef2610fc7e5c6a170
+      entity_id: d1b3ca4d6a019622064ef94336bbd650
       domain: switch
   mode: single
 - id: '1744308459186'
@@ -1982,6 +2012,11 @@
     type: single
     subtype: button
     trigger: device
+  - device_id: d686deeba13232cfa6ab008fa8c80dc0
+    domain: bthome
+    type: button_1
+    subtype: press
+    trigger: device
   conditions: []
   actions:
   - action: light.toggle
@@ -1999,6 +2034,11 @@
     type: triple
     subtype: button
     trigger: device
+  - device_id: d686deeba13232cfa6ab008fa8c80dc0
+    domain: bthome
+    type: button_2
+    subtype: long_press
+    trigger: device
   conditions: []
   actions:
   - type: toggle
@@ -2014,6 +2054,11 @@
     domain: shelly
     type: long
     subtype: button
+    trigger: device
+  - device_id: d686deeba13232cfa6ab008fa8c80dc0
+    domain: bthome
+    type: button_1
+    subtype: long_press
     trigger: device
   conditions: []
   actions:
@@ -2126,7 +2171,7 @@
     domain: switch
   mode: single
 - id: '1745945849501'
-  alias: 'Botão Sala Estore1 '
+  alias: "\U0001FA9FBotão Sala Estore1 "
   description: ''
   triggers:
   - device_id: e8a6c706997d87b98183e26e7598ae8b
@@ -2155,6 +2200,8 @@
   - entity_id: sensor.ph_corrigido
     trigger: state
     enabled: true
+  - trigger: time_pattern
+    minutes: /5
   conditions:
   - condition: state
     entity_id: switch.bomba_piscina_switch_0
@@ -2181,19 +2228,11 @@
   mode: single
 - id: '1746780173077'
   alias: "\U0001F3CA\U0001F3FBAtualizar Temperatura Piscina filtrado com bomba de
-    aquecimentoligada"
+    aquecimento ligada"
   description: ''
   triggers:
-  - entity_id:
-    - switch.aquecimento_piscina_channel_1
-    to: 'on'
-    trigger: state
-    id: bomba
-    from: 'off'
-  - entity_id:
-    - sensor.bomba_piscina_temperature
-    trigger: state
-    enabled: true
+  - trigger: time_pattern
+    minutes: /5
   conditions:
   - condition: state
     entity_id: switch.aquecimento_piscina_channel_1
@@ -2319,4 +2358,143 @@
         entity_id: input_number.average_cloud_cover_piscina
         value: '{{ avg_clouds }}'
       action: input_number.set_value
+  mode: single
+- id: '1747216234443'
+  alias: "\U0001F3CA\U0001F3FB Actualizar Horario Bomba Piscina Noite"
+  description: ''
+  triggers:
+  - trigger: time_pattern
+    minutes: /30
+    hours: /1
+  - trigger: state
+    entity_id:
+    - sensor.bomba_piscina_noite_horario
+  conditions:
+  - condition: time
+    after: '13:00:00'
+    before: '21:00:00'
+  actions:
+  - action: input_datetime.set_datetime
+    metadata: {}
+    data:
+      datetime: "{% set horario = states('sensor.bomba_piscina_noite_horario') %}\n{%
+        if horario not in ['unknown', 'unavailable', '', None] %}\n  {{ as_datetime(horario).astimezone().isoformat()
+        }}\n{% else %}\n  {{ (now() + timedelta(days=1)).replace(hour=2, minute=0,
+        second=0, microsecond=0).isoformat() }}\n{% endif %}"
+    target:
+      entity_id: input_datetime.horario_piscina_noite
+  mode: single
+- id: '1747335289002'
+  alias: "\U0001F3CA\U0001F3FBBomba Peristaltica"
+  description: ''
+  triggers:
+  - trigger: state
+    entity_id:
+    - switch.bomba_piscina_switch_0
+  - trigger: time_pattern
+    minutes: /5
+  conditions:
+  - condition: device
+    type: is_on
+    device_id: e5f1b9b1d10308b32ef8f69bc0d20d74
+    entity_id: 43f5cd2f7257fed3e55788df58ce96de
+    domain: switch
+  actions:
+  - if:
+    - condition: device
+      type: is_on
+      device_id: e5f1b9b1d10308b32ef8f69bc0d20d74
+      entity_id: 43f5cd2f7257fed3e55788df58ce96de
+      domain: switch
+    - condition: numeric_state
+      entity_id: sensor.ph_corrigido_filtrado
+      above: 7.5
+    then:
+    - action: switch.turn_on
+      metadata: {}
+      data: {}
+      target:
+        entity_id:
+        - switch.bomba_peristaltica_switch_0
+    else:
+    - action: switch.turn_off
+      metadata: {}
+      data: {}
+      target:
+        entity_id:
+        - switch.bomba_peristaltica_switch_0
+  mode: single
+- id: '1748274888683'
+  alias: "\U0001FA9FAbrir Estore 1"
+  description: ''
+  triggers:
+  - device_id: d686deeba13232cfa6ab008fa8c80dc0
+    domain: bthome
+    type: button_3
+    subtype: press
+    trigger: device
+  conditions: []
+  actions:
+  - if:
+    - condition: or
+      conditions:
+      - condition: device
+        device_id: cfd18037256cb019fa29781e93e644d7
+        domain: cover
+        entity_id: 8749320a26b0fe2753d119e46c5cba27
+        type: is_opening
+      - condition: device
+        device_id: cfd18037256cb019fa29781e93e644d7
+        domain: cover
+        entity_id: 8749320a26b0fe2753d119e46c5cba27
+        type: is_closing
+    then:
+    - action: cover.stop_cover
+      metadata: {}
+      data: {}
+      target:
+        entity_id: cover.estore1_cover_0
+    else:
+    - action: cover.open_cover
+      metadata: {}
+      data: {}
+      target:
+        entity_id: cover.estore1_cover_0
+  mode: single
+- id: '1748276682652'
+  alias: "\U0001FA9FFechar Estore 1"
+  description: ''
+  triggers:
+  - device_id: d686deeba13232cfa6ab008fa8c80dc0
+    domain: bthome
+    type: button_4
+    subtype: press
+    trigger: device
+  conditions: []
+  actions:
+  - if:
+    - condition: or
+      conditions:
+      - condition: device
+        device_id: cfd18037256cb019fa29781e93e644d7
+        domain: cover
+        entity_id: 8749320a26b0fe2753d119e46c5cba27
+        type: is_opening
+      - condition: device
+        device_id: cfd18037256cb019fa29781e93e644d7
+        domain: cover
+        entity_id: 8749320a26b0fe2753d119e46c5cba27
+        type: is_closing
+    then:
+    - action: cover.stop_cover
+      metadata: {}
+      data: {}
+      target:
+        entity_id: cover.estore1_cover_0
+    else:
+    - action: cover.close_cover
+      metadata: {}
+      data: {}
+      target:
+        entity_id: cover.estore1_cover_0
   mode: single

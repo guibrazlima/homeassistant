@@ -53,6 +53,7 @@ input_boolean: !include input_boolean.yaml
 template: !include_dir_merge_list templates/
 ingress: !include ingress.yaml
 thermal_comfort: !include thermal_comfort.yaml
+input_datetime: !include input_datetime.yaml
 
 http:
   use_x_forwarded_for: true

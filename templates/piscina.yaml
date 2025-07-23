@@ -79,9 +79,8 @@
 #        {{ cheapest_energy_hours(sensor=sensor.pt_average_electricity_price_today, attr_today='prices_today', attr_tomorrow='prices_tomorrow', time_key='time', value_key='price', hours=3, include_tomorrow=true, look_ahead=true) }}
 
 - trigger:
-    - platform: time
-      at:
-        - '16:00'
+    -  platform: time_pattern
+       hours: /1
   sensor:
     - unique_id: f8853830-bf81-46d4-85a9-379c25c37344
       name: Bomba Piscina Noite Horario
@@ -92,7 +91,7 @@
         {%- set horas = partes[0] | int -%}
         {%- set minutos = partes[1] | int -%}
         {%- set total = horas + (minutos / 60) -%}
-        {%- set arredondado = total | round(0, 'ceil') | int -%}
+        {%- set arredondado = [total | round(0, 'ceil') | int, 1] | max -%}
         {% from 'cheapest_energy_hours.jinja' import cheapest_energy_hours %}
         {{ cheapest_energy_hours(
             sensor='sensor.pt_average_electricity_price_today', 
@@ -101,10 +100,10 @@
             time_key='time', 
             value_key='price', 
             hours=arredondado, 
-            start='22:00', 
-            end='08:00', 
+            start='00:00', 
+            end='23:59',
             include_tomorrow=true, 
-            look_ahead=true
+            look_ahead=false
         ) }}
 
 
@@ -128,26 +127,32 @@
             start='22:00', 
             end='08:00', 
             include_tomorrow=true, 
-            look_ahead=true
+            look_ahead=false
         ) }}
 
-
+# Sensor PH com compensação da temperatura da piscina. Usa a equação de Nernst ajustada para temperatura
 - sensor:
     - name: "pH Corrigido"
       unique_id: f8853830-bf81-46d4-85a9-37ddf334ee
-      unit_of_measurement: "pH"
       state_class: measurement
       device_class: ph
       state: >
         {% set voltage = states('sensor.phsensor_ph_voltage') | float(0) %}
         {% set temp = states('sensor.bomba_piscina_temperature') | float(25) %}
-        
+        {% set offset = 0.4043 %}  {# Ajusta com tua calibração para pH 7 #}
+        {% set pH_ref = 7 %}
+
         {% set T = temp + 273.15 %}
         {% set slope = ((2.303 * 8.314 * T) / 96485) * 1000 %}  {# mV/pH #}
-        {% set offset = 0.55 %}  {# Ajusta com tua calibração para pH 7.2 #}
-        {{ 7.2 - ((voltage - offset) * 1000 / slope) | round(2) }}
+        {% set pH = pH_ref - ((voltage - offset) * 1000 / slope) | round(2) %}
+        {{ [0, [pH, 14] | min] | max | round(2) }}
 
-- sensor:
+#Sensor PH com compensação da temperatura da piscina, que atualiza o valor se a bomba da piscina estiver a funcionar. 
+- trigger:
+    -  platform: state
+       entity_id:
+          - sensor.ph_corrigido
+  sensor:
     - name: "pH Corrigido Filtrado"
       unique_id: f8853830-bf81-46d4-85a9-37ddf334g4f
       state_class: measurement
@@ -156,10 +161,16 @@
         {% if is_state('switch.bomba_piscina', 'on') %}
           {{ states('sensor.ph_corrigido') | float }}
         {% else %}
-          {{ states('input_number.ph_filtrado') | float(states('sensor.ph_corrigido')) }}
+          {{ states('input_number.ph_filtrado') }}
         {% endif %}
+      
 
-- sensor:
+#Sensor PH , que atualiza o valor se a bomba da piscina estiver a funcionar. 
+- trigger:
+    -  platform: state
+       entity_id:
+          - sensor.ph_sensor
+  sensor:
     - name: "pH Sensor Filtrado"
       unique_id: f8853830-bf81-46d4-85a9-37ddfasd334d
       state_class: measurement
@@ -168,7 +179,7 @@
         {% if is_state('switch.bomba_piscina', 'on') %}
           {{ states('sensor.ph_sensor') | float }}
         {% else %}
-          {{ states('input_number.ph_sensor_filtrado') | float(states('sensor.ph_sensor')) }}
+          {{ states('input_number.ph_sensor_filtrado') }}
         {% endif %}
 
 - sensor:
