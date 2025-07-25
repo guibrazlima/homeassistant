@@ -2,8 +2,15 @@
 # Configure a default setup of Home Assistant (frontend, api, etc)
 default_config:
 
-#auth_header:
-#  username_header: X-authentik-username
+auth_header:
+  username_header: X-authentik-username
+
+auth_oidc:
+  client_id: "homeassistant"
+  client_secret: !secret client_secret_authentik
+  discovery_url: "https://authentik.moutas.casa/application/o/home-assistant/.well-known/openid-configuration"
+  features:
+    automatic_user_linking: true
 
 recorder:
   db_url: !secret mariadb_connection
@@ -59,8 +66,7 @@ http:
   use_x_forwarded_for: true
   trusted_proxies:
     - 172.0.0.0/8
-    - 192.168.1.221/32
-    - 192.168.1.222/32
+    - 192.168.1.0/24
 
 
 logger:
