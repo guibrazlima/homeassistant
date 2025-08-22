@@ -1,0 +1,85 @@
+- sensor:
+    # Excedente FV disponível (W) com fallback robusto
+    - name: "Piscina - Solar Disponível (W)"
+      unique_id: piscina_solar_disponivel_w
+      unit_of_measurement: "W"
+      icon: mdi:solar-power
+      availability: >-
+        {{ states('sensor.emoncms_export_power_positive') not in ['unknown','unavailable','']
+           or states('sensor.emoncms_import_export') not in ['unknown','unavailable',''] }}
+      state: >-
+        {# 1) Se existir exportação positiva direta, usa-a #}
+        {% set exp = states('sensor.emoncms_export_power_positive') %}
+        {% set net = states('sensor.emoncms_import_export') %}
+        {% if exp not in ['unknown','unavailable',''] %}
+          {{ exp | float(0) | round(0) }}
+        {% elif net not in ['unknown','unavailable',''] %}
+          {# Assumimos convenção comum: net < 0 => exportação (excedente) #}
+          {% set n = net | float(0) %}
+          {{ (0 - n) | max(0) | round(0) }}
+        {% else %}
+          0
+        {% endif %}
+
+    # Potência solar necessária para empatar fora-vazio com vazio (W)
+    - name: "Piscina - Solar Break-even (W)"
+      unique_id: piscina_solar_break_even_w
+      unit_of_measurement: "W"
+      icon: mdi:solar-power
+      state: >-
+        {% set pump_w = states('input_number.piscina_potencia_bomba_w')|float(1500) %}
+        {% set p_vz   = states('input_number.electricidade_preco_vazio_eur_kwh')|float(0.0929) %}
+        {% set p_fv   = states('input_number.electricidade_preco_fora_vazio_eur_kwh')|float(0.1537) %}
+        {% if p_fv > 0 %}
+          {{ (pump_w * (p_fv - p_vz) / p_fv) | round(0) }}
+        {% else %} 0 {% endif %}
+
+    # Custo/h em vazio (€ / h)
+    - name: "Piscina - Custo Vazio (€/h)"
+      unique_id: piscina_custo_vazio_eur_h
+      unit_of_measurement: "€/h"
+      icon: mdi:cash
+      state: >-
+        {% set pump_w = states('input_number.piscina_potencia_bomba_w')|float(1500) %}
+        {% set p_vz   = states('input_number.electricidade_preco_vazio_eur_kwh')|float(0.0929) %}
+        {{ ((pump_w/1000) * p_vz) | round(5) }}
+
+    # Custo/h efetivo fora-vazio, usando o excedente atual (€ / h)
+    - name: "Piscina - Custo Fora Vazio Efetivo (€/h)"
+      unique_id: piscina_custo_fora_vazio_efetivo_eur_h
+      unit_of_measurement: "€/h"
+      icon: mdi:cash-multiple
+      state: >-
+        {% set pump_w = states('input_number.piscina_potencia_bomba_w')|float(1500) %}
+        {% set p_fv   = states('input_number.electricidade_preco_fora_vazio_eur_kwh')|float(0.1537) %}
+        {% set solar_w = states('sensor.piscina_solar_disponivel_w')|float(0) %}
+        {% set import_w = [pump_w - solar_w, 0] | max %}
+        {{ ((import_w/1000) * p_fv) | round(5) }}
+
+    # Quanto falta de solar para atingir o break-even (W)
+    - name: "Piscina - Solar em Falta p/ Break-even (W)"
+      unique_id: piscina_solar_falta_break_even_w
+      unit_of_measurement: "W"
+      icon: mdi:progress-clock
+      state: >-
+        {% set need = states('sensor.piscina_solar_break_even_w')|float(0) %}
+        {% set have = states('sensor.piscina_solar_disponivel_w')|float(0) %}
+        {{ [need - have, 0] | max | round(0) }}
+        
+- binary_sensor:
+    # Verdadeiro quando já é igual ou mais barato que vazio
+    - name: "Piscina - Já compensa fora-vazio"
+      unique_id: piscina_compensa_fora_vazio
+      icon: mdi:check-decagram
+      state: >-
+        {% set cfv = states('sensor.piscina_custo_fora_vazio_efetivo_eur_h')|float(99) %}
+        {% set cvz = states('sensor.piscina_custo_vazio_eur_h')|float(99) %}
+        {{ cfv <= cvz }}
+    # Verdadeiro quando excedente >= break-even
+    - name: "Piscina - Excedente >= Break-even"
+      unique_id: piscina_excedente_maior_igual_break_even
+      icon: mdi:flash
+      state: >-
+        {% set have = states('sensor.piscina_solar_disponivel_w')|float(0) %}
+        {% set need = states('sensor.piscina_solar_break_even_w')|float(0) %}
+        {{ have >= need }}

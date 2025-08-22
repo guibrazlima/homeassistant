@@ -189,7 +189,7 @@
       unit_of_measurement: "°C"
       state: >
         {% if is_state('switch.bomba_piscina', 'on') %}
-          {{ states('sensor.bomba_piscina_temperature') | float }}
+          {{ states('sensor.bomba_piscina_temperature') | float(0) }}
         {% else %}
           {{ states('input_number.temperatura_piscina_filtrado') | float(states('sensor.bomba_piscina_temperature')) }}
         {% endif %}

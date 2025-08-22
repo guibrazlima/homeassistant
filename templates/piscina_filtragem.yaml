@@ -1,0 +1,288 @@
+# Sensores de temperatura (ADAPTA nomes das tuas entidades)
+# sensor.temperatura_agua  → ADAPTA
+# sensor.temperatura_ar    → ADAPTA
+# Energia (se tiveres): sensor.grid_export_power (W, exportação positiva) OU sensor.grid_power (W, positivo=importação / negativo=exportação) → ADAPTA
+
+- sensor:
+    - name: "Piscina - Tempo de Filtração Recomendado"
+      unique_id: piscina_tempo_de_filtracao_recomendado
+      unit_of_measurement: "h/dia"
+      availability: >
+        {{ states('sensor.temperatura_piscina_filtrado') not in ['unknown','unavailable','']
+           and states('sensor.bthome_sensor_6a2b_temperature') not in ['unknown','unavailable','']
+           and states('input_number.piscina_volume_m3') not in ['unknown','unavailable','']
+           and states('input_number.bomba_caudal_m3h') not in ['unknown','unavailable',''] }}
+      state: >
+        {% set T_agua = states('sensor.temperatura_piscina_filtrado') | float(20) %}
+        {% set T_ar   = states('sensor.bthome_sensor_6a2b_temperature') | float(20) %}
+        {% set vol    = states('input_number.piscina_volume_m3') | float(66) %}
+        {% set q      = states('input_number.bomba_caudal_m3h') | float(12) %}
+        {% set fator_cob = 0.75 if is_state('input_boolean.piscina_cobertura_fechada','on') else 1.0 %}
+        {% set horas_temp      = 0.5 * ([T_agua, T_ar] | max) * fator_cob %}
+        {% set horas_turnover  = (vol / q if q > 0 else 24) %}
+        {% set bruto           = [horas_temp, horas_turnover] | max %}
+        {% set limitado        = [ [bruto, 4] | max , 24 ] | min %}
+        {{ ((limitado * 2) | round(0) / 2) | round(1) }}
+      attributes:
+        T_agua: "{{ states('sensor.temperatura_piscina_filtrado') | float(20) }}"
+        T_ar: "{{ states('sensor.bthome_sensor_6a2b_temperature') | float(20) }}"
+        volume_m3: "{{ states('input_number.piscina_volume_m3') | float(66) }}"
+        caudal_m3h: "{{ states('input_number.bomba_caudal_m3h') | float(12) }}"
+        cobertura_fechada: "{{ is_state('input_boolean.piscina_cobertura_fechada','on') }}"
+        fator_cobertura: "{{ 0.75 if is_state('input_boolean.piscina_cobertura_fechada','on') else 1.0 }}"
+        horas_pelo_calor: >
+          {% set T_agua = states('sensor.temperatura_piscina_filtrado') | float(20) %}
+          {% set T_ar   = states('sensor.bthome_sensor_6a2b_temperature') | float(20) %}
+          {% set fator_cob = 0.75 if is_state('input_boolean.piscina_cobertura_fechada','on') else 1.0 %}
+          {{ (0.5 * ([T_agua, T_ar] | max) * fator_cob) | round(2) }}
+        horas_por_renovacao: >
+          {% set vol = states('input_number.piscina_volume_m3') | float(66) %}
+          {% set q   = states('input_number.bomba_caudal_m3h') | float(12) %}
+          {{ (vol / q if q > 0 else 24) | round(2) }}
+        bruto_max: >
+          {% set T_agua = states('sensor.temperatura_piscina_filtrado') | float(20) %}
+          {% set T_ar   = states('sensor.bthome_sensor_6a2b_temperature') | float(20) %}
+          {% set vol    = states('input_number.piscina_volume_m3') | float(66) %}
+          {% set q      = states('input_number.bomba_caudal_m3h') | float(12) %}
+          {% set fator_cob = 0.75 if is_state('input_boolean.piscina_cobertura_fechada','on') else 1.0 %}
+          {% set horas_temp = 0.5 * ([T_agua, T_ar] | max) * fator_cob %}
+          {% set horas_turnover = (vol / q if q > 0 else 24) %}
+          {{ ([horas_temp, horas_turnover] | max) | round(2) }}
+        limitado_4_24: >
+          {% set T_agua = states('sensor.temperatura_piscina_filtrado') | float(20) %}
+          {% set T_ar   = states('sensor.bthome_sensor_6a2b_temperature') | float(20) %}
+          {% set vol    = states('input_number.piscina_volume_m3') | float(66) %}
+          {% set q      = states('input_number.bomba_caudal_m3h') | float(12) %}
+          {% set fator_cob = 0.75 if is_state('input_boolean.piscina_cobertura_fechada','on') else 1.0 %}
+          {% set horas_temp = 0.5 * ([T_agua, T_ar] | max) * fator_cob %}
+          {% set horas_turnover = (vol / q if q > 0 else 24) %}
+          {% set bruto = [horas_temp, horas_turnover] | max %}
+          {{ ([ [bruto, 4] | max , 24 ] | min) | round(2) }}
+    
+    - name: "Piscina - Minutos Recomendados"
+      unique_id: piscina_minutos_recomendados
+      unit_of_measurement: "min"
+      state: >
+        {{ (states('sensor.piscina_tempo_de_filtracao_recomendado')|float(8) * 60) | round(0) }}
+
+    - name: "Piscina - Minutos ON (08-08)"
+      unique_id: piscina_min_on_08_08
+      unit_of_measurement: "min"
+      state: >
+        {{ (states('sensor.piscina_horas_on_08_08') | float(0) * 60) | round(0) }}
+
+- binary_sensor:
+    - name: "Piscina - Excedente FV >= Bomba"
+      unique_id: piscina_excedente_fv_bomba
+      icon: mdi:solar-power
+      availability: >-
+        {{
+          states('sensor.emoncms_192_168_1_250_use_no_pool_pump') not in ['unknown','unavailable',''] or
+          states('sensor.emoncms_solar') not in ['unknown','unavailable',''] or
+          states('sensor.emoncms_import_export') not in ['unknown','unavailable',''] or
+          states('sensor.emoncms_export_power_positive') not in ['unknown','unavailable','']
+        }}
+      state: >-
+        {% set pump       = states('input_number.piscina_potencia_bomba_w')|float(800) %}
+        {% set import_max = states('input_number.piscina_import_max_w')|float(700) %}
+        {% set was_on     = (this.state == 'on') %}
+
+        {# ---- Leituras preferenciais: casa (sem bomba) + PV ---- #}
+        {% set house_v = states('sensor.emoncms_192_168_1_250_use_no_pool_pump') %}
+        {% set pv_v    = states('sensor.emoncms_solar') %}
+        {% set have_hp = (house_v not in ['unknown','unavailable',''] and pv_v not in ['unknown','unavailable',''] and house_v|string != '' and pv_v|string != '') %}
+
+        {# Fallbacks NET / EXPORT #}
+        {% set net_v = states('sensor.emoncms_import_export') %}
+        {% set exp_v = states('sensor.emoncms_export_power_positive') %}
+
+        {# ---- Cálculo NET, importação atual e prevista ---- #}
+        {% if have_hp %}
+          {% set house = house_v|float(0) %}
+          {% set pv    = pv_v|float(0) %}
+          {% set net_off = house - pv %}
+          {% set import_w = [house + (pump if was_on else 0) - pv, 0] | max %}
+          {% set predicted_import = [house + pump - pv, 0] | max %}
+          {% set fonte = 'house+pv' %}
+        {% elif net_v not in ['unknown','unavailable',''] and net_v|string != '' %}
+          {% set net = net_v|float(0) %}
+          {% set import_w = [net, 0] | max %}
+          {% set predicted_import = [net + pump, 0] | max %}
+          {% set fonte = 'net_power' %}
+        {% elif exp_v not in ['unknown','unavailable',''] and exp_v|string != '' %}
+          {% set exp = exp_v|float(0) %}
+          {% set net = 0 - (exp if exp > 0 else 0) %}
+          {% set import_w = 1000000000 %}                {# sem NET não sabemos a import real quando ON #}
+          {% set predicted_import = [net + pump, 0] | max %}
+          {% set fonte = 'export_power' %}
+        {% else %}
+          {% set import_w = 1000000000 %}
+          {% set predicted_import = 1000000000 %}
+          {% set fonte = 'none' %}
+        {% endif %}
+
+        {# ---- Regras: arranque pelo import PREVISTO <= limite; manter pelo import REAL <= limite ---- #}
+        {% set starting_pred = (predicted_import <= import_max) %}
+        {% set staying_on    = was_on and (import_w <= import_max) %}
+        {{ starting_pred or staying_on }}
+
+      delay_on: "00:00:20"
+      delay_off: "00:00:30"
+
+      attributes:
+        # Helpers e thresholds
+        pump_w: "{{ states('input_number.piscina_potencia_bomba_w')|float(800)|round(0) }}"
+        buffer_w: "{{ states('input_number.piscina_buffer_w')|float(200)|round(0) }}"
+        target_w: >-
+          {% set pump = states('input_number.piscina_potencia_bomba_w')|float(800) %}
+          {% set buffer = states('input_number.piscina_buffer_w')|float(200) %}
+          {{ (pump + buffer) | round(0) }}
+        import_limit_w: "{{ states('input_number.piscina_import_max_w')|float(700)|round(0) }}"
+
+        # Preços e break-even (referência/diagnóstico)
+        preco_vazio_eur_kwh: "{{ states('input_number.electricidade_preco_vazio_eur_kwh')|float(0.0929) }}"
+        preco_fora_vazio_eur_kwh: "{{ states('input_number.electricidade_preco_fora_vazio_eur_kwh')|float(0.1537) }}"
+        break_even_w: >-
+          {% set pump = states('input_number.piscina_potencia_bomba_w')|float(800) %}
+          {% set p_vz = states('input_number.electricidade_preco_vazio_eur_kwh')|float(0.0929) %}
+          {% set p_fv = states('input_number.electricidade_preco_fora_vazio_eur_kwh')|float(0.1537) %}
+          {% set be = (pump * (p_fv - p_vz) / p_fv) if p_fv > 0 else 0 %}
+          {{ [be, 0] | max | round(0) }}
+
+        # Break-even de import (bomba e total da casa)
+        import_break_even_pump_w: >-
+          {% set pump = states('input_number.piscina_potencia_bomba_w')|float(800) %}
+          {% set p_vz = states('input_number.electricidade_preco_vazio_eur_kwh')|float(0.0929) %}
+          {% set p_fv = states('input_number.electricidade_preco_fora_vazio_eur_kwh')|float(0.1537) %}
+          {% if p_fv > 0 %}
+            {{ (pump * p_vz / p_fv) | round(0) }}
+          {% else %} 0 {% endif %}
+          
+        # recomendado para definir/importar o Import limit W "agora"
+        import_break_even_w: >-   
+          {% set pump = states('input_number.piscina_potencia_bomba_w')|float(800) %}
+          {% set p_vz = states('input_number.electricidade_preco_vazio_eur_kwh')|float(0.0929) %}
+          {% set p_fv = states('input_number.electricidade_preco_fora_vazio_eur_kwh')|float(0.1537) %}
+          {% set be_pump = (pump * p_vz / p_fv) if p_fv>0 else 0 %}
+          {% set house_v = states('sensor.emoncms_192_168_1_250_use_no_pool_pump') %}
+          {% if house_v not in ['unknown','unavailable',''] and house_v|string != '' %}
+            {{ (house_v|float(0) + be_pump) | round(0) }}
+          {% else %}
+            {{ be_pump | round(0) }}   {# se não houver "house_only", mostra só o da bomba #}
+          {% endif %}
+
+        # Leituras brutas
+        house_no_pool_w: >-
+          {% set v = states('sensor.emoncms_192_168_1_250_use_no_pool_pump') %}
+          {{ v|float(0) if v not in ['unknown','unavailable',''] and v|string != '' else 0 }}
+        pv_power_w: >-
+          {% set v = states('sensor.emoncms_solar') %}
+          {{ v|float(0) if v not in ['unknown','unavailable',''] and v|string != '' else 0 }}
+        grid_power_w: >-
+          {% set v = states('sensor.emoncms_import_export') %}
+          {{ v|float(0) if v not in ['unknown','unavailable',''] and v|string != '' else 0 }}
+        grid_export_power_w: >-
+          {% set v = states('sensor.emoncms_export_power_positive') %}
+          {{ v|float(0) if v not in ['unknown','unavailable',''] and v|string != '' else 0 }}
+
+        # Excedente, import atual e import PREVISTA (consistentes com a lógica do estado)
+        export_available_w: >-
+          {% set house_v = states('sensor.emoncms_192_168_1_250_use_no_pool_pump') %}
+          {% set pv_v    = states('sensor.emoncms_solar') %}
+          {% if house_v not in ['unknown','unavailable',''] and pv_v not in ['unknown','unavailable',''] and house_v|string != '' and pv_v|string != '' %}
+            {% set house = house_v|float(0) %}
+            {% set pv    = pv_v|float(0) %}
+            {{ [pv - house, 0] | max | round(0) }}
+          {% else %}
+            {% set net_v = states('sensor.emoncms_import_export') %}
+            {% if net_v not in ['unknown','unavailable',''] and net_v|string != '' %}
+              {% set net = net_v|float(0) %}
+              {{ [0 - net, 0] | max | round(0) }}
+            {% else %}
+              {% set exp_v = states('sensor.emoncms_export_power_positive') %}
+              {% if exp_v not in ['unknown','unavailable',''] and exp_v|string != '' %}
+                {% set exp = exp_v|float(0) %}
+                {{ (exp if exp > 0 else 0) | round(0) }}
+              {% else %} 0 {% endif %}
+            {% endif %}
+          {% endif %}
+        import_w: >-
+          {% set pump = states('input_number.piscina_potencia_bomba_w')|float(800) %}
+          {% set was_on = is_state(this.entity_id,'on') %}
+          {% set house_v = states('sensor.emoncms_192_168_1_250_use_no_pool_pump') %}
+          {% set pv_v    = states('sensor.emoncms_solar') %}
+          {% if house_v not in ['unknown','unavailable',''] and pv_v not in ['unknown','unavailable',''] and house_v|string != '' and pv_v|string != '' %}
+            {% set house = house_v|float(0) %}
+            {% set pv    = pv_v|float(0) %}
+            {{ [house + (pump if was_on else 0) - pv, 0] | max | round(0) }}
+          {% else %}
+            {% set net_v = states('sensor.emoncms_import_export') %}
+            {% if net_v not in ['unknown','unavailable',''] and net_v|string != '' %}
+              {% set net = net_v|float(0) %}
+              {{ [net, 0] | max | round(0) }}
+            {% else %} 1000000000 {% endif %}
+          {% endif %}
+        predicted_import_w: >-
+          {% set pump = states('input_number.piscina_potencia_bomba_w')|float(800) %}
+          {% set house_v = states('sensor.emoncms_192_168_1_250_use_no_pool_pump') %}
+          {% set pv_v    = states('sensor.emoncms_solar') %}
+          {% if house_v not in ['unknown','unavailable',''] and pv_v not in ['unknown','unavailable',''] and house_v|string != '' and pv_v|string != '' %}
+            {% set house = house_v|float(0) %}
+            {% set pv    = pv_v|float(0) %}
+            {{ [house + pump - pv, 0] | max | round(0) }}
+          {% else %}
+            {% set net_v = states('sensor.emoncms_import_export') %}
+            {% set exp_v = states('sensor.emoncms_export_power_positive') %}
+            {% if net_v not in ['unknown','unavailable',''] and net_v|string != '' %}
+              {% set net = net_v|float(0) %}
+              {{ [net + pump, 0] | max | round(0) }}
+            {% elif exp_v not in ['unknown','unavailable',''] and exp_v|string != '' %}
+              {% set exp = exp_v|float(0) %}
+              {% set net = 0 - (exp if exp > 0 else 0) %}
+              {{ [net + pump, 0] | max | round(0) }}
+            {% else %} 1000000000 {% endif %}
+          {% endif %}
+
+        source_used: >-
+          {% set house_v = states('sensor.emoncms_192_168_1_250_use_no_pool_pump') %}
+          {% set pv_v    = states('sensor.emoncms_solar') %}
+          {% if house_v not in ['unknown','unavailable',''] and pv_v not in ['unknown','unavailable',''] and house_v|string != '' and pv_v|string != '' %}
+            house+pv
+          {% elif states('sensor.emoncms_import_export') not in ['unknown','unavailable',''] and states('sensor.emoncms_import_export')|string != '' %}
+            net_power
+          {% elif states('sensor.emoncms_export_power_positive') not in ['unknown','unavailable',''] and states('sensor.emoncms_export_power_positive')|string != '' %}
+            export_power
+          {% else %}
+            none
+          {% endif %}
+
+        # Flags & motivo
+        starting_predicted_import: >-
+          {% set pred = state_attr(this.entity_id,'predicted_import_w')|int(1000000000) %}
+          {% set lim  = states('input_number.piscina_import_max_w')|int(700) %}
+          {{ pred <= lim }}
+        staying_on: >-
+          {% set imp = state_attr(this.entity_id,'import_w')|int(1000000000) %}
+          {% set lim = states('input_number.piscina_import_max_w')|int(700) %}
+          {{ is_state(this.entity_id,'on') and imp <= lim }}
+        regra_usada: >-
+          {% set was_on = is_state(this.entity_id,'on') %}
+          {% set imp = state_attr(this.entity_id,'import_w')|int(1000000000) %}
+          {% set lim = states('input_number.piscina_import_max_w')|int(700) %}
+          {% set start_pred = state_attr(this.entity_id, 'starting_predicted_import') in [True,'True','true'] %}
+          {% if not was_on and start_pred %}
+            start:predicted_import<=limite
+          {% elif was_on and imp <= lim %}
+            manter:on_import_ok
+          {% elif was_on and imp > lim %}
+            desligar:importacao>limite
+          {% else %}
+            nenhuma
+          {% endif %}
+
+        thresholds_w: >-
+          {% set pump   = states('input_number.piscina_potencia_bomba_w')|float(800) %}
+          {% set p_vz   = states('input_number.electricidade_preco_vazio_eur_kwh')|float(0.0929) %}
+          {% set p_fv   = states('input_number.electricidade_preco_fora_vazio_eur_kwh')|float(0.1537) %}
+          {% set be     = (pump * (p_fv - p_vz) / p_fv) if p_fv>0 else 0 %}
+          ON_when_OFF: predicted_import<= {{ states('input_number.piscina_import_max_w')|int(700) }}W; break_even: {{ [be,0]|max|round(0) }}W; import_max: {{ states('input_number.piscina_import_max_w') }}W

@@ -1,3 +1,6 @@
+homeassistant:
+  packages: !include_dir_named packages
+
 
 # Configure a default setup of Home Assistant (frontend, api, etc)
 default_config:
@@ -47,7 +50,8 @@ tts:
   - platform: google_translate
 
 group: !include groups.yaml
-automation: !include automations.yaml
+#automation: !include automations.yaml
+automation: !include_dir_merge_list automations/
 script: !include scripts.yaml
 scene: !include scenes.yaml
 sensor: !include_dir_merge_list sensors/
@@ -87,3 +91,17 @@ notify:
   - platform: telegram
     name: "Gui"
     chat_id: 45258104860
+
+timer:
+  piscina_manual:
+    name: Piscina — Temporizador manual
+    duration: "00:00:00"   # a duração real define-se no arranque do script
+
+rest_command:
+  cfos_disable_charging:
+    url: "http://admin:!!!LixoLogico111@192.168.1.174/cnf?cmd=override_device&dev_id=E1&flags=CE"
+
+  cfos_enable_charging:
+    url: "http://admin:!!!LixoLogico111@192.168.1.174/cnf?cmd=override_device&dev_id=E1&flags=ce"
+
+

@@ -1,0 +1,180 @@
+#
+# Pacote Home Assistant — Perdas térmicas AQS Daikin 500 L
+# Colocar em: /config/packages/aqs_perdas.yaml
+# Requer no configuration.yaml:
+#   homeassistant:
+#     packages: !include_dir_named packages
+#
+
+input_number:
+  dhw_volume_l:
+    name: "AQS - Volume (L)"
+    min: 50
+    max: 800
+    step: 10
+    unit_of_measurement: "L"
+    initial: 500
+
+# --- 1) Filtragem da temperatura para reduzir ruído/serrilhado ---
+sensor:
+  - platform: filter
+    name: aqs_tanque_filtrada
+    entity_id: sensor.hpsu_can_hot_water_temperature
+    filters:
+      # remove picos estranhos
+      - filter: outlier
+        window_size: 5
+        radius: 3.0
+      # suavização exponencial
+      - filter: lowpass
+        time_constant: 30
+        precision: 2
+
+  # --- 2) Derivada com base na temperatura filtrada (°C/h) ---
+  - platform: derivative
+    name: aqs_dt_dt
+    source: sensor.aqs_tanque_filtrada
+    unit_time: h
+    time_window: "01:00:00"
+    round: 3
+
+  # --- 6) Integração para perdas acumuladas (°C·h) ---
+  - platform: integration
+    name: aqs_perda_acum_c_h
+    source: sensor.aqs_perda_c_h
+    unit_time: h
+    method: left
+
+# --- 3) Estados úteis (noite / HP / solar / standby OK) ---
+binary_sensor:
+  - platform: template
+    sensors:
+      aqs_noite_22_06:
+        friendly_name: "AQS - Janela Noturna (22-06)"
+        value_template: >
+          {% set h = now().hour %}
+          {{ h >= 22 or h < 6 }}
+
+      aqs_hp_a_aquecer:
+        friendly_name: "AQS - A aquecer (HP)"
+        value_template: >
+          {{ states('sensor.hpsu_can_mode_of_operating') == 'Hot Water Production' }}
+
+      aqs_solar_a_aquecer:
+        friendly_name: "AQS - A aquecer (Solar)"
+        value_template: >
+          {% set rising = states('sensor.aqs_dt_dt')|float(0) > 0.10 %}
+          {% set hp     = is_state('binary_sensor.aqs_hp_a_aquecer','on') %}
+          {% set is_day = is_state('sun.sun','above_horizon') %}
+          {{ rising and (not hp) and is_day }}
+
+      aqs_ok_para_medicao_standby:
+        friendly_name: "AQS - Ok para medir standby"
+        # Standby válido quando:
+        # - É noite (ou sol abaixo do horizonte)
+        # - NÃO está a aquecer por HP
+        # - NÃO está a aquecer por solar
+        # - Derivada negativa (descida suave): -5.0 < dT/dt < -0.02 °C/h
+        #value_template: >
+        #  {% set night = is_state('binary_sensor.aqs_noite_22_06','on') or is_state('sun.sun','below_horizon') %}
+        #  {% set hp    = is_state('binary_sensor.aqs_hp_a_aquecer','on') %}
+        #  {% set solar = is_state('binary_sensor.aqs_solar_a_aquecer','on') %}
+        #  {% set dt    = states('sensor.aqs_dt_dt')|float(0) %}
+        #  {{ night and (not hp) and (not solar) and (dt < -0.02) and (dt > -5.0) }}
+        value_template: >
+          {% set hp    = is_state('binary_sensor.aqs_hp_a_aquecer','on') %}
+          {% set solar = is_state('binary_sensor.aqs_solar_a_aquecer','on') %}
+          {% set dt    = states('sensor.aqs_dT_dt')|float(0) %}
+          {{ (not hp) and (not solar) and (dt < -0.02) and (dt > -5.0) }}
+
+# --- 4) Cálculos principais (perda instantânea, potência, UA, etc.) ---
+template:
+  - sensor:
+      # Fonte limpa para integrações/automação
+      - name: aqs_perda_c_h               # entity_id: sensor.aqs_perda_c_h
+        unit_of_measurement: "C/h"
+        state: >
+          {% set ok = is_state('binary_sensor.aqs_ok_para_medicao_standby','on') %}
+          {% set dt = states('sensor.aqs_dt_dt')|float(0) %}
+          {{ (dt | abs if ok else 0) | round(3) }}
+
+      # Versão "bonita" para UI (espelha a acima, mas com °C/h)
+      - name: "AQS - Perda (°C/h)"
+        unit_of_measurement: "°C/h"
+        state: "{{ states('sensor.aqs_perda_c_h') }}"
+
+      - name: "AQS - Perda (W)"               # entity_id: sensor.aqs_perda_w
+        unique_id: aqs_perda_w
+        unit_of_measurement: "W"
+        icon: mdi:fire
+        # W = m * c * (dT/dt) / 3600; m≈V(L) kg; c=4180 J/kg.K; dT/dt em °C/h
+        state: >
+          {% set vol = states('input_number.dhw_volume_l')|float(500) %}
+          {% set dTh = states('sensor.aqs_perda_c_h')|float(0) %}
+          {{ (vol * 4180 * dTh / 3600) | round(1) }}
+
+      - name: "AQS - ΔT Depósito-Exterior (°C)"             # entity_id: sensor.aqs_delta_t_out
+        unique_id: aqs_delta_t_out
+        unit_of_measurement: "C"
+        icon: mdi:thermometer
+        state: >
+          {% set Ttank = states('sensor.hpsu_can_hot_water_temperature')|float(0) %}
+          {% set Tout  = states('sensor.hpsu_can_outside_temperature')|float(0) %}
+          {{ (Ttank - Tout) | round(1) }}
+
+      - name: "AQS - Perda específica (W/°C)"           # entity_id: sensor.aqs_perda_w_por_c
+        unique_id: aqs_perda_w_por_c
+        unit_of_measurement: "W/C"
+        icon: mdi:sigma-lower
+        # UA ≈ W / ΔT (apenas faz sentido quando há perdas > 0)
+        state: >
+          {% set W   = states('sensor.aqs_perda_w')|float(0) %}
+          {% set dT  = states('sensor.aqs_delta_t_out')|float(0.001) %}
+          {{ (W / dT) | round(2) }}
+
+      - name: "AQS - Setpoint (°C)"
+        unique_id: aqs_setpoint
+        unit_of_measurement: "°C"
+        icon: mdi:target
+        state: >
+          {{ states('select.hpsu_can_target_hot_water_temperature') | replace(' °C','') | float(0) }}
+
+      # --- 5) Conversões diárias ---
+      - name: "AQS - Perdas (°C/dia)"
+        unique_id: aqs_perdas_c_dia
+        unit_of_measurement: "C/d"
+        icon: mdi:calendar-clock
+        state: >
+          {{ (states('sensor.aqs_perda_acum_c_h')|float(0) / 24) | round(2) }}
+
+      - name: "AQS - Perdas (kWh/dia)"
+        unique_id: aqs_perdas_kwh_dia
+        unit_of_measurement: "kWh/d"
+        icon: mdi:counter
+        state: >
+          {% set vol   = states('input_number.dhw_volume_l')|float(500) %}
+          {% set dTday = states('sensor.aqs_perdas_c_dia')|float(0) %}
+          {{ (vol * 4.18 * dTday / 3600) | round(2) }}
+
+      - name: "AQS - Perdas (W médios)"
+        unique_id: aqs_perdas_w_medios
+        unit_of_measurement: "W"
+        icon: mdi:flash
+        state: >
+          {{ ((states('sensor.aqs_perdas_kwh_dia')|float(0)) * 1000 / 24) | round(1) }}
+
+      # Referência da placa e comparação
+      - name: "AQS - Perda teórica etiqueta (kWh/dia @60°C)"
+        unique_id: aqs_perda_teorica_kwh_d
+        unit_of_measurement: "kWh/d"
+        icon: mdi:label
+        state: "1.4"        # Daikin: Standby heat expenditure @60°C/24h
+
+      - name: "AQS - Ratio vs etiqueta"
+        unique_id: aqs_ratio_vs_etik
+        unit_of_measurement: "x"
+        icon: mdi:scale-balance
+        state: >
+          {% set real = states('sensor.aqs_perdas_kwh_dia')|float(0.0001) %}
+          {% set spec = states('sensor.aqs_ref_kwh_d')|float(1.4) %}
+          {{ (real / spec) | round(2) }}

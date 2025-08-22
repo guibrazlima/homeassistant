@@ -18,4 +18,12 @@ gvasconcelos_present:
 modo_automatico:
   name: "Modo Automático"
   icon: mdi:robot
-  initial: true 
+  initial: true
+
+piscina_override_manual:
+  name: Piscina — Modo Manual (ignorar automações)
+  icon: mdi:hand
+
+piscina_cobertura_fechada:
+    name: Piscina — Cobertura fechada
+    icon: mdi:shield-sun

@@ -50,3 +50,92 @@ average_cloud_cover_piscina:
   max: 100
   step: 0.1
   unit_of_measurement: '%'
+
+### Tempo Filtragem Piscina ##################################
+piscina_volume_m3:
+  name: Piscina - Volume (m³)
+  min: 1
+  max: 200
+  step: 1
+  unit_of_measurement: "m³"
+  icon: mdi:pool
+  initial: 66
+
+bomba_caudal_m3h:
+  name: Piscina - Caudal bomba (m³/h)
+  min: 1
+  max: 50
+  step: 0.1
+  unit_of_measurement: "m³/h"
+  icon: mdi:pump
+  initial: 21.6
+
+piscina_potencia_bomba_w:
+  name: Piscina - Potência bomba (W)
+  min: 100
+  max: 5000
+  step: 10
+  unit_of_measurement: "W"
+  icon: mdi:flash
+  initial: 1550   # ADAPTA
+
+piscina_buffer_w:
+  name: Piscina - Reserva FV (W)
+  min: 0
+  max: 1000
+  step: 50
+  unit_of_measurement: "W"
+  icon: mdi:shield
+  initial: 0   # margem para evitar importação
+
+piscina_filtracao_min_restantes:
+  name: Piscina - Minutos restantes do dia
+  min: 0
+  max: 1440
+  step: 1
+  unit_of_measurement: "min"
+  icon: mdi:timer-sand
+  initial: 0
+
+piscina_manual_min:
+    name: Piscina — Tempo manual (min)
+    min: 1
+    max: 600
+    step: 1
+    unit_of_measurement: "min"
+    icon: mdi:timer-cog
+    initial: 30
+
+
+piscina_import_max_w:
+    name: Piscina — Importação máxima (W)
+    min: 0
+    max: 2000
+    step: 50
+    unit_of_measurement: "W"
+    icon: mdi:transmission-tower-export
+    initial: 900
+
+electricidade_preco_vazio_eur_kwh:
+    name: Tarifa Vazio (€/kWh)
+    min: 0
+    max: 1
+    step: 0.0001
+    unit_of_measurement: €/kWh
+    mode: box
+    icon: mdi:currency-eur
+    initial: 0.0929
+
+electricidade_preco_fora_vazio_eur_kwh:
+    name: Tarifa Fora Vazio (€/kWh)
+    min: 0
+    max: 1
+    step: 0.0001
+    unit_of_measurement: €/kWh
+    mode: box
+    icon: mdi:currency-eur
+    initial: 0.1537
+
+
+###############################################################
+
