@@ -133,3 +133,88 @@
     action: switch.turn_on
     data: {}
   mode: single
+- id: '1757245016939'
+  alias: Piscina - Snapshot 5min
+  description: ''
+  triggers:
+  - trigger: time_pattern
+    minutes: /5
+  conditions: []
+  actions:
+  - action: camera.snapshot
+    metadata: {}
+    data:
+      filename: '"/config/www/piscina_latest.jpg"'
+    target:
+      entity_id: camera.eira_hd_stream
+  mode: single
+- id: '1758640648961'
+  alias: Piscina — Estado da cobertura (LLM Vision)
+  description: ''
+  triggers:
+  - entity_id: switch.bomba_piscina_switch_0
+    to: 'on'
+    for: 00:05:00
+    trigger: state
+  - minutes: /30
+    trigger: time_pattern
+  conditions:
+  - condition: state
+    entity_id: switch.bomba_piscina_switch_0
+    state: 'on'
+  actions:
+  - response_variable: llmresp
+    data:
+      provider: 01K5S60RJSW6MFMB543KEDHE23
+      model: gpt-4o-mini
+      message: 'Observa esta imagem da piscina e responde apenas com um valor booleano
+        para atualizar o sensor alvo: "true" se a COBERTURA estiver FECHADA. "false"
+        se a COBERTURA estiver ABERTA. Regras: - Considera fechada apenas se a cobertura
+        visivelmente cobre totalmente a lâmina de água. - Se a cobertura estiver a
+        meio (a mover) ou houver dúvida, responde "false" (trata como aberta). - Não
+        expliques. Não uses outras palavras.
+
+        '
+      sensor_entity: input_boolean.piscina_cobertura_fechada
+      image_entity:
+      - camera.eira_piscina_hd_stream
+      max_tokens: 24
+      target_width: 768
+      include_filename: false
+    action: llmvision.data_analyzer
+  mode: restart
+- id: '1758640655955'
+  alias: Piscina — Estado da cobertura (LLM Vision)
+  description: ''
+  triggers:
+  - entity_id: switch.bomba_piscina_switch_0
+    to: 'on'
+    for: 00:05:00
+    trigger: state
+  - minutes: /30
+    trigger: time_pattern
+  conditions:
+  - condition: state
+    entity_id: switch.bomba_piscina_switch_0
+    state: 'on'
+  actions:
+  - response_variable: llmresp
+    data:
+      provider: 01K5S60RJSW6MFMB543KEDHE23
+      model: gpt-4o-mini
+      message: 'Observa esta imagem da piscina e responde apenas com um valor booleano
+        para atualizar o sensor alvo: "true" se a COBERTURA estiver FECHADA. "false"
+        se a COBERTURA estiver ABERTA. Regras: - Considera fechada apenas se a cobertura
+        visivelmente cobre totalmente a lâmina de água. - Se a cobertura estiver a
+        meio (a mover) ou houver dúvida, responde "false" (trata como aberta). - Não
+        expliques. Não uses outras palavras.
+
+        '
+      sensor_entity: input_boolean.piscina_cobertura_fechada
+      image_entity:
+      - camera.eira_piscina_hd_stream
+      max_tokens: 24
+      target_width: 768
+      include_filename: false
+    action: llmvision.data_analyzer
+  mode: restart

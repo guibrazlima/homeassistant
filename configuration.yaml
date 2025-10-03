@@ -5,15 +5,16 @@ homeassistant:
 # Configure a default setup of Home Assistant (frontend, api, etc)
 default_config:
 
-auth_header:
-  username_header: X-authentik-username
+#auth_header:
+#  username_header: X-authentik-username
 
-auth_oidc:
-  client_id: "homeassistant"
-  client_secret: !secret client_secret_authentik
-  discovery_url: "https://authentik.moutas.casa/application/o/home-assistant/.well-known/openid-configuration"
-  features:
-    automatic_user_linking: true
+
+#auth_oidc:
+#  client_id: "homeassistant"
+#  client_secret: !secret client_secret_authentik
+#  discovery_url: "https://authentik.moutas.casa/application/o/home-assistant/.well-known/openid-configuration"
+#  features:
+#    automatic_user_linking: true
 
 recorder:
   db_url: !secret mariadb_connection
@@ -77,7 +78,9 @@ logger:
   default: info
   logs:
     custom_components.pyscript.file.pv_excess_control: INFO
-    custom_components.auth_header: debug
+    #custom_components.auth_header: debug
+    custom_components.llmvision: debug
+    homeassistant.components.automation: debug
 
 # Telegram Bot
 telegram_bot:

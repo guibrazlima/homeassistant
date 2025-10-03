@@ -1,0 +1,1127 @@
+# climate_confort_fixed4_full.yaml (completo, atributos em string)
+
+template:
+
+  - sensor:
+      - name: "Sala Inferior - Ponto de orvalho"
+        unique_id: sala_inferior_ponto_de_orvalho
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Temperatura em que o ar satura e começa a condensar."
+          inputs: "temperature=sensor.bthome_sensor_4ee3_temperature, humidity=sensor.bthome_sensor_4ee3_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_4ee3_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_4ee3_humidity')|float(0) %}
+          {% set a = 17.62 %}
+          {% set b = 243.12 %}
+          {% set gamma = ((a*T)/(b+T)) + ((RH/100)|log) %}
+          {{ ((b*gamma)/(a-gamma)) | round(2) }}
+
+      - name: "Sala Inferior - Humidade absoluta"
+        unique_id: sala_inferior_humidade_absoluta
+        unit_of_measurement: "g/m³"
+        state_class: measurement
+        attributes:
+          description: "Quantidade absoluta de vapor de água no ar."
+          inputs: "temperature=sensor.bthome_sensor_4ee3_temperature, humidity=sensor.bthome_sensor_4ee3_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_4ee3_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_4ee3_humidity')|float(0) %}
+          {% set es = 6.112 * (2.718281828459045 ** ((17.67*T)/(T+243.5))) %}
+          {% set epa = RH/100 * es %}
+          {{ ((2.1674 * epa) / (273.15 + T) * 100) | round(2) }}
+
+      - name: "Sala Inferior - Margem de condensação"
+        unique_id: sala_inferior_margem_de_condensacao
+        unit_of_measurement: "°C"
+        icon: mdi:thermometer-alert
+        state_class: measurement
+        attributes:
+          description: "Diferença entre temperatura atual e ponto de orvalho."
+          inputs: "temperature=sensor.bthome_sensor_4ee3_temperature, dewpoint=sensor.sala_inferior_ponto_de_orvalho"
+        state: >
+          {% set T = states('sensor.bthome_sensor_4ee3_temperature')|float(0) %}
+          {% set dp = states('sensor.sala_inferior_ponto_de_orvalho')|float(0) %}
+          {{ (T - dp) | round(2) }}
+
+      - name: "Sala Inferior - Comfort score"
+        unique_id: sala_inferior_comfort_score
+        unit_of_measurement: "%"
+        icon: mdi:human-handsup
+        attributes:
+          description: "Score 0–100% baseado em T e HR ideais."
+          inputs: "temperature=sensor.bthome_sensor_4ee3_temperature, humidity=sensor.bthome_sensor_4ee3_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_4ee3_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_4ee3_humidity')|float(0) %}
+          {% set t_score = 100 - (((T - 22)|abs) * 8) %}
+          {% set rh_score = 100 - (((RH - 50)|abs) * 2) %}
+          {% set raw = (0.6*t_score + 0.4*rh_score)|round(0) %}
+          {% if raw < 0 %} 0 {% elif raw > 100 %} 100 {% else %} {{ raw }} {% endif %}
+
+      - name: "Sala Inferior - Heat Index"
+        unique_id: sala_inferior_heat_index
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Sensação térmica combinando temperatura e humidade."
+          inputs: "temperature=sensor.bthome_sensor_4ee3_temperature, humidity=sensor.bthome_sensor_4ee3_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_4ee3_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_4ee3_humidity')|float(0) %}
+          {% if T < 26 %} {{ T | round(2) }}
+          {% else %}
+            {{ (-8.784695 + 1.61139411*T + 2.338549*RH - 0.14611605*T*RH
+               - 0.012308094*T*T - 0.016424828*RH*RH + 0.002211732*T*T*RH
+               + 0.00072546*T*RH*RH - 0.000003582*T*T*RH*RH) | round(2) }}
+          {% endif %}
+
+      - name: "Sala Inferior - Humidex"
+        unique_id: sala_inferior_humidex
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Índice canadiano de sensação térmica."
+          inputs: "temperature=sensor.bthome_sensor_4ee3_temperature, humidity=sensor.bthome_sensor_4ee3_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_4ee3_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_4ee3_humidity')|float(0) %}
+          {% set a = 17.27 %}
+          {% set b = 237.7 %}
+          {% set alpha = ((a*T)/(b+T)) + ((RH/100)|log) %}
+          {% set dp = (b*alpha)/(a-alpha) %}
+          {{ (T + (5/9)*(6.11 * (2.718281828459045 ** (5417.7530*((1/273.16)-(1/(dp+273.15))))) - 10)) | round(2) }}
+
+      - name: "Sala Inferior - WBGT (sombra)"
+        unique_id: sala_inferior_wbgt_sombra
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Wet Bulb Globe Temperature (sombra)."
+          inputs: "temperature=sensor.bthome_sensor_6a2b_temperature, humidity=sensor.bthome_sensor_6a2b_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_6a2b_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_6a2b_humidity')|float(0) %}
+          {% set es = 6.112 * (2.718281828459045 ** ((17.67*T)/(T+243.5))) %}
+          {% set epa = RH/100 * es %}
+          {{ (0.567*T + 0.393*epa + 3.94) | round(2) }}
+
+      - name: "Sala Inferior - Enthalpia"
+        unique_id: sala_inferior_enthalpia
+        unit_of_measurement: "kJ/kg"
+        icon: mdi:fire
+        state_class: measurement
+        attributes:
+          description: "Energia total do ar úmido."
+          inputs: "temperature=sensor.bthome_sensor_4ee3_temperature, humidity=sensor.bthome_sensor_4ee3_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_4ee3_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_4ee3_humidity')|float(0) %}
+          {% set P = 101.325 %}
+          {% set Ps = 0.61078 * (2.718281828459045 ** ((17.2694*T)/(T+237.29))) %}
+          {% set Pv = RH/100 * Ps %}
+          {% set w = 0.62198 * Pv / (P - Pv) %}
+          {{ (1.006*T + w*(2501 + 1.86*T)) | round(2) }}
+
+  - sensor:
+      - name: "Cave - Ponto de orvalho"
+        unique_id: cave_ponto_de_orvalho
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Temperatura em que o ar satura e começa a condensar."
+          inputs: "temperature=sensor.bthome_sensor_25e6_temperature, humidity=sensor.bthome_sensor_25e6_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_25e6_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_25e6_humidity')|float(0) %}
+          {% set a = 17.62 %}
+          {% set b = 243.12 %}
+          {% set gamma = ((a*T)/(b+T)) + ((RH/100)|log) %}
+          {{ ((b*gamma)/(a-gamma)) | round(2) }}
+
+      - name: "Cave - Humidade absoluta"
+        unique_id: cave_humidade_absoluta
+        unit_of_measurement: "g/m³"
+        state_class: measurement
+        attributes:
+          description: "Quantidade absoluta de vapor de água no ar."
+          inputs: "temperature=sensor.bthome_sensor_25e6_temperature, humidity=sensor.bthome_sensor_25e6_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_25e6_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_25e6_humidity')|float(0) %}
+          {% set es = 6.112 * (2.718281828459045 ** ((17.67*T)/(T+243.5))) %}
+          {% set epa = RH/100 * es %}
+          {{ ((2.1674 * epa) / (273.15 + T) * 100) | round(2) }}
+
+      - name: "Cave - Margem de condensação"
+        unique_id: cave_margem_de_condensacao
+        unit_of_measurement: "°C"
+        icon: mdi:thermometer-alert
+        state_class: measurement
+        attributes:
+          description: "Diferença entre temperatura atual e ponto de orvalho."
+          inputs: "temperature=sensor.bthome_sensor_25e6_temperature, dewpoint=sensor.cave_ponto_de_orvalho"
+        state: >
+          {% set T = states('sensor.bthome_sensor_25e6_temperature')|float(0) %}
+          {% set dp = states('sensor.cave_ponto_de_orvalho')|float(0) %}
+          {{ (T - dp) | round(2) }}
+
+      - name: "Cave - Comfort score"
+        unique_id: cave_comfort_score
+        unit_of_measurement: "%"
+        icon: mdi:human-handsup
+        attributes:
+          description: "Score 0–100% baseado em T e HR ideais."
+          inputs: "temperature=sensor.bthome_sensor_25e6_temperature, humidity=sensor.bthome_sensor_25e6_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_25e6_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_25e6_humidity')|float(0) %}
+          {% set t_score = 100 - (((T - 22)|abs) * 8) %}
+          {% set rh_score = 100 - (((RH - 50)|abs) * 2) %}
+          {% set raw = (0.6*t_score + 0.4*rh_score)|round(0) %}
+          {% if raw < 0 %} 0 {% elif raw > 100 %} 100 {% else %} {{ raw }} {% endif %}
+
+      - name: "Cave - Heat Index"
+        unique_id: cave_heat_index
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Sensação térmica combinando temperatura e humidade."
+          inputs: "temperature=sensor.bthome_sensor_25e6_temperature, humidity=sensor.bthome_sensor_25e6_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_25e6_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_25e6_humidity')|float(0) %}
+          {% if T < 26 %} {{ T | round(2) }}
+          {% else %}
+            {{ (-8.784695 + 1.61139411*T + 2.338549*RH - 0.14611605*T*RH
+               - 0.012308094*T*T - 0.016424828*RH*RH + 0.002211732*T*T*RH
+               + 0.00072546*T*RH*RH - 0.000003582*T*T*RH*RH) | round(2) }}
+          {% endif %}
+
+      - name: "Cave - Humidex"
+        unique_id: cave_humidex
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Índice canadiano de sensação térmica."
+          inputs: "temperature=sensor.bthome_sensor_25e6_temperature, humidity=sensor.bthome_sensor_25e6_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_25e6_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_25e6_humidity')|float(0) %}
+          {% set a = 17.27 %}
+          {% set b = 237.7 %}
+          {% set alpha = ((a*T)/(b+T)) + ((RH/100)|log) %}
+          {% set dp = (b*alpha)/(a-alpha) %}
+          {{ (T + (5/9)*(6.11 * (2.718281828459045 ** (5417.7530*((1/273.16)-(1/(dp+273.15))))) - 10)) | round(2) }}
+
+      - name: "Cave - WBGT (sombra)"
+        unique_id: cave_wbgt_sombra
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Wet Bulb Globe Temperature (sombra)."
+          inputs: "temperature=sensor.bthome_sensor_6a2b_temperature, humidity=sensor.bthome_sensor_6a2b_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_6a2b_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_6a2b_humidity')|float(0) %}
+          {% set es = 6.112 * (2.718281828459045 ** ((17.67*T)/(T+243.5))) %}
+          {% set epa = RH/100 * es %}
+          {{ (0.567*T + 0.393*epa + 3.94) | round(2) }}
+
+      - name: "Cave - Enthalpia"
+        unique_id: cave_enthalpia
+        unit_of_measurement: "kJ/kg"
+        icon: mdi:fire
+        state_class: measurement
+        attributes:
+          description: "Energia total do ar úmido."
+          inputs: "temperature=sensor.bthome_sensor_25e6_temperature, humidity=sensor.bthome_sensor_25e6_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_25e6_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_25e6_humidity')|float(0) %}
+          {% set P = 101.325 %}
+          {% set Ps = 0.61078 * (2.718281828459045 ** ((17.2694*T)/(T+237.29))) %}
+          {% set Pv = RH/100 * Ps %}
+          {% set w = 0.62198 * Pv / (P - Pv) %}
+          {{ (1.006*T + w*(2501 + 1.86*T)) | round(2) }}
+
+  - sensor:
+      - name: "Cozinha - Ponto de orvalho"
+        unique_id: cozinha_ponto_de_orvalho
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Temperatura em que o ar satura e começa a condensar."
+          inputs: "temperature=sensor.bthome_sensor_508c_temperature, humidity=sensor.bthome_sensor_508c_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_508c_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_508c_humidity')|float(0) %}
+          {% set a = 17.62 %}
+          {% set b = 243.12 %}
+          {% set gamma = ((a*T)/(b+T)) + ((RH/100)|log) %}
+          {{ ((b*gamma)/(a-gamma)) | round(2) }}
+
+      - name: "Cozinha - Humidade absoluta"
+        unique_id: cozinha_humidade_absoluta
+        unit_of_measurement: "g/m³"
+        state_class: measurement
+        attributes:
+          description: "Quantidade absoluta de vapor de água no ar."
+          inputs: "temperature=sensor.bthome_sensor_508c_temperature, humidity=sensor.bthome_sensor_508c_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_508c_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_508c_humidity')|float(0) %}
+          {% set es = 6.112 * (2.718281828459045 ** ((17.67*T)/(T+243.5))) %}
+          {% set epa = RH/100 * es %}
+          {{ ((2.1674 * epa) / (273.15 + T) * 100) | round(2) }}
+
+      - name: "Cozinha - Margem de condensação"
+        unique_id: cozinha_margem_de_condensacao
+        unit_of_measurement: "°C"
+        icon: mdi:thermometer-alert
+        state_class: measurement
+        attributes:
+          description: "Diferença entre temperatura atual e ponto de orvalho."
+          inputs: "temperature=sensor.bthome_sensor_508c_temperature, dewpoint=sensor.cozinha_ponto_de_orvalho"
+        state: >
+          {% set T = states('sensor.bthome_sensor_508c_temperature')|float(0) %}
+          {% set dp = states('sensor.cozinha_ponto_de_orvalho')|float(0) %}
+          {{ (T - dp) | round(2) }}
+
+      - name: "Cozinha - Comfort score"
+        unique_id: cozinha_comfort_score
+        unit_of_measurement: "%"
+        icon: mdi:human-handsup
+        attributes:
+          description: "Score 0–100% baseado em T e HR ideais."
+          inputs: "temperature=sensor.bthome_sensor_508c_temperature, humidity=sensor.bthome_sensor_508c_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_508c_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_508c_humidity')|float(0) %}
+          {% set t_score = 100 - (((T - 22)|abs) * 8) %}
+          {% set rh_score = 100 - (((RH - 50)|abs) * 2) %}
+          {% set raw = (0.6*t_score + 0.4*rh_score)|round(0) %}
+          {% if raw < 0 %} 0 {% elif raw > 100 %} 100 {% else %} {{ raw }} {% endif %}
+
+      - name: "Cozinha - Heat Index"
+        unique_id: cozinha_heat_index
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Sensação térmica combinando temperatura e humidade."
+          inputs: "temperature=sensor.bthome_sensor_508c_temperature, humidity=sensor.bthome_sensor_508c_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_508c_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_508c_humidity')|float(0) %}
+          {% if T < 26 %} {{ T | round(2) }}
+          {% else %}
+            {{ (-8.784695 + 1.61139411*T + 2.338549*RH - 0.14611605*T*RH
+               - 0.012308094*T*T - 0.016424828*RH*RH + 0.002211732*T*T*RH
+               + 0.00072546*T*RH*RH - 0.000003582*T*T*RH*RH) | round(2) }}
+          {% endif %}
+
+      - name: "Cozinha - Humidex"
+        unique_id: cozinha_humidex
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Índice canadiano de sensação térmica."
+          inputs: "temperature=sensor.bthome_sensor_508c_temperature, humidity=sensor.bthome_sensor_508c_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_508c_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_508c_humidity')|float(0) %}
+          {% set a = 17.27 %}
+          {% set b = 237.7 %}
+          {% set alpha = ((a*T)/(b+T)) + ((RH/100)|log) %}
+          {% set dp = (b*alpha)/(a-alpha) %}
+          {{ (T + (5/9)*(6.11 * (2.718281828459045 ** (5417.7530*((1/273.16)-(1/(dp+273.15))))) - 10)) | round(2) }}
+
+      - name: "Cozinha - WBGT (sombra)"
+        unique_id: cozinha_wbgt_sombra
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Wet Bulb Globe Temperature (sombra)."
+          inputs: "temperature=sensor.bthome_sensor_6a2b_temperature, humidity=sensor.bthome_sensor_6a2b_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_6a2b_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_6a2b_humidity')|float(0) %}
+          {% set es = 6.112 * (2.718281828459045 ** ((17.67*T)/(T+243.5))) %}
+          {% set epa = RH/100 * es %}
+          {{ (0.567*T + 0.393*epa + 3.94) | round(2) }}
+
+      - name: "Cozinha - Enthalpia"
+        unique_id: cozinha_enthalpia
+        unit_of_measurement: "kJ/kg"
+        icon: mdi:fire
+        state_class: measurement
+        attributes:
+          description: "Energia total do ar úmido."
+          inputs: "temperature=sensor.bthome_sensor_508c_temperature, humidity=sensor.bthome_sensor_508c_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_508c_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_508c_humidity')|float(0) %}
+          {% set P = 101.325 %}
+          {% set Ps = 0.61078 * (2.718281828459045 ** ((17.2694*T)/(T+237.29))) %}
+          {% set Pv = RH/100 * Ps %}
+          {% set w = 0.62198 * Pv / (P - Pv) %}
+          {{ (1.006*T + w*(2501 + 1.86*T)) | round(2) }}
+
+  - sensor:
+      - name: "Quarto Luisa - Ponto de orvalho"
+        unique_id: quarto_luisa_ponto_de_orvalho
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Temperatura em que o ar satura e começa a condensar."
+          inputs: "temperature=sensor.bthome_sensor_f9de_temperature, humidity=sensor.bthome_sensor_f9de_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_f9de_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_f9de_humidity')|float(0) %}
+          {% set a = 17.62 %}
+          {% set b = 243.12 %}
+          {% set gamma = ((a*T)/(b+T)) + ((RH/100)|log) %}
+          {{ ((b*gamma)/(a-gamma)) | round(2) }}
+
+      - name: "Quarto Luisa - Humidade absoluta"
+        unique_id: quarto_luisa_humidade_absoluta
+        unit_of_measurement: "g/m³"
+        state_class: measurement
+        attributes:
+          description: "Quantidade absoluta de vapor de água no ar."
+          inputs: "temperature=sensor.bthome_sensor_f9de_temperature, humidity=sensor.bthome_sensor_f9de_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_f9de_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_f9de_humidity')|float(0) %}
+          {% set es = 6.112 * (2.718281828459045 ** ((17.67*T)/(T+243.5))) %}
+          {% set epa = RH/100 * es %}
+          {{ ((2.1674 * epa) / (273.15 + T) * 100) | round(2) }}
+
+      - name: "Quarto Luisa - Margem de condensação"
+        unique_id: quarto_luisa_margem_de_condensacao
+        unit_of_measurement: "°C"
+        icon: mdi:thermometer-alert
+        state_class: measurement
+        attributes:
+          description: "Diferença entre temperatura atual e ponto de orvalho."
+          inputs: "temperature=sensor.bthome_sensor_f9de_temperature, dewpoint=sensor.quarto_luisa_ponto_de_orvalho"
+        state: >
+          {% set T = states('sensor.bthome_sensor_f9de_temperature')|float(0) %}
+          {% set dp = states('sensor.quarto_luisa_ponto_de_orvalho')|float(0) %}
+          {{ (T - dp) | round(2) }}
+
+      - name: "Quarto Luisa - Comfort score"
+        unique_id: quarto_luisa_comfort_score
+        unit_of_measurement: "%"
+        icon: mdi:human-handsup
+        attributes:
+          description: "Score 0–100% baseado em T e HR ideais."
+          inputs: "temperature=sensor.bthome_sensor_f9de_temperature, humidity=sensor.bthome_sensor_f9de_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_f9de_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_f9de_humidity')|float(0) %}
+          {% set t_score = 100 - (((T - 22)|abs) * 8) %}
+          {% set rh_score = 100 - (((RH - 50)|abs) * 2) %}
+          {% set raw = (0.6*t_score + 0.4*rh_score)|round(0) %}
+          {% if raw < 0 %} 0 {% elif raw > 100 %} 100 {% else %} {{ raw }} {% endif %}
+
+      - name: "Quarto Luisa - Heat Index"
+        unique_id: quarto_luisa_heat_index
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Sensação térmica combinando temperatura e humidade."
+          inputs: "temperature=sensor.bthome_sensor_f9de_temperature, humidity=sensor.bthome_sensor_f9de_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_f9de_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_f9de_humidity')|float(0) %}
+          {% if T < 26 %} {{ T | round(2) }}
+          {% else %}
+            {{ (-8.784695 + 1.61139411*T + 2.338549*RH - 0.14611605*T*RH
+               - 0.012308094*T*T - 0.016424828*RH*RH + 0.002211732*T*T*RH
+               + 0.00072546*T*RH*RH - 0.000003582*T*T*RH*RH) | round(2) }}
+          {% endif %}
+
+      - name: "Quarto Luisa - Humidex"
+        unique_id: quarto_luisa_humidex
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Índice canadiano de sensação térmica."
+          inputs: "temperature=sensor.bthome_sensor_f9de_temperature, humidity=sensor.bthome_sensor_f9de_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_f9de_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_f9de_humidity')|float(0) %}
+          {% set a = 17.27 %}
+          {% set b = 237.7 %}
+          {% set alpha = ((a*T)/(b+T)) + ((RH/100)|log) %}
+          {% set dp = (b*alpha)/(a-alpha) %}
+          {{ (T + (5/9)*(6.11 * (2.718281828459045 ** (5417.7530*((1/273.16)-(1/(dp+273.15))))) - 10)) | round(2) }}
+
+      - name: "Quarto Luisa - WBGT (sombra)"
+        unique_id: quarto_luisa_wbgt_sombra
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Wet Bulb Globe Temperature (sombra)."
+          inputs: "temperature=sensor.bthome_sensor_6a2b_temperature, humidity=sensor.bthome_sensor_6a2b_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_6a2b_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_6a2b_humidity')|float(0) %}
+          {% set es = 6.112 * (2.718281828459045 ** ((17.67*T)/(T+243.5))) %}
+          {% set epa = RH/100 * es %}
+          {{ (0.567*T + 0.393*epa + 3.94) | round(2) }}
+
+      - name: "Quarto Luisa - Enthalpia"
+        unique_id: quarto_luisa_enthalpia
+        unit_of_measurement: "kJ/kg"
+        icon: mdi:fire
+        state_class: measurement
+        attributes:
+          description: "Energia total do ar úmido."
+          inputs: "temperature=sensor.bthome_sensor_f9de_temperature, humidity=sensor.bthome_sensor_f9de_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_f9de_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_f9de_humidity')|float(0) %}
+          {% set P = 101.325 %}
+          {% set Ps = 0.61078 * (2.718281828459045 ** ((17.2694*T)/(T+237.29))) %}
+          {% set Pv = RH/100 * Ps %}
+          {% set w = 0.62198 * Pv / (P - Pv) %}
+          {{ (1.006*T + w*(2501 + 1.86*T)) | round(2) }}
+
+  - sensor:
+      - name: "Quarto - Ponto de orvalho"
+        unique_id: quarto_ponto_de_orvalho
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Temperatura em que o ar satura e começa a condensar."
+          inputs: "temperature=sensor.meu_quarto_temperature, humidity=sensor.meu_quarto_humidity"
+        state: >
+          {% set T = states('sensor.meu_quarto_temperature')|float(0) %}
+          {% set RH = states('sensor.meu_quarto_humidity')|float(0) %}
+          {% set a = 17.62 %}
+          {% set b = 243.12 %}
+          {% set gamma = ((a*T)/(b+T)) + ((RH/100)|log) %}
+          {{ ((b*gamma)/(a-gamma)) | round(2) }}
+
+      - name: "Quarto - Humidade absoluta"
+        unique_id: quarto_humidade_absoluta
+        unit_of_measurement: "g/m³"
+        state_class: measurement
+        attributes:
+          description: "Quantidade absoluta de vapor de água no ar."
+          inputs: "temperature=sensor.meu_quarto_temperature, humidity=sensor.meu_quarto_humidity"
+        state: >
+          {% set T = states('sensor.meu_quarto_temperature')|float(0) %}
+          {% set RH = states('sensor.meu_quarto_humidity')|float(0) %}
+          {% set es = 6.112 * (2.718281828459045 ** ((17.67*T)/(T+243.5))) %}
+          {% set epa = RH/100 * es %}
+          {{ ((2.1674 * epa) / (273.15 + T) * 100) | round(2) }}
+
+      - name: "Quarto - Margem de condensação"
+        unique_id: quarto_margem_de_condensacao
+        unit_of_measurement: "°C"
+        icon: mdi:thermometer-alert
+        state_class: measurement
+        attributes:
+          description: "Diferença entre temperatura atual e ponto de orvalho."
+          inputs: "temperature=sensor.meu_quarto_temperature, dewpoint=sensor.quarto_ponto_de_orvalho"
+        state: >
+          {% set T = states('sensor.meu_quarto_temperature')|float(0) %}
+          {% set dp = states('sensor.quarto_ponto_de_orvalho')|float(0) %}
+          {{ (T - dp) | round(2) }}
+
+      - name: "Quarto - Comfort score"
+        unique_id: quarto_comfort_score
+        unit_of_measurement: "%"
+        icon: mdi:human-handsup
+        attributes:
+          description: "Score 0–100% baseado em T e HR ideais."
+          inputs: "temperature=sensor.meu_quarto_temperature, humidity=sensor.meu_quarto_humidity"
+        state: >
+          {% set T = states('sensor.meu_quarto_temperature')|float(0) %}
+          {% set RH = states('sensor.meu_quarto_humidity')|float(0) %}
+          {% set t_score = 100 - (((T - 22)|abs) * 8) %}
+          {% set rh_score = 100 - (((RH - 50)|abs) * 2) %}
+          {% set raw = (0.6*t_score + 0.4*rh_score)|round(0) %}
+          {% if raw < 0 %} 0 {% elif raw > 100 %} 100 {% else %} {{ raw }} {% endif %}
+
+      - name: "Quarto - Heat Index"
+        unique_id: quarto_heat_index
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Sensação térmica combinando temperatura e humidade."
+          inputs: "temperature=sensor.meu_quarto_temperature, humidity=sensor.meu_quarto_humidity"
+        state: >
+          {% set T = states('sensor.meu_quarto_temperature')|float(0) %}
+          {% set RH = states('sensor.meu_quarto_humidity')|float(0) %}
+          {% if T < 26 %} {{ T | round(2) }}
+          {% else %}
+            {{ (-8.784695 + 1.61139411*T + 2.338549*RH - 0.14611605*T*RH
+               - 0.012308094*T*T - 0.016424828*RH*RH + 0.002211732*T*T*RH
+               + 0.00072546*T*RH*RH - 0.000003582*T*T*RH*RH) | round(2) }}
+          {% endif %}
+
+      - name: "Quarto - Humidex"
+        unique_id: quarto_humidex
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Índice canadiano de sensação térmica."
+          inputs: "temperature=sensor.meu_quarto_temperature, humidity=sensor.meu_quarto_humidity"
+        state: >
+          {% set T = states('sensor.meu_quarto_temperature')|float(0) %}
+          {% set RH = states('sensor.meu_quarto_humidity')|float(0) %}
+          {% set a = 17.27 %}
+          {% set b = 237.7 %}
+          {% set alpha = ((a*T)/(b+T)) + ((RH/100)|log) %}
+          {% set dp = (b*alpha)/(a-alpha) %}
+          {{ (T + (5/9)*(6.11 * (2.718281828459045 ** (5417.7530*((1/273.16)-(1/(dp+273.15))))) - 10)) | round(2) }}
+
+      - name: "Quarto - WBGT (sombra)"
+        unique_id: quarto_wbgt_sombra
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Wet Bulb Globe Temperature (sombra)."
+          inputs: "temperature=sensor.bthome_sensor_6a2b_temperature, humidity=sensor.bthome_sensor_6a2b_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_6a2b_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_6a2b_humidity')|float(0) %}
+          {% set es = 6.112 * (2.718281828459045 ** ((17.67*T)/(T+243.5))) %}
+          {% set epa = RH/100 * es %}
+          {{ (0.567*T + 0.393*epa + 3.94) | round(2) }}
+
+      - name: "Quarto - Enthalpia"
+        unique_id: quarto_enthalpia
+        unit_of_measurement: "kJ/kg"
+        icon: mdi:fire
+        state_class: measurement
+        attributes:
+          description: "Energia total do ar úmido."
+          inputs: "temperature=sensor.meu_quarto_temperature, humidity=sensor.meu_quarto_humidity"
+        state: >
+          {% set T = states('sensor.meu_quarto_temperature')|float(0) %}
+          {% set RH = states('sensor.meu_quarto_humidity')|float(0) %}
+          {% set P = 101.325 %}
+          {% set Ps = 0.61078 * (2.718281828459045 ** ((17.2694*T)/(T+237.29))) %}
+          {% set Pv = RH/100 * Ps %}
+          {% set w = 0.62198 * Pv / (P - Pv) %}
+          {{ (1.006*T + w*(2501 + 1.86*T)) | round(2) }}
+
+  - sensor:
+      - name: "Quarto Gui - Ponto de orvalho"
+        unique_id: quarto_gui_ponto_de_orvalho
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Temperatura em que o ar satura e começa a condensar."
+          inputs: "temperature=sensor.quarto_miudos_temperature, humidity=sensor.quarto_miudos_humidity"
+        state: >
+          {% set T = states('sensor.quarto_miudos_temperature')|float(0) %}
+          {% set RH = states('sensor.quarto_miudos_humidity')|float(0) %}
+          {% set a = 17.62 %}
+          {% set b = 243.12 %}
+          {% set gamma = ((a*T)/(b+T)) + ((RH/100)|log) %}
+          {{ ((b*gamma)/(a-gamma)) | round(2) }}
+
+      - name: "Quarto Gui - Humidade absoluta"
+        unique_id: quarto_gui_humidade_absoluta
+        unit_of_measurement: "g/m³"
+        state_class: measurement
+        attributes:
+          description: "Quantidade absoluta de vapor de água no ar."
+          inputs: "temperature=sensor.quarto_miudos_temperature, humidity=sensor.quarto_miudos_humidity"
+        state: >
+          {% set T = states('sensor.quarto_miudos_temperature')|float(0) %}
+          {% set RH = states('sensor.quarto_miudos_humidity')|float(0) %}
+          {% set es = 6.112 * (2.718281828459045 ** ((17.67*T)/(T+243.5))) %}
+          {% set epa = RH/100 * es %}
+          {{ ((2.1674 * epa) / (273.15 + T) * 100) | round(2) }}
+
+      - name: "Quarto Gui - Margem de condensação"
+        unique_id: quarto_gui_margem_de_condensacao
+        unit_of_measurement: "°C"
+        icon: mdi:thermometer-alert
+        state_class: measurement
+        attributes:
+          description: "Diferença entre temperatura atual e ponto de orvalho."
+          inputs: "temperature=sensor.quarto_miudos_temperature, dewpoint=sensor.quarto_gui_ponto_de_orvalho"
+        state: >
+          {% set T = states('sensor.quarto_miudos_temperature')|float(0) %}
+          {% set dp = states('sensor.quarto_gui_ponto_de_orvalho')|float(0) %}
+          {{ (T - dp) | round(2) }}
+
+      - name: "Quarto Gui - Comfort score"
+        unique_id: quarto_gui_comfort_score
+        unit_of_measurement: "%"
+        icon: mdi:human-handsup
+        attributes:
+          description: "Score 0–100% baseado em T e HR ideais."
+          inputs: "temperature=sensor.quarto_miudos_temperature, humidity=sensor.quarto_miudos_humidity"
+        state: >
+          {% set T = states('sensor.quarto_miudos_temperature')|float(0) %}
+          {% set RH = states('sensor.quarto_miudos_humidity')|float(0) %}
+          {% set t_score = 100 - (((T - 22)|abs) * 8) %}
+          {% set rh_score = 100 - (((RH - 50)|abs) * 2) %}
+          {% set raw = (0.6*t_score + 0.4*rh_score)|round(0) %}
+          {% if raw < 0 %} 0 {% elif raw > 100 %} 100 {% else %} {{ raw }} {% endif %}
+
+      - name: "Quarto Gui - Heat Index"
+        unique_id: quarto_gui_heat_index
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Sensação térmica combinando temperatura e humidade."
+          inputs: "temperature=sensor.quarto_miudos_temperature, humidity=sensor.quarto_miudos_humidity"
+        state: >
+          {% set T = states('sensor.quarto_miudos_temperature')|float(0) %}
+          {% set RH = states('sensor.quarto_miudos_humidity')|float(0) %}
+          {% if T < 26 %} {{ T | round(2) }}
+          {% else %}
+            {{ (-8.784695 + 1.61139411*T + 2.338549*RH - 0.14611605*T*RH
+               - 0.012308094*T*T - 0.016424828*RH*RH + 0.002211732*T*T*RH
+               + 0.00072546*T*RH*RH - 0.000003582*T*T*RH*RH) | round(2) }}
+          {% endif %}
+
+      - name: "Quarto Gui - Humidex"
+        unique_id: quarto_gui_humidex
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Índice canadiano de sensação térmica."
+          inputs: "temperature=sensor.quarto_miudos_temperature, humidity=sensor.quarto_miudos_humidity"
+        state: >
+          {% set T = states('sensor.quarto_miudos_temperature')|float(0) %}
+          {% set RH = states('sensor.quarto_miudos_humidity')|float(0) %}
+          {% set a = 17.27 %}
+          {% set b = 237.7 %}
+          {% set alpha = ((a*T)/(b+T)) + ((RH/100)|log) %}
+          {% set dp = (b*alpha)/(a-alpha) %}
+          {{ (T + (5/9)*(6.11 * (2.718281828459045 ** (5417.7530*((1/273.16)-(1/(dp+273.15))))) - 10)) | round(2) }}
+
+      - name: "Quarto Gui - WBGT (sombra)"
+        unique_id: quarto_gui_wbgt_sombra
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Wet Bulb Globe Temperature (sombra)."
+          inputs: "temperature=sensor.bthome_sensor_6a2b_temperature, humidity=sensor.bthome_sensor_6a2b_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_6a2b_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_6a2b_humidity')|float(0) %}
+          {% set es = 6.112 * (2.718281828459045 ** ((17.67*T)/(T+243.5))) %}
+          {% set epa = RH/100 * es %}
+          {{ (0.567*T + 0.393*epa + 3.94) | round(2) }}
+
+      - name: "Quarto Gui - Enthalpia"
+        unique_id: quarto_gui_enthalpia
+        unit_of_measurement: "kJ/kg"
+        icon: mdi:fire
+        state_class: measurement
+        attributes:
+          description: "Energia total do ar úmido."
+          inputs: "temperature=sensor.quarto_miudos_temperature, humidity=sensor.quarto_miudos_humidity"
+        state: >
+          {% set T = states('sensor.quarto_miudos_temperature')|float(0) %}
+          {% set RH = states('sensor.quarto_miudos_humidity')|float(0) %}
+          {% set P = 101.325 %}
+          {% set Ps = 0.61078 * (2.718281828459045 ** ((17.2694*T)/(T+237.29))) %}
+          {% set Pv = RH/100 * Ps %}
+          {% set w = 0.62198 * Pv / (P - Pv) %}
+          {{ (1.006*T + w*(2501 + 1.86*T)) | round(2) }}
+
+  - sensor:
+      - name: "Sala Superior - Ponto de orvalho"
+        unique_id: sala_superior_ponto_de_orvalho
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Temperatura em que o ar satura e começa a condensar."
+          inputs: "temperature=sensor.sala_superior_temperature, humidity=sensor.sala_superior_humidity"
+        state: >
+          {% set T = states('sensor.sala_superior_temperature')|float(0) %}
+          {% set RH = states('sensor.sala_superior_humidity')|float(0) %}
+          {% set a = 17.62 %}
+          {% set b = 243.12 %}
+          {% set gamma = ((a*T)/(b+T)) + ((RH/100)|log) %}
+          {{ ((b*gamma)/(a-gamma)) | round(2) }}
+
+      - name: "Sala Superior - Humidade absoluta"
+        unique_id: sala_superior_humidade_absoluta
+        unit_of_measurement: "g/m³"
+        state_class: measurement
+        attributes:
+          description: "Quantidade absoluta de vapor de água no ar."
+          inputs: "temperature=sensor.sala_superior_temperature, humidity=sensor.sala_superior_humidity"
+        state: >
+          {% set T = states('sensor.sala_superior_temperature')|float(0) %}
+          {% set RH = states('sensor.sala_superior_humidity')|float(0) %}
+          {% set es = 6.112 * (2.718281828459045 ** ((17.67*T)/(T+243.5))) %}
+          {% set epa = RH/100 * es %}
+          {{ ((2.1674 * epa) / (273.15 + T) * 100) | round(2) }}
+
+      - name: "Sala Superior - Margem de condensação"
+        unique_id: sala_superior_margem_de_condensacao
+        unit_of_measurement: "°C"
+        icon: mdi:thermometer-alert
+        state_class: measurement
+        attributes:
+          description: "Diferença entre temperatura atual e ponto de orvalho."
+          inputs: "temperature=sensor.sala_superior_temperature, dewpoint=sensor.sala_superior_ponto_de_orvalho"
+        state: >
+          {% set T = states('sensor.sala_superior_temperature')|float(0) %}
+          {% set dp = states('sensor.sala_superior_ponto_de_orvalho')|float(0) %}
+          {{ (T - dp) | round(2) }}
+
+      - name: "Sala Superior - Comfort score"
+        unique_id: sala_superior_comfort_score
+        unit_of_measurement: "%"
+        icon: mdi:human-handsup
+        attributes:
+          description: "Score 0–100% baseado em T e HR ideais."
+          inputs: "temperature=sensor.sala_superior_temperature, humidity=sensor.sala_superior_humidity"
+        state: >
+          {% set T = states('sensor.sala_superior_temperature')|float(0) %}
+          {% set RH = states('sensor.sala_superior_humidity')|float(0) %}
+          {% set t_score = 100 - (((T - 22)|abs) * 8) %}
+          {% set rh_score = 100 - (((RH - 50)|abs) * 2) %}
+          {% set raw = (0.6*t_score + 0.4*rh_score)|round(0) %}
+          {% if raw < 0 %} 0 {% elif raw > 100 %} 100 {% else %} {{ raw }} {% endif %}
+
+      - name: "Sala Superior - Heat Index"
+        unique_id: sala_superior_heat_index
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Sensação térmica combinando temperatura e humidade."
+          inputs: "temperature=sensor.sala_superior_temperature, humidity=sensor.sala_superior_humidity"
+        state: >
+          {% set T = states('sensor.sala_superior_temperature')|float(0) %}
+          {% set RH = states('sensor.sala_superior_humidity')|float(0) %}
+          {% if T < 26 %} {{ T | round(2) }}
+          {% else %}
+            {{ (-8.784695 + 1.61139411*T + 2.338549*RH - 0.14611605*T*RH
+               - 0.012308094*T*T - 0.016424828*RH*RH + 0.002211732*T*T*RH
+               + 0.00072546*T*RH*RH - 0.000003582*T*T*RH*RH) | round(2) }}
+          {% endif %}
+
+      - name: "Sala Superior - Humidex"
+        unique_id: sala_superior_humidex
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Índice canadiano de sensação térmica."
+          inputs: "temperature=sensor.sala_superior_temperature, humidity=sensor.sala_superior_humidity"
+        state: >
+          {% set T = states('sensor.sala_superior_temperature')|float(0) %}
+          {% set RH = states('sensor.sala_superior_humidity')|float(0) %}
+          {% set a = 17.27 %}
+          {% set b = 237.7 %}
+          {% set alpha = ((a*T)/(b+T)) + ((RH/100)|log) %}
+          {% set dp = (b*alpha)/(a-alpha) %}
+          {{ (T + (5/9)*(6.11 * (2.718281828459045 ** (5417.7530*((1/273.16)-(1/(dp+273.15))))) - 10)) | round(2) }}
+
+      - name: "Sala Superior - WBGT (sombra)"
+        unique_id: sala_superior_wbgt_sombra
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        attributes:
+          description: "Wet Bulb Globe Temperature (sombra)."
+          inputs: "temperature=sensor.bthome_sensor_6a2b_temperature, humidity=sensor.bthome_sensor_6a2b_humidity"
+        state: >
+          {% set T = states('sensor.bthome_sensor_6a2b_temperature')|float(0) %}
+          {% set RH = states('sensor.bthome_sensor_6a2b_humidity')|float(0) %}
+          {% set es = 6.112 * (2.718281828459045 ** ((17.67*T)/(T+243.5))) %}
+          {% set epa = RH/100 * es %}
+          {{ (0.567*T + 0.393*epa + 3.94) | round(2) }}
+
+      - name: "Sala Superior - Enthalpia"
+        unique_id: sala_superior_enthalpia
+        unit_of_measurement: "kJ/kg"
+        icon: mdi:fire
+        state_class: measurement
+        attributes:
+          description: "Energia total do ar úmido."
+          inputs: "temperature=sensor.sala_superior_temperature, humidity=sensor.sala_superior_humidity"
+        state: >
+          {% set T = states('sensor.sala_superior_temperature')|float(0) %}
+          {% set RH = states('sensor.sala_superior_humidity')|float(0) %}
+          {% set P = 101.325 %}
+          {% set Ps = 0.61078 * (2.718281828459045 ** ((17.2694*T)/(T+237.29))) %}
+          {% set Pv = RH/100 * Ps %}
+          {% set w = 0.62198 * Pv / (P - Pv) %}
+          {{ (1.006*T + w*(2501 + 1.86*T)) | round(2) }}
+
+  - sensor:
+      - name: "Casa - Estado Geral"
+        unique_id: casa_estado_geral
+        icon: mdi:home-thermometer
+        attributes:
+          description: "Resumo qualitativo do conforto médio interior."
+          included_rooms: "Sala Inferior, Cave, Cozinha, Quarto Luisa, Quarto, Quarto Gui, Sala Superior"
+        state: >
+          {% set temps = [
+            states('sensor.sala_inferior_temperature')|float(0),
+            states('sensor.cave_temperature')|float(0),
+            states('sensor.cozinha_temperature')|float(0),
+            states('sensor.quarto_luisa_temperature')|float(0),
+            states('sensor.quarto_temperature')|float(0),
+            states('sensor.quarto_gui_temperature')|float(0),
+            states('sensor.sala_superior_temperature')|float(0)
+          ] %}
+          {% set hums = [
+            states('sensor.sala_inferior_humidity')|float(0),
+            states('sensor.cave_humidity')|float(0),
+            states('sensor.cozinha_humidity')|float(0),
+            states('sensor.quarto_luisa_humidity')|float(0),
+            states('sensor.quarto_humidity')|float(0),
+            states('sensor.quarto_gui_humidity')|float(0),
+            states('sensor.sala_superior_humidity')|float(0)
+          ] %}
+          {% set T_in = (temps | sum / temps | count) | round(2) %}
+          {% set H_in = (hums | sum / hums | count) | round(2) %}
+          {% if 20 <= T_in <= 25 and 40 <= H_in <= 60 %}
+            Confortável
+          {% elif H_in > 65 %}
+            Húmido
+          {% elif H_in < 35 %}
+            Seco
+          {% elif T_in < 19 %}
+            Frio
+          {% elif T_in > 27 %}
+            Quente
+          {% else %}
+            Moderado
+          {% endif %}
+
+      - name: "Casa - Conforto Score"
+        unique_id: casa_conforto_score
+        unit_of_measurement: "%"
+        icon: mdi:human-handsup
+        attributes:
+          description: "Score médio da casa 0–100%."
+          included_rooms: "Sala Inferior, Cave, Cozinha, Quarto Luisa, Quarto, Quarto Gui, Sala Superior"
+        state: >
+          {% set temps = [
+            states('sensor.sala_inferior_temperature')|float(0),
+            states('sensor.cave_temperature')|float(0),
+            states('sensor.cozinha_temperature')|float(0),
+            states('sensor.quarto_luisa_temperature')|float(0),
+            states('sensor.quarto_temperature')|float(0),
+            states('sensor.quarto_gui_temperature')|float(0),
+            states('sensor.sala_superior_temperature')|float(0)
+          ] %}
+          {% set hums = [
+            states('sensor.sala_inferior_humidity')|float(0),
+            states('sensor.cave_humidity')|float(0),
+            states('sensor.cozinha_humidity')|float(0),
+            states('sensor.quarto_luisa_humidity')|float(0),
+            states('sensor.quarto_humidity')|float(0),
+            states('sensor.quarto_gui_humidity')|float(0),
+            states('sensor.sala_superior_humidity')|float(0)
+          ] %}
+          {% set T_in = (temps | sum / temps | count) | round(2) %}
+          {% set H_in = (hums | sum / hums | count) | round(2) %}
+          {% set t_score = 100 - (((T_in - 22)|abs) * 8) %}
+          {% set rh_score = 100 - (((H_in - 50)|abs) * 2) %}
+          {% set raw = (0.6*t_score + 0.4*rh_score)|round(0) %}
+          {% if raw < 0 %} 0 {% elif raw > 100 %} 100 {% else %} {{ raw }} {% endif %}
+
+group:
+  sala_inferior_comfort:
+    name: 'Sala Inferior - Conforto (grupo)'
+    entities:
+      - sensor.sala_inferior_ponto_de_orvalho
+      - sensor.sala_inferior_humidade_absoluta
+      - sensor.sala_inferior_margem_de_condensacao
+      - sensor.sala_inferior_comfort_score
+      - sensor.sala_inferior_heat_index
+      - sensor.sala_inferior_humidex
+      - sensor.sala_inferior_wbgt_sombra
+      - sensor.sala_inferior_enthalpia
+  cave_comfort:
+    name: 'Cave - Conforto (grupo)'
+    entities:
+      - sensor.cave_ponto_de_orvalho
+      - sensor.cave_humidade_absoluta
+      - sensor.cave_margem_de_condensacao
+      - sensor.cave_comfort_score
+      - sensor.cave_heat_index
+      - sensor.cave_humidex
+      - sensor.cave_wbgt_sombra
+      - sensor.cave_enthalpia
+  cozinha_comfort:
+    name: 'Cozinha - Conforto (grupo)'
+    entities:
+      - sensor.cozinha_ponto_de_orvalho
+      - sensor.cozinha_humidade_absoluta
+      - sensor.cozinha_margem_de_condensacao
+      - sensor.cozinha_comfort_score
+      - sensor.cozinha_heat_index
+      - sensor.cozinha_humidex
+      - sensor.cozinha_wbgt_sombra
+      - sensor.cozinha_enthalpia
+  quarto_luisa_comfort:
+    name: 'Quarto Luisa - Conforto (grupo)'
+    entities:
+      - sensor.quarto_luisa_ponto_de_orvalho
+      - sensor.quarto_luisa_humidade_absoluta
+      - sensor.quarto_luisa_margem_de_condensacao
+      - sensor.quarto_luisa_comfort_score
+      - sensor.quarto_luisa_heat_index
+      - sensor.quarto_luisa_humidex
+      - sensor.quarto_luisa_wbgt_sombra
+      - sensor.quarto_luisa_enthalpia
+  quarto_comfort:
+    name: 'Quarto - Conforto (grupo)'
+    entities:
+      - sensor.quarto_ponto_de_orvalho
+      - sensor.quarto_humidade_absoluta
+      - sensor.quarto_margem_de_condensacao
+      - sensor.quarto_comfort_score
+      - sensor.quarto_heat_index
+      - sensor.quarto_humidex
+      - sensor.quarto_wbgt_sombra
+      - sensor.quarto_enthalpia
+  quarto_gui_comfort:
+    name: 'Quarto Gui - Conforto (grupo)'
+    entities:
+      - sensor.quarto_gui_ponto_de_orvalho
+      - sensor.quarto_gui_humidade_absoluta
+      - sensor.quarto_gui_margem_de_condensacao
+      - sensor.quarto_gui_comfort_score
+      - sensor.quarto_gui_heat_index
+      - sensor.quarto_gui_humidex
+      - sensor.quarto_gui_wbgt_sombra
+      - sensor.quarto_gui_enthalpia
+  sala_superior_comfort:
+    name: 'Sala Superior - Conforto (grupo)'
+    entities:
+      - sensor.sala_superior_ponto_de_orvalho
+      - sensor.sala_superior_humidade_absoluta
+      - sensor.sala_superior_margem_de_condensacao
+      - sensor.sala_superior_comfort_score
+      - sensor.sala_superior_heat_index
+      - sensor.sala_superior_humidex
+      - sensor.sala_superior_wbgt_sombra
+      - sensor.sala_superior_enthalpia
+
+  comfort_score_all:
+    name: 'Conforto - Score (todas)'
+    entities:
+      - sensor.sala_inferior_comfort_score
+      - sensor.cave_comfort_score
+      - sensor.cozinha_comfort_score
+      - sensor.quarto_luisa_comfort_score
+      - sensor.quarto_comfort_score
+      - sensor.quarto_gui_comfort_score
+      - sensor.sala_superior_comfort_score
+
+  dewpoint_all:
+    name: 'Conforto - Ponto de orvalho (todas)'
+    entities:
+      - sensor.sala_inferior_ponto_de_orvalho
+      - sensor.cave_ponto_de_orvalho
+      - sensor.cozinha_ponto_de_orvalho
+      - sensor.quarto_luisa_ponto_de_orvalho
+      - sensor.quarto_ponto_de_orvalho
+      - sensor.quarto_gui_ponto_de_orvalho
+      - sensor.sala_superior_ponto_de_orvalho
+
+  abs_humidity_all:
+    name: 'Conforto - Humidade absoluta (todas)'
+    entities:
+      - sensor.sala_inferior_humidade_absoluta
+      - sensor.cave_humidade_absoluta
+      - sensor.cozinha_humidade_absoluta
+      - sensor.quarto_luisa_humidade_absoluta
+      - sensor.quarto_humidade_absoluta
+      - sensor.quarto_gui_humidade_absoluta
+      - sensor.sala_superior_humidade_absoluta
+
+  condensation_margin_all:
+    name: 'Conforto - Margem de condensação (todas)'
+    entities:
+      - sensor.sala_inferior_margem_de_condensacao
+      - sensor.cave_margem_de_condensacao
+      - sensor.cozinha_margem_de_condensacao
+      - sensor.quarto_luisa_margem_de_condensacao
+      - sensor.quarto_margem_de_condensacao
+      - sensor.quarto_gui_margem_de_condensacao
+      - sensor.sala_superior_margem_de_condensacao
+
+  heat_index_all:
+    name: 'Conforto - Heat Index (todas)'
+    entities:
+      - sensor.sala_inferior_heat_index
+      - sensor.cave_heat_index
+      - sensor.cozinha_heat_index
+      - sensor.quarto_luisa_heat_index
+      - sensor.quarto_heat_index
+      - sensor.quarto_gui_heat_index
+      - sensor.sala_superior_heat_index
+
+  humidex_all:
+    name: 'Conforto - Humidex (todas)'
+    entities:
+      - sensor.sala_inferior_humidex
+      - sensor.cave_humidex
+      - sensor.cozinha_humidex
+      - sensor.quarto_luisa_humidex
+      - sensor.quarto_humidex
+      - sensor.quarto_gui_humidex
+      - sensor.sala_superior_humidex
+
+  wbgt_all:
+    name: 'Conforto - WBGT (todas)'
+    entities:
+      - sensor.sala_inferior_wbgt_sombra
+      - sensor.cave_wbgt_sombra
+      - sensor.cozinha_wbgt_sombra
+      - sensor.quarto_luisa_wbgt_sombra
+      - sensor.quarto_wbgt_sombra
+      - sensor.quarto_gui_wbgt_sombra
+      - sensor.sala_superior_wbgt_sombra
+
+  enthalpy_all:
+    name: 'Conforto - Enthalpia (todas)'
+    entities:
+      - sensor.sala_inferior_enthalpia
+      - sensor.cave_enthalpia
+      - sensor.cozinha_enthalpia
+      - sensor.quarto_luisa_enthalpia
+      - sensor.quarto_enthalpia
+      - sensor.quarto_gui_enthalpia
+      - sensor.sala_superior_enthalpia

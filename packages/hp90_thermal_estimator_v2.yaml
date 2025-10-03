@@ -1,0 +1,323 @@
+# package: hp90_thermal_estimator_v2.yaml
+#
+# Estimador térmico p/ 50 tubos Varisol HP90 + sensores AQS HP90 (com fator de calibração)
+# Baseado no Forecast.Solar (instância configurada para 1000 Wp, Tilt=20°, Azimuth=174°)
+# Todos os atributos são STRINGS conforme pedido.
+#
+# -> NOVO: sensores "AQS HP90 - Energia Hoje/Amanhã/Restante", "Litros Hoje (T alvo)",
+#          "Litros Próxima Hora", "Carga Estimada Depósito", "Pico Hoje/Amanhã", "Potência Agora".
+#
+input_number:
+  solar_hp_n_tubos:
+    name: "HP90 — Nº de tubos"
+    min: 1
+    max: 120
+    step: 1
+    initial: 50
+    icon: mdi:counter
+
+  solar_hp_area_tubo_m2:
+    name: "HP90 — Área por tubo (m²)"
+    min: 0.05
+    max: 0.20
+    step: 0.001
+    initial: 0.105
+    unit_of_measurement: "m²"
+    icon: mdi:ruler-square
+
+  solar_hp_eta_sistema:
+    name: "HP90 — Rendimento térmico (0–1)"
+    min: 0.30
+    max: 0.85
+    step: 0.01
+    initial: 0.55
+    icon: mdi:percent
+
+  dhw_volume_l:
+    name: "AQS — Volume (L)"
+    min: 50
+    max: 1000
+    step: 10
+    unit_of_measurement: "L"
+    initial: 500
+    icon: mdi:water-boiler
+
+  aqs_hp90_kwh_factor:
+    name: "AQS HP90 — Fator kWh térmicos"
+    min: 0.5
+    max: 2.0
+    step: 0.05
+    unit_of_measurement: "×"
+    initial: 1.0
+    icon: mdi:tune-variant
+
+  aqs_target_temp:
+    name: "AQS — Temperatura alvo"
+    min: 35
+    max: 60
+    step: 1
+    unit_of_measurement: "°C"
+    initial: 45
+    icon: mdi:thermometer-water
+
+  aqs_min_liters_window:
+    name: "AQS — Mín. litros/1h p/ janela boa"
+    min: 20
+    max: 200
+    step: 5
+    unit_of_measurement: "L"
+    initial: 80
+    icon: mdi:shower-head
+
+template:
+  - sensor:
+      # =================== BLOCO BASE HP90 (já existente) ===================
+      - name: "HP90 — Área total (m²)"
+        unique_id: hp90_area_total_m2
+        unit_of_measurement: "m²"
+        icon: mdi:selection
+        attributes:
+          description: "Área total útil de abertura dos tubos: Nº de tubos × área por tubo."
+          inputs: "N_tubos=input_number.solar_hp_n_tubos, area_tubo=input_number.solar_hp_area_tubo_m2"
+        state: >
+          {% set n  = states('input_number.solar_hp_n_tubos')|float(50) %}
+          {% set at = states('input_number.solar_hp_area_tubo_m2')|float(0.105) %}
+          {{ (n * at) | round(3) }}
+
+      - name: "HP90 — Potência térmica (kW)"
+        unique_id: hp90_pot_termica_kw
+        unit_of_measurement: "kW"
+        icon: mdi:solar-power
+        attributes:
+          description: "Potência térmica estimada no instante: (power_now/1000) × Área × Rendimento."
+          inputs: "power_now=sensor.power_production_now_tubos_hp90, area_total=sensor.hp90_area_total_m2, eta=input_number.solar_hp_eta_sistema"
+        state: >
+          {% set p_fs_kw = (states('sensor.power_production_now_tubos_hp90')|float(0)) / 1000 %}
+          {% set A       = states('sensor.hp90_area_total_m2')|float(0) %}
+          {% set eta     = states('input_number.solar_hp_eta_sistema')|float(0.55) %}
+          {{ (p_fs_kw * A * eta) | round(2) }}
+
+      - name: "HP90 — Energia térmica do dia (kWh)"
+        unique_id: hp90_energia_termica_dia_kwh
+        unit_of_measurement: "kWh"
+        icon: mdi:chart-areaspline
+        attributes:
+          description: "Energia térmica diária estimada: energy_today_proxy × Área × Rendimento."
+          inputs: "energy_today=sensor.energy_production_today_tubos_hp90, area_total=sensor.hp90_area_total_m2, eta=input_number.solar_hp_eta_sistema"
+        state: >
+          {% set Hproxy = states('sensor.energy_production_today_tubos_hp90')|float(0) %}
+          {% set A      = states('sensor.hp90_area_total_m2')|float(0) %}
+          {% set eta    = states('input_number.solar_hp_eta_sistema')|float(0.55) %}
+          {{ (Hproxy * A * eta) | round(2) }}
+
+      - name: "HP90 — ΔT previsto hoje (°C)"
+        unique_id: hp90_deltaT_previsto_hoje_c
+        unit_of_measurement: "°C"
+        icon: mdi:thermometer-lines
+        attributes:
+          description: "Elevação de temperatura do depósito assumindo mistura homogénea."
+          formula: "ΔT = E_kWh / (V_L × 4.18 kJ/kgK / 3600)"
+          inputs: "E=sensor.hp90_energia_termica_do_dia_kwh, V=input_number.dhw_volume_l"
+        state: >
+          {% set E = states('sensor.hp90_energia_termica_do_dia_kwh')|float(0) %}
+          {% set V = states('input_number.dhw_volume_l')|float(500) %}
+          {% set kWh_per_C = (V * 4.18 / 3600) %}
+          {{ (E / max(kWh_per_C, 0.001)) | round(1) }}
+
+      - name: "HP90 — Energia líquida após perdas (kWh)"
+        unique_id: hp90_energia_liquida_kwh
+        unit_of_measurement: "kWh"
+        icon: mdi:fire-circle
+        attributes:
+          description: "Energia diária após perdas do depósito (se sensor de perdas existir)."
+          inputs: "E_bruta=sensor.hp90_energia_termica_do_dia_kwh, perdas=sensor.aqs_perdas_kwh_dia"
+        state: >
+          {% set E  = states('sensor.hp90_energia_termica_do_dia_kwh')|float(0) %}
+          {% set Pl = states('sensor.aqs_perdas_kwh_dia')|float(0) %}
+          {% set net = E - Pl %}
+          {{ (net if net > 0 else 0) | round(2) }}
+
+      - name: "HP90 — ΔT líquido previsto (°C)"
+        unique_id: hp90_deltaT_liquido_previsto_c
+        unit_of_measurement: "°C"
+        icon: mdi:thermometer-water
+        attributes:
+          description: "Elevação de temperatura considerando as perdas (se declaradas)."
+          formula: "ΔT_liq = E_liquida / (V_L × 4.18/3600)"
+          inputs: "E_liquida=sensor.hp90_energia_liquida_apos_perdas_kwh, V=input_number.dhw_volume_l"
+        state: >
+          {% set E_net = states('sensor.hp90_energia_liquida_apos_perdas_kwh')|float(0) %}
+          {% set V     = states('input_number.dhw_volume_l')|float(500) %}
+          {% set kWh_per_C = (V * 4.18 / 3600) %}
+          {{ (E_net / max(kWh_per_C, 0.001)) | round(1) }}
+
+      # =================== NOVOS SENSORES "AQS HP90" ===================
+      - name: "AQS HP90 - Energia Hoje"
+        unique_id: aqs_hp90_energy_today
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: measurement
+        attributes:
+          description: "Energia térmica prevista para hoje (kWh_th) com fator de calibração."
+          formula: "E_today_th = (energy_today × Área × η) × fator"
+          inputs: "energy_today=sensor.energy_production_today_tubos_hp90, area_total=sensor.hp90_area_total_m2, eta=input_number.solar_hp_eta_sistema, fator=input_number.aqs_hp90_kwh_factor"
+        state: >
+          {% set Hproxy = states('sensor.energy_production_today_tubos_hp90')|float(0) %}
+          {% set A      = states('sensor.hp90_area_total_m2')|float(0) %}
+          {% set eta    = states('input_number.solar_hp_eta_sistema')|float(0.55) %}
+          {% set k      = states('input_number.aqs_hp90_kwh_factor')|float(1.0) %}
+          {{ (Hproxy * A * eta * k) | round(2) }}
+
+      - name: "AQS HP90 - Energia Amanhã"
+        unique_id: aqs_hp90_energy_tomorrow
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: measurement
+        attributes:
+          description: "Energia térmica prevista para amanhã (kWh_th) com fator de calibração."
+          formula: "E_tomorrow_th = (energy_tomorrow × Área × η) × fator"
+          inputs: "energy_tomorrow=sensor.energy_production_tomorrow_tubos_hp90, area_total=sensor.hp90_area_total_m2, eta=input_number.solar_hp_eta_sistema, fator=input_number.aqs_hp90_kwh_factor"
+        state: >
+          {% set Htom = states('sensor.energy_production_tomorrow_tubos_hp90')|float(0) %}
+          {% set A    = states('sensor.hp90_area_total_m2')|float(0) %}
+          {% set eta  = states('input_number.solar_hp_eta_sistema')|float(0.55) %}
+          {% set k    = states('input_number.aqs_hp90_kwh_factor')|float(1.0) %}
+          {{ (Htom * A * eta * k) | round(2) }}
+
+      - name: "AQS HP90 - Energia Restante Hoje"
+        unique_id: aqs_hp90_energy_remaining_today
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: measurement
+        attributes:
+          description: "Energia térmica ainda prevista para o resto do dia (kWh_th) com fator."
+          formula: "E_remaining_th = (energy_today_remaining × Área × η) × fator"
+          inputs: "energy_today_remaining=sensor.energy_production_today_remaining_tubos_hp90, area_total=sensor.hp90_area_total_m2, eta=input_number.solar_hp_eta_sistema, fator=input_number.aqs_hp90_kwh_factor"
+        state: >
+          {% set Hrem = states('sensor.energy_production_today_remaining_tubos_hp90')|float(0) %}
+          {% set A    = states('sensor.hp90_area_total_m2')|float(0) %}
+          {% set eta  = states('input_number.solar_hp_eta_sistema')|float(0.55) %}
+          {% set k    = states('input_number.aqs_hp90_kwh_factor')|float(1.0) %}
+          {{ (Hrem * A * eta * k) | round(2) }}
+
+      - name: "AQS HP90 - Litros Hoje (T alvo)"
+        unique_id: aqs_hp90_liters_today_target
+        unit_of_measurement: "L"
+        state_class: measurement
+        attributes:
+          description: "Litros de AQS possíveis hoje à temperatura alvo com base na energia prevista."
+          formula: "L = E_today_th / (0.001163 × (T_alvo - T_fria))"
+          notes: "T_fria aproximada pela temperatura exterior (limitada a 8..20 °C)."
+          inputs: "E_today_th=sensor.aqs_hp90_energy_today, T_alvo=input_number.aqs_target_temp, T_ext=sensor.bthome_sensor_6a2b_temperature"
+        state: >
+          {% set E = states('sensor.aqs_hp90_energy_today')|float(0) %}
+          {% set tgt = states('input_number.aqs_target_temp')|float(45) %}
+          {% set ext = states('sensor.bthome_sensor_6a2b_temperature')|float(15) %}
+          {% set t_cold = ext %}
+          {% if t_cold < 8 %}{% set t_cold = 8 %}{% elif t_cold > 20 %}{% set t_cold = 20 %}{% endif %}
+          {% set denom = 0.001163 * max(tgt - t_cold, 1) %}
+          {{ (E / denom) | round(0) }}
+
+      - name: "AQS HP90 - Litros Próxima Hora"
+        unique_id: aqs_hp90_liters_next_hour
+        unit_of_measurement: "L"
+        state_class: measurement
+        attributes:
+          description: "Litros de AQS que poderão ser aquecidos na próxima hora."
+          formula: "L_h = E_h_th / (0.001163 × (T_alvo - T_fria))"
+          inputs: "E_h=sensor.energy_next_hour_tubos_hp90, area_total=sensor.hp90_area_total_m2, eta=input_number.solar_hp_eta_sistema, fator=input_number.aqs_hp90_kwh_factor, T_alvo=input_number.aqs_target_temp, T_ext=sensor.bthome_sensor_6a2b_temperature"
+        state: >
+          {% set Eh  = states('sensor.energy_next_hour_tubos_hp90')|float(0) %}
+          {% set A   = states('sensor.hp90_area_total_m2')|float(0) %}
+          {% set eta = states('input_number.solar_hp_eta_sistema')|float(0.55) %}
+          {% set k   = states('input_number.aqs_hp90_kwh_factor')|float(1.0) %}
+          {% set E   = Eh * A * eta * k %}
+          {% set tgt = states('input_number.aqs_target_temp')|float(45) %}
+          {% set ext = states('sensor.bthome_sensor_6a2b_temperature')|float(15) %}
+          {% set t_cold = ext %}
+          {% if t_cold < 8 %}{% set t_cold = 8 %}{% elif t_cold > 20 %}{% set t_cold = 20 %}{% endif %}
+          {% set denom = 0.001163 * max(tgt - t_cold, 1) %}
+          {{ (E / denom) | round(0) }}
+
+      - name: "AQS HP90 - Carga Estimada Depósito"
+        unique_id: aqs_hp90_tank_charge_estimate
+        unit_of_measurement: "%"
+        icon: mdi:water-boiler
+        attributes:
+          description: "Estimativa de % de carga do depósito no fim do dia (usa T atual do depósito, se existir)."
+          formula: "% = (E_now + E_today_th) / E_full × 100"
+          inputs: "V=input_number.dhw_volume_l, T_alvo=input_number.aqs_target_temp, T_ext=sensor.bthome_sensor_6a2b_temperature, T_tanque=sensor.hpsu_can_dhw_temperature (opcional), E_today=sensor.aqs_hp90_energy_today"
+        state: >
+          {% set vol = states('input_number.dhw_volume_l')|float(500) %}
+          {% set tgt = states('input_number.aqs_target_temp')|float(45) %}
+          {% set ext = states('sensor.bthome_sensor_6a2b_temperature')|float(15) %}
+          {% set t_cold = ext %}
+          {% if t_cold < 8 %}{% set t_cold = 8 %}{% elif t_cold > 20 %}{% set t_cold = 20 %}{% endif %}
+          {% set E_full = 0.001163 * vol * max(tgt - t_cold, 1) %}
+          {% set E_today = states('sensor.aqs_hp90_energy_today')|float(0) %}
+          {% set tank_T = states('sensor.hpsu_can_dhw_temperature') %}
+          {% if tank_T in ['unknown','unavailable','none',''] %}
+            {% set tank_T = 40 %}
+          {% else %}
+            {% set tank_T = tank_T | float(40) %}
+          {% endif %}
+          {% set E_now = 0.001163 * vol * max(tank_T - t_cold, 0) %}
+          {% set pct = ((E_now + E_today) / max(E_full, 0.1)) * 100 %}
+          {% if pct < 0 %}0{% elif pct > 100 %}100{% else %}{{ pct | round(0) }}{% endif %}
+
+      - name: "AQS HP90 - Pico Hoje (hora)"
+        unique_id: aqs_hp90_peak_time_today
+        icon: mdi:clock-outline
+        attributes:
+          description: "Hora do pico de potência previsto para hoje."
+          source: "sensor.power_highest_peak_time_today_tubos_hp90"
+        state: "{{ states('sensor.power_highest_peak_time_today_tubos_hp90') }}"
+
+      - name: "AQS HP90 - Pico Amanhã (hora)"
+        unique_id: aqs_hp90_peak_time_tomorrow
+        icon: mdi:clock-outline
+        attributes:
+          description: "Hora do pico de potência previsto para amanhã."
+          source: "sensor.power_highest_peak_time_tomorrow_tubos_hp90"
+        state: "{{ states('sensor.power_highest_peak_time_tomorrow_tubos_hp90') }}"
+
+      - name: "AQS HP90 - Potência Agora"
+        unique_id: aqs_hp90_power_now
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        attributes:
+          description: "Potência térmica prevista agora (modelo: power_now × Área × η)."
+          inputs: "power_now=sensor.power_production_now_tubos_hp90, area_total=sensor.hp90_area_total_m2, eta=input_number.solar_hp_eta_sistema"
+        state: >
+          {% set pW  = states('sensor.power_production_now_tubos_hp90')|float(0) %}
+          {% set A   = states('sensor.hp90_area_total_m2')|float(0) %}
+          {% set eta = states('input_number.solar_hp_eta_sistema')|float(0.55) %}
+          {{ (pW * A * eta) | round(0) }}
+
+  - binary_sensor:
+      - name: "AQS HP90 - Janela Boa Próxima Hora"
+        unique_id: aqs_hp90_good_window_next_hour
+        device_class: heat
+        attributes:
+          description: "ON se os litros previstos na próxima hora ≥ mínimo definido."
+          rule: "on se L_h >= input_number.aqs_min_liters_window"
+        state: >
+          {% set Lh = states('sensor.aqs_hp90_liters_next_hour')|float(0) %}
+          {% set minL = states('input_number.aqs_min_liters_window')|float(80) %}
+          {{ 'on' if Lh >= minL else 'off' }}
+
+group:
+  aqs_hp90_previsao:
+    name: "AQS HP90 - Previsão"
+    entities:
+      - sensor.aqs_hp90_energy_today
+      - sensor.aqs_hp90_energy_tomorrow
+      - sensor.aqs_hp90_energy_remaining_today
+      - sensor.aqs_hp90_liters_today_target
+      - sensor.aqs_hp90_liters_next_hour
+      - sensor.aqs_hp90_tank_charge_estimate
+      - sensor.aqs_hp90_peak_time_today
+      - sensor.aqs_hp90_peak_time_tomorrow
+      - sensor.aqs_hp90_power_now
+      - binary_sensor.aqs_hp90_good_window_next_hour
