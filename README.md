@@ -1,1507 +1,262 @@
-# 🏠 Home Assistant - Sistema de Automação Residencial# 🏠 Sistema Home Assistant - Documentação Completa
+# 🏠 Home Assistant - Sistema de Automação Residencial
 
+> **Sistema Home Assistant** com automações inteligentes, controlo de energia solar, 
+> gestão de piscina e climatização avançada.
 
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2023.1+-blue.svg)](https://www.home-assistant.io/)
+[![Maintenance](https://img.shields.io/badge/Maintained-Yes-green.svg)](https://github.com/guibrazlima/homeassistant)
 
-> **Sistema Home Assistant** com automações inteligentes, controlo de energia solar, gestão de piscina e climatização avançada.> ⚠️ **IMPORTANTE:** Este repositório contém configurações públicas. Ficheiros sensíveis como `secrets.yaml`, bases de dados e tokens **NÃO** estão incluídos. Consulte [SECURITY.md](SECURITY.md) antes de fazer fork ou contribuir.
+---
 
+## 🚀 Início Rápido
 
+### Componentes Principais
 
-[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2023.1+-blue.svg)](https://www.home-assistant.io/)## 📋 Índice
-
-[![Maintenance](https://img.shields.io/badge/Maintained-Yes-green.svg)](https://github.com/guibrazlima/homeassistant)1. [Visão Geral](#-visão-geral)
-
-2. [Arquitetura do Sistema](#-arquitetura-do-sistema)
-
----3. [Componentes Principais](#-componentes-principais)
-
-4. [Integrações Personalizadas](#-integrações-personalizadas)
-
-## 🚀 Início Rápido5. [Automações](#-automações)
-
-6. [Configuração de Rede](#-configuração-de-rede)
-
-### Componentes Principais7. [Monitorização e Logging](#-monitorização-e-logging)
-
-8. [Backups](#-backups)
-
-- **🤖 Automações:** 68+ automações organizadas em 13 categorias9. [Manutenção](#-manutenção)
-
-- **📦 Packages:** 8 packages modulares (AQS, Piscina, Climatização)10. [Segurança](#-segurança)
-
+- **🤖 Automações:** 68+ automações organizadas em 13 categorias
+- **📦 Packages:** 8 packages modulares (AQS, Piscina, Climatização)
 - **🔌 Integrações:** 24+ integrações personalizadas
-
-- **☀️ Energia Solar:** Controlo automático de excesso PV## 🔍 Visão Geral
-
+- **☀️ Energia Solar:** Controlo automático de excesso PV
 - **🏊 Piscina:** Gestão completa (cloro, pH, cobertura)
+- **🌡️ Climatização:** Sensores de conforto térmico
 
-- **🌡️ Climatização:** Sensores de conforto térmicoEste é um sistema Home Assistant completo e avançado que implementa uma solução de domótica integrada para automação residencial. O sistema inclui controlo de energia solar, gestão de humidade, automações inteligentes e monitorização completa da casa.
-
-
-
-### Estrutura do Projeto### 📊 Estatísticas do Sistema
-
-- **Data de Última Atualização**: Novembro 2025
-
-```- **Versão HA**: 2023.1+
-
-homeassistant/- **Automações Ativas**: 2500+ linhas
-
-├── automations/           # 13 ficheiros de automações categorizadas- **Componentes Personalizados**: 24+ integrações
-
-├── packages/              # 8 packages modulares- **Sensores**: 100+ entidades monitorizadas
-
-├── custom_components/     # Integrações personalizadas
-
-├── docs/                  # 📚 Documentação consolidada## 🏗 Arquitetura do Sistema
-
-│   ├── historico/         # Histórico de reorganizações
-
-│   ├── analises/          # Análises técnicas### 🔗 Componentes Base
-
-│   └── SECURITY.md        # Guia de segurança```yaml
-
-├── scripts/               # Scripts de automação# Configuração principal (configuration.yaml)
-
-└── configuration.yaml     # Configuração principaldefault_config:          # Configuração padrão do HA
-
-```recorder:                # Base de dados MariaDB
-
-history:                 # Histórico de entidades
-
----influxdb:               # Base de dados para métricas
-
-logger:                 # Sistema de logging
-
-## 📚 Documentação```
-
-
-
-### 📖 Guias Principais### 📡 Conectividade
-
-- **Base de Dados**: MariaDB (externa)
-
-| Documento | Descrição |- **Métricas**: InfluxDB v2
-
-|-----------|-----------|- **Proxy Reverso**: Nginx (172.0.0.0/8, 192.168.1.221/32, 192.168.1.222/32)
-
-| [📋 Histórico de Reorganização](docs/historico/REORGANIZACAO.md) | Completo histórico de todas as reorganizações |- **Notificações**: Telegram Bot
-
-| [📦 Análise de Packages](docs/analises/PACKAGES.md) | Análise técnica detalhada de todos os packages |
-
-| [🔍 Análise de Erros](docs/analises/ERROS_LOGS.md) | Diagnóstico de erros e soluções |## 🧩 Componentes Principais
-
-| [🚀 Melhorias Técnicas](docs/analises/MELHORIAS_TECNICAS.md) | Guia completo de boas práticas |
-
-| [🔒 Segurança](docs/SECURITY.md) | Guia de segurança e ficheiros sensíveis |### 🔋 Sistema de Energia Solar
-
-**PV Excess Control** - Controlo automático de excesso de energia solar
-
-### 🎯 Documentação por Categoria- **Localização**: `pv_excess_control.yaml`, `pyscript/pv_excess_control.py`
-
-- **Funcionalidades**:
-
-#### Automações  - Gestão automática de aparelhos baseada no excesso de energia solar
-
-- Ver: [`automations/README.md`](automations/README.md)  - Suporte para inversores híbridos e standard
-
-- 13 ficheiros categorizados  - Controlo dinâmico de corrente (wallboxes)
-
-- 100% IDs únicos  - Sistema de prioridades configurável
-
-- Descrições completas  - Integração com previsões Solcast
-
-  - Suporte mono e trifásico
-
-#### Packages
-
-- Ver: [`packages/README.md`](packages/README.md)**Configuração Típica**:
-
-- 8 packages modulares```yaml
-
-- Dependências documentadasautomation_id: automation.pv_excess_wallbox
-
-- Error handling implementadoappliance_priority: 100
-
-grid_voltage: 230
-
----min_home_battery_level: 20
+### Estrutura do Projeto
 
 ```
+homeassistant/
+├── automations/           # 13 ficheiros de automações categorizadas
+├── packages/              # 8 packages modulares
+├── custom_components/     # Integrações personalizadas
+├── docs/                  # 📚 Documentação consolidada
+│   ├── historico/         # Histórico de reorganizações
+│   ├── analises/          # Análises técnicas
+│   └── SECURITY.md        # Guia de segurança
+├── scripts/               # Scripts de automação
+└── configuration.yaml     # Configuração principal
+```
 
-## 🏗️ Arquitetura
+---
 
-### 🌡️ Controlo de Humidade Otimizada
+## 📚 Documentação
 
-### Componentes do Sistema**Optimal Humidity** - Sensor inteligente de humidade
+### 📖 Guias Principais
 
-- **Localização**: `custom_components/optimal_humidity/`
+| Documento | Descrição |
+|-----------|-----------|
+| [📋 Histórico de Reorganização](docs/historico/REORGANIZACAO.md) | Completo histórico de todas as reorganizações |
+| [📦 Análise de Packages](docs/analises/PACKAGES.md) | Análise técnica detalhada de todos os packages |
+| [🔍 Análise de Erros](docs/analises/ERROS_LOGS.md) | Diagnóstico de erros e soluções |
+| [🚀 Melhorias Técnicas](docs/analises/MELHORIAS_TECNICAS.md) | Guia completo de boas práticas |
+| [🔒 Segurança](docs/SECURITY.md) | Guia de segurança e ficheiros sensíveis |
 
-```- **Funcionalidades**:
+### 🎯 Documentação por Categoria
 
-┌─────────────────────────────────────────────┐  - Cálculo automático da humidade ideal
+#### Automações
+- Ver: [`automations/README.md`](automations/README.md)
+- 13 ficheiros categorizados
+- 100% IDs únicos
+- Descrições completas
 
-│         Home Assistant Core                 │  - Prevenção de condensação e mofo
+#### Packages
+- Ver: [`packages/README.md`](packages/README.md)
+- 8 packages modulares
+- Dependências documentadas
+- Error handling implementado
 
-├─────────────────────────────────────────────┤  - Índice de conforto Humidex
+---
 
-│  Automações (13 ficheiros)                  │  - Monitorização de ponto de orvalho
+## ��️ Arquitetura
 
-│  Packages (8 módulos)                       │  - Alertas de risco de mofo
+### Componentes do Sistema
 
+```
+┌─────────────────────────────────────────────┐
+│         Home Assistant Core                 │
+├─────────────────────────────────────────────┤
+│  Automações (13 ficheiros)                  │
+│  Packages (8 módulos)                       │
 │  Custom Components (24+)                    │
+└─────────────────────────────────────────────┘
+         │              │              │
+    ┌────┴────┐    ┌───┴───┐    ┌────┴────┐
+    │ MariaDB │    │InfluxDB│    │ Telegram│
+    └─────────┘    └────────┘    └─────────┘
+```
 
-└─────────────────────────────────────────────┘**Sensores Disponíveis**:
+### Integrações Principais
 
-         │              │              │- `dewpoint` - Ponto de orvalho
+- **☀️ Solar:** PV Excess Control, Solcast
+- **📷 Câmaras:** Tapo Control, ONVIF
+- **🌡️ Sensores:** Thermal Comfort, Sensor avançados
+- **🔌 Dispositivos:** TP-Link Deco, dispositivos Zigbee/WiFi
+- **🤖 IA:** LLM Vision para análise de imagens
 
-    ┌────┴────┐    ┌───┴───┐    ┌────┴────┐- `specific_humidity` - Humidade específica
+---
 
-    │ MariaDB │    │InfluxDB│    │ Telegram│- `optimal_humidity` - Humidade ideal
+## 💡 Funcionalidades Destacadas
 
-    └─────────┘    └────────┘    └─────────┘- `mold_warning` - Alerta de mofo
-
-```- `humidex` - Índice Humidex
-
-
-
-### Integrações Principais### 🚪 Sistema de Portões e Acessos
-
-```yaml
-
-- **☀️ Solar:** PV Excess Control, Solcast# Automação de portão com callback
-
-- **📷 Câmaras:** Tapo Control, ONVIF- alias: "🏡 Callback to open gate from action"
-
-- **🌡️ Sensores:** Thermal Comfort, Sensor avançados  trigger:
-
-- **🔌 Dispositivos:** TP-Link Deco, dispositivos Zigbee/WiFi    - platform: event
-
-- **🤖 IA:** LLM Vision para análise de imagens      event_type: mobile_app_notification_action
-
-      event_data:
-
----        action: ABRIR_PORTAO
-
-  action:
-
-## 💡 Funcionalidades Destacadas    - service: cover.open_cover
-
-      target:
-
-### 🌞 Gestão de Energia Solar        entity_id: cover.gate
-
-- Controlo automático de excesso de produção solar```
-
+### 🌞 Gestão de Energia Solar
+- Controlo automático de excesso de produção solar
 - Otimização de autoconsumo
+- Integração com previsões Solcast
 
-- Integração com previsões Solcast## 🔧 Integrações Personalizadas
-
-
-
-### 🏊 Automação de Piscina### 📦 Componentes Instalados via HACS
-
-- **Clorador de sal:** Controlo automático de produção de cloroO sistema utiliza 24+ integrações personalizadas para funcionalidades avançadas:
-
+### 🏊 Automação de Piscina
+- **Clorador de sal:** Controlo automático de produção de cloro
 - **pH:** Monitorização e alertas
+- **Cobertura:** Deteção automática via IA (LLM Vision)
+- **TPO:** Cálculo de tempo ótimo de cloração
 
-- **Cobertura:** Deteção automática via IA (LLM Vision)#### 🚨 **alarmo** - Sistema de Alarmes
-
-- **TPO:** Cálculo de tempo ótimo de cloração- **Função**: Sistema completo de alarmes residenciais
-
-- **Características**: Múltiplas zonas, códigos de utilizador, notificações
-
-### 🌡️ Conforto Térmico- **Integração**: Sensores de movimento, contactos de porta/janela
-
+### 🌡️ Conforto Térmico
 - Sensores de conforto para 4 divisões
+- Cálculos de ponto de orvalho
+- Alertas de humidade ideal
 
-- Cálculos de ponto de orvalho#### 🔄 **auto_backup** - Backups Automáticos  
-
-- Alertas de humidade ideal- **Função**: Gestão automática de backups do sistema
-
-- **Scheduling**: Backups diários às 01:00 e de hora a hora
-
-### 💧 Água Quente Sanitária (AQS)- **Retenção**: Limpeza automática de backups antigos
-
-- Estimador térmico para bomba de calor HP90- **Formato**: TAR comprimido com timestamp
-
+### 💧 Água Quente Sanitária (AQS)
+- Estimador térmico para bomba de calor HP90
 - Cálculo de perdas térmicas
+- Otimização de aquecimento
 
-- Otimização de aquecimento#### 📶 **ble_monitor** - Monitor Bluetooth LE
+---
 
-- **Função**: Monitorização de dispositivos Bluetooth Low Energy
+## 🔧 Instalação e Configuração
 
----- **Sensores**: BTHome (temperatura, humidade, movimento)
+### Pré-requisitos
 
-- **Alcance**: Cobertura completa da habitação
+- Home Assistant 2023.1 ou superior
+- MariaDB (para recorder)
+- Python 3.11+
 
-## 🔧 Instalação e Configuração- **Protocolo**: BTHome v2 para máxima compatibilidade
+### Configuração Inicial
 
-
-
-### Pré-requisitos#### 🌐 **browser_mod** - Controlo do Navegador
-
-- **Função**: Controlo avançado do navegador para dashboards
-
-- Home Assistant 2023.1 ou superior- **Características**: Pop-ups dinâmicos, navegação automática
-
-- MariaDB (para recorder)- **Media Player**: Controlo de reprodução de media
-
-- Python 3.11+- **Notification**: Notificações no navegador
-
-
-
-### Configuração Inicial#### ⚡ **entsoe** - Dados Energéticos Europeus
-
-- **Função**: Acesso a dados energéticos em tempo real da Europa
-
-1. **Clonar repositório:**- **API**: ENTSO-E Transparency Platform
-
-   ```bash- **Dados**: Preços spot, produção renovável, consumo
-
-   git clone https://github.com/guibrazlima/homeassistant.git- **Região**: Portugal/Península Ibérica
-
+1. **Clonar repositório:**
+   ```bash
+   git clone https://github.com/guibrazlima/homeassistant.git
    cd homeassistant
-
-   ```#### 🚗 **ev_smart_charging** - Carregamento Inteligente VE
-
-- **Função**: Otimização de carregamento de veículos elétricos
-
-2. **Configurar secrets:**- **Algoritmos**: Baseado em preços energéticos e produção solar
-
-   ```bash- **Suporte**: OCPP, wallboxes Tesla, outros protocolos
-
-   cp secrets.yaml.example secrets.yaml- **Scheduling**: Carregamento em horários de menor custo
-
-   # Editar secrets.yaml com as suas credenciais
-
-   ```#### 🏪 **hacs** - Home Assistant Community Store
-
-- **Função**: Loja de componentes da comunidade
-
-3. **Validar configuração:**- **Repositórios**: 1000+ integrações disponíveis
-
-   ```bash- **Atualizações**: Gestão automática de versões
-
-   hass --script check_config- **Backup**: Restauração de configurações
-
    ```
 
-#### 🌡️ **midea_ac** + **midea_dehumidifier_lan** 
+2. **Configurar secrets:**
+   ```bash
+   cp secrets.yaml.example secrets.yaml
+   # Editar secrets.yaml com as suas credenciais
+   ```
 
-4. **Reiniciar Home Assistant**- **Função**: Controlo de equipamentos Midea via LAN
+3. **Validar configuração:**
+   ```bash
+   hass --script check_config
+   ```
 
-- **Dispositivos**: Ares condicionados, desumidificadores
+4. **Reiniciar Home Assistant**
 
-### ⚠️ Ficheiros Sensíveis- **Protocolo**: Comunicação direta sem cloud
+### ⚠️ Ficheiros Sensíveis
 
-- **Funcionalidades**: Temperatura, modo, velocidade, timer
+> **IMPORTANTE:** Este repositório contém configurações públicas. 
+> Ficheiros sensíveis como `secrets.yaml`, bases de dados e tokens 
+> **NÃO** estão incluídos.
 
 Os seguintes ficheiros **NÃO** estão no repositório e devem ser criados manualmente:
 
-#### 🔌 **ocpp** - Open Charge Point Protocol
+- `secrets.yaml` (credenciais)
+- `*.db*` (bases de dados)
+- `known_devices.yaml` (dispositivos)
+- `home-assistant.log*` (logs)
 
-- `secrets.yaml` (credenciais)- **Função**: Protocolo standard para wallboxes
-
-- `*.db*` (bases de dados)- **Compatibilidade**: Wallboxes comerciais e DIY
-
-- `known_devices.yaml` (dispositivos)- **Monitorização**: Energia, estado de carregamento, erros
-
-- `home-assistant.log*` (logs)- **Controlo**: Start/stop, limite de corrente, scheduling
-
-
-
-Ver [SECURITY.md](docs/SECURITY.md) para detalhes completos.#### 💰 **omie** - Mercado Energético Ibérico
-
-- **Função**: Preços spot do mercado OMIE em tempo real
-
----- **Frequência**: Atualização horária
-
-- **Dados**: Preços PT/ES, previsões, histórico
-
-## 📊 Estatísticas- **Integração**: Templates de tarifários dinâmicos
-
-
-
-| Categoria | Quantidade | Estado |#### 🧠 **powerbrain** - Gestão Inteligente de Energia
-
-|-----------|------------|--------|- **Função**: Otimização automática do consumo energético
-
-| **Automações** | 68+ | ✅ 100% válidas |- **IA**: Algoritmos de machine learning para padrões
-
-| **Packages** | 8 | ✅ 100% documentados |- **Previsões**: Consumo futuro baseado em histórico
-
-| **Integrações** | 24+ | ✅ Funcionais |- **Controlo**: Gestão automática de cargas
-
-| **Sensores** | 100+ | ✅ Monitorizados |
-
-| **Documentação** | 2000+ linhas | ✅ Consolidada |#### 🐍 **pyscript** - Scripts Python Avançados
-
-- **Função**: Execução de código Python nativo no HA
-
-### Qualidade do Código- **Características**: 
-
-  - Triggers temporais e de estado
-
-- ✅ **100%** YAML válido  - Acesso completo à API do HA
-
-- ✅ **100%** Unique IDs nos sensores  - Bibliotecas Python externas
-
-- ✅ **100%** Error handling em automações críticas- **Scripts Ativos**:
-
-- ✅ **95%** Documentação completa  - `pv_excess_control.py` - Controlo de excesso solar
-
-- ✅ **Nomenclatura padronizada:** `categoria_descricao.yaml`  - Scripts de cálculo energético
-
-  - Automações complexas
+Ver [SECURITY.md](docs/SECURITY.md) para detalhes completos.
 
 ---
 
-#### ☀️ **solcast_solar** - Previsões Solares
+## 📊 Estatísticas
 
-## 🚀 Melhorias Recentes- **Função**: Previsões precisas de produção solar
+| Categoria | Quantidade | Estado |
+|-----------|------------|--------|
+| **Automações** | 68+ | ✅ 100% válidas |
+| **Packages** | 8 | ✅ 100% documentados |
+| **Integrações** | 24+ | ✅ Funcionais |
+| **Sensores** | 100+ | ✅ Monitorizados |
+| **Documentação** | 2800+ linhas | ✅ Consolidada |
 
-- **API**: Solcast.com.au com dados meteorológicos
+### Qualidade do Código
 
-### Novembro 2025- **Dados**: Produção estimada, irradiação, cobertura nuvens
+- ✅ **100%** YAML válido
+- ✅ **100%** Unique IDs nos sensores
+- ✅ **100%** Error handling em automações críticas
+- ✅ **95%** Documentação completa
+- ✅ **Nomenclatura padronizada:** `categoria_descricao.yaml`
 
-- **Ficheiros de Configuração**:
+---
 
-#### ✨ Reorganização Completa  ```json
+## 🚀 Melhorias Recentes
 
-- ✅ 68 automações reorganizadas em 13 ficheiros categorizados  // solcast-sites.json
+### Novembro 2025
 
-- ✅ 8 packages otimizados e documentados  {
+#### ✨ Reorganização Completa
+- ✅ 68 automações reorganizadas em 13 ficheiros categorizados
+- ✅ 8 packages otimizados e documentados
+- ✅ Documentação consolidada em `docs/`
+- ✅ Eliminação de duplicações
+- ✅ Padronização de nomenclatura
 
-- ✅ Documentação consolidada em `docs/`    "sites": [
-
-- ✅ Eliminação de duplicações      {
-
-- ✅ Padronização de nomenclatura        "resource_id": "xxxxx-xxxx-xxxx",
-
-        "capacity": 10.0,
-
-#### 🔧 Melhorias Técnicas        "tilt": 30,
-
-- ✅ Unique IDs em 100% dos sensores        "azimuth": 180
-
-- ✅ Timeout e error handling em automações LLM Vision      }
-
-- ✅ Criação de `aqs_common.yaml` para inputs partilhados    ]
-
-- ✅ README.md para automações e packages  }
-
-  ```
+#### 🔧 Melhorias Técnicas
+- ✅ Unique IDs em 100% dos sensores
+- ✅ Timeout e error handling em automações LLM Vision
+- ✅ Criação de `aqs_common.yaml` para inputs partilhados
+- ✅ README.md para automações e packages
 
 Ver [REORGANIZACAO.md](docs/historico/REORGANIZACAO.md) para histórico completo.
 
-#### 🔌 **tapo_control** - Dispositivos TP-Link Tapo
+---
 
----- **Função**: Controlo de dispositivos Tapo (plugs, câmaras, lâmpadas)
-
-- **Protocolo**: Comunicação local sem cloud
-
-## 🤝 Contribuir- **Monitorização**: Consumo energético, estado, programação
-
-- **Automação**: Integração completa com automações HA
+## 🤝 Contribuir
 
 ### Como Contribuir
 
-#### 🌡️ **thermal_comfort** - Conforto Térmico
-
-1. Fork o repositório- **Função**: Cálculos avançados de conforto térmico
-
-2. Criar branch: `git checkout -b feature/nova-funcionalidade`- **Métricas**: 
-
-3. Validar YAML: `hass --script check_config`  - Heat Index
-
-4. Commit: `git commit -m "Adicionar nova funcionalidade"`  - Simmer Index  
-
-5. Push: `git push origin feature/nova-funcionalidade`  - Frost Point
-
-6. Abrir Pull Request  - Thermal Perception
-
-- **Sensores**: Baseado em temperatura e humidade existentes
+1. Fork o repositório
+2. Criar branch: `git checkout -b feature/nova-funcionalidade`
+3. Validar YAML: `hass --script check_config`
+4. Commit: `git commit -m "Adicionar nova funcionalidade"`
+5. Push: `git push origin feature/nova-funcionalidade`
+6. Abrir Pull Request
 
 ### Boas Práticas
 
-#### 💻 **ui_lovelace_minimalist** - Interface Minimalista
-
-- ✅ Sempre adicionar `unique_id` a sensores- **Função**: Framework de UI moderna e minimalista
-
-- ✅ Usar nomenclatura: `categoria_descricao.yaml`- **Características**:
-
-- ✅ Documentar dependências em cabeçalhos  - Design cards personalizadas
-
-- ✅ Adicionar timeout em services externos  - Temas adaptativos
-
-- ✅ Nunca commitar `secrets.yaml`  - Performance otimizada
-
-- **Localização**: `ui_lovelace_minimalist/`, `button_card_templates/`
+- ✅ Sempre adicionar `unique_id` a sensores
+- ✅ Usar nomenclatura: `categoria_descricao.yaml`
+- ✅ Documentar dependências em cabeçalhos
+- ✅ Adicionar timeout em services externos
+- ✅ Nunca commitar `secrets.yaml`
 
 Ver [MELHORIAS_TECNICAS.md](docs/analises/MELHORIAS_TECNICAS.md) para guia completo.
 
-#### 📊 **variable** - Variáveis Persistentes
+---
 
----- **Função**: Criação de variáveis que persistem entre reinícios
-
-- **Casos de Uso**: Contadores, estados temporários, configurações
-
-## 📞 Suporte- **API**: Serviços para set/get de valores
-
-- **Backup**: Incluído nos backups automáticos
+## 📞 Suporte
 
 ### Documentação
 
-#### 🌪️ **xiaomi_miio** - Dispositivos Xiaomi
-
-- 📚 [Documentação Home Assistant](https://www.home-assistant.io/docs/)- **Função**: Integração com ecosistema Xiaomi/Mijia
-
-- 🔧 [Guia de Troubleshooting](docs/analises/ERROS_LOGS.md)- **Dispositivos**: Ventoinhas, purificadores ar, robots aspirador
-
-- 💡 [Boas Práticas](docs/analises/MELHORIAS_TECNICAS.md)- **Protocolos**: miIO protocol, raw commands
-
-- **Controlo**: Speed, oscilação, timer, modo
+- 📚 [Documentação Home Assistant](https://www.home-assistant.io/docs/)
+- 🔧 [Guia de Troubleshooting](docs/analises/ERROS_LOGS.md)
+- 💡 [Boas Práticas](docs/analises/MELHORIAS_TECNICAS.md)
 
 ### Issues
 
-### 🎯 Configurações Específicas Avançadas
-
 - 🐛 Reportar bugs via [GitHub Issues](https://github.com/guibrazlima/homeassistant/issues)
-
-- 💬 Discussões na comunidade Home Assistant#### 📊 InfluxDB v2 - Base de Dados de Métricas
-
-```yaml
-
----influxdb:
-
-  api_version: 2
-
-## 📜 Licença  ssl: false
-
-  host: influxdb
-
-Este projeto está sob licença MIT. Ver `LICENSE` para detalhes.  port: 8086
-
-  token: !secret influxdb_token
-
----  organization: gl
-
-  bucket: homeassistant
-
-## 🙏 Agradecimentos  tags:
-
-    source: HomeAssistant
-
-- [Home Assistant](https://www.home-assistant.io/) - Plataforma incrível    installation: production
-
-- [PV Excess Control](https://github.com/InventoCasa/ha-advanced-blueprints) - Blueprint de energia solar  tags_attributes:
-
-- [LLM Vision](https://github.com/valentinfrlch/ha-llmvision) - Integração de IA para visão computacional    - friendly_name
-
-- Comunidade Home Assistant Portugal 🇵🇹    - device_class
-
-  default_measurement: units
-
----  ignore_attributes:
-
-    - icon
-
-**Última atualização:** 11 de novembro de 2025      - entity_picture
-
-**Versão:** 2.0.0    exclude:
-
-**Manutenção:** Ativa ✅    entities:
-
-      - zone.home
-      - sun.sun
-    domains:
-      - persistent_notification
-      - person
-      - weather
-  include:
-    entities:
-      - sensor.emoncms_*
-      - sensor.solcast_*
-      - sensor.*_energy_*
-```
-
-**Características**:
-- **Organização**: Dados estruturados por tags
-- **Performance**: Queries otimizadas para dashboards
-- **Retenção**: Políticas de retenção automáticas
-- **Grafana**: Integração para visualizações avançadas
-
-#### 🔄 MariaDB - Recorder Principal
-```yaml
-recorder:
-  db_url: !secret mariadb_connection
-  auto_purge: false
-  commit_interval: 5
-  include:
-    domains:
-      - sensor
-      - switch
-      - light
-      - climate
-      - cover
-  exclude:
-    entity_globs:
-      - sensor.*_last_*
-      - sensor.*_next_*
-    entities:
-      - sensor.time
-      - sensor.date
-```
-
-**Otimizações**:
-- **Índices**: Criados automaticamente para queries frequentes
-- **Purga Manual**: Controlo fino sobre limpeza de dados
-- **Particionamento**: Tabelas particionadas por data
-- **Backup**: Dump diário para backup/restore
-
-## 🤖 Automações
-
-### 📊 Estatísticas das Automações
-- **Total de Automações**: Ficheiro com 2500+ linhas
-- **Triggers Ativos**: Time-based, State-based, Event-based
-- **Complexidade**: Desde simples ON/OFF até lógica multi-condicional
-- **Categorias Principais**:
-  - 🌞 **Gestão de energia solar** (PV Excess Control)
-  - 🏊 **Controlo de piscina** (Manual/Automático)
-  - 💡 **Iluminação inteligente** (Presença + Tempo)
-  - 🚗 **Carregamento de veículos elétricos** (Horário otimizado)
-  - 🌡️ **Controlo de clima** (Bomba de calor + aquecimento)
-  - 🔔 **Notificações** (Telegram + Mobile app)
-  - 🚪 **Controlo de acessos** (Portões + segurança)
-  - ⚡ **Monitorização de rede** (Speedtests + conectividade)
-
-### 🏊 Sistema de Piscina Avançado
-Sistema completo de gestão de piscina com múltiplos modos de operação:
-
-```yaml
-# Script principal para alternar modo automático/manual
-alternar_modo_automacao_piscina:
-  alias: "Alternar Entre Modo Piscina Manual e Automático"
-  sequence:
-    - choose:
-        # Modo Automático → Manual
-        - conditions:
-            - condition: state
-              entity_id: input_boolean.modo_automatico
-              state: 'on'
-          sequence:
-            - service: input_boolean.turn_off
-              target:
-                entity_id: input_boolean.modo_automatico
-            - service: automation.turn_off
-              target:
-                entity_id:
-                  - automation.automacao_bomba_piscina
-                  - automation.bomba_piscina_noite
-            - service: persistent_notification.create
-              data:
-                message: "Modo Manual ativado. Automações desativadas."
-                title: "Alteração de Modo"
-        
-        # Modo Manual → Automático  
-        - conditions:
-            - condition: state
-              entity_id: input_boolean.modo_automatico
-              state: 'off'
-          sequence:
-            - service: input_boolean.turn_on
-              target:
-                entity_id: input_boolean.modo_automatico
-            - service: automation.turn_on
-              target:
-                entity_id:
-                  - automation.automacao_bomba_piscina
-                  - automation.bomba_piscina_noite
-            - service: persistent_notification.create
-              data:
-                message: "Modo Automático ativado. Automações ativadas."
-                title: "Alteração de Modo"
-```
-
-**Funcionalidades da Piscina**:
-- **Modo Manual**: Controlo direto pelo utilizador
-- **Modo Automático**: Baseado em temperatura, tempo de filtragem e condições meteorológicas
-- **Scheduling**: Bomba noturna com horários otimizados
-- **Feedback**: Notificações de mudança de estado
-- **Templates**: Cálculo de tempo restante e duração de filtragem
-
-### ⚡ Monitorização de Rede
-Sistema automatizado de testes de velocidade de internet:
-
-```yaml
-- alias: SpeedTests
-  description: 'Testes automáticos de velocidade de internet'
-  trigger:
-    - platform: time
-      at: 06:30:00       # Teste matinal
-    - platform: time
-      at: '18:30:00'     # Teste vespertino
-    - event: sunrise
-      offset: -00:35:00  # Teste ao nascer do sol
-  condition: []
-  action:
-    - service: homeassistant.update_entity
-      data: {}
-      target:
-        entity_id: sensor.speedtest_download
-  mode: single
-```
-
-**Características**:
-- **Frequência**: 3x por dia em horários estratégicos
-- **Métricas**: Download, upload, ping e jitter
-- **Histórico**: Armazenamento em InfluxDB para análise de tendências
-- **Alertas**: Notificação se velocidade abaixo do esperado
-
-### 🚪 Sistema de Portões Inteligente
-Controlo de acessos com notificações móveis:
-
-```yaml
-# Callback para abrir portão via notificação móvel
-- alias: "🏡 Callback to open gate from action"
-  description: 'Abertura remota via notification action'
-  trigger:
-    - platform: event
-      event_type: mobile_app_notification_action
-      event_data:
-        action: ABRIR_PORTAO
-  condition: []
-  action:
-    - service: cover.open_cover
-      data: {}
-      target:
-        entity_id:
-          - cover.gate
-  mode: restart
-
-# Iluminação automática da garagem
-- alias: "💡🏡 Garage light on when gate opens/closes"
-  description: 'Ativação automática da luz da garagem'
-  trigger:
-    - platform: state
-      entity_id:
-        - cover.gate
-      from: closed
-      to: open
-      for:
-        hours: 0
-        minutes: 0
-        seconds: 2
-    - platform: state
-      entity_id:
-        - cover.gate
-      from: open
-      to: closed
-  action:
-    - service: light.turn_on
-      target:
-        entity_id: light.garage
-    - delay: '00:05:00'    # Luz ligada por 5 minutos
-    - service: light.turn_off
-      target:
-        entity_id: light.garage
-```
-
-**Segurança e Controlo**:
-- **Acesso Remoto**: Via app móvel com ações de notificação
-- **Iluminação Automática**: Luz da garagem ao abrir/fechar portão
-- **Logs**: Registo de todas as operações
-- **Timeout**: Desativação automática da iluminação
-
-### 🌞 Gestão Solar Avançada
-Sistema PV Excess Control integrado nas automações:
-
-```yaml
-# Exemplo de automação solar (configuração via blueprint)
-automation_pv_wallbox:
-  alias: "Solar Excess - Wallbox Charging"
-  use_blueprint:
-    path: pv_excess_control.yaml
-    input:
-      automation_id: automation.pv_excess_wallbox
-      appliance_priority: 100
-      pv_power: sensor.solcast_pv_power
-      export_power: sensor.emoncms_export
-      appliance_switch: switch.wallbox_charging
-      min_current: 6
-      max_current: 32
-      grid_voltage: 230
-```
-
-**Automações Solares Ativas**:
-- **Wallbox**: Carregamento automático durante excesso solar
-- **Bomba de Calor**: Aquecimento de água quando há excedente
-- **Piscina**: Filtragem adicional com energia solar gratuita
-- **Electrodomésticos**: Ativação inteligente (máquina de lavar, etc.)
-
-### 🌡️ Controlo Climático Inteligente
-Automações para eficiência energética:
-
-```yaml
-# Otimização de aquecimento baseada em preços
-- alias: "Heat Pump Night Mode"
-  trigger:
-    - platform: template
-      value_template: "{{ states('sensor.aquecimento_agua_noite') == now().strftime('%H:%M') }}"
-  action:
-    - service: climate.set_temperature
-      target:
-        entity_id: climate.hpsu_can
-      data:
-        temperature: 55
-    - service: notify.telegram
-      data:
-        message: "Aquecimento de água ativado na hora mais barata: {{ states('sensor.aquecimento_agua_noite') }}"
-```
-
-### 🔔 Sistema de Notificações
-Telegram Bot integrado para alertas em tempo real:
-
-```yaml
-# Configuração do bot
-telegram_bot:
-  - platform: polling
-    api_key: !secret telegram_bot_api_key
-    allowed_chat_ids:
-      - 5258104860  # Utilizador autorizado
-
-# Notificações automáticas
-notify:
-  - platform: telegram
-    name: "Gui"
-    chat_id: 45258104860
-```
-
-**Tipos de Notificações**:
-- **Energia**: Excesso solar, preços baixos, falhas de rede
-- **Segurança**: Abertura de portões, movimento detectado
-- **Sistema**: Backups completados, atualizações disponíveis
-- **Manutenção**: Limpeza de filtros, verificações periódicas
-
-### 📱 Presença Inteligente
-Sistema de detecção de presença via HomeKit:
-
-```yaml
-# Sensores de presença via input_boolean
-binary_sensor:
-  - platform: template
-    sensors:
-      hk_presence_gblima:
-        friendly_name: "gblima(HK)"
-        device_class: presence
-        value_template: >-
-          {{ is_state('input_boolean.gblima_present', 'on') }}
-      hk_presence_cmouta:
-        friendly_name: "cmouta(HK)"
-        device_class: presence
-        value_template: >-
-          {{ is_state('input_boolean.cmouta_present', 'on') }}
-```
-
-**Automações baseadas em Presença**:
-- **Iluminação**: Auto ON/OFF baseado na presença
-- **Clima**: Ajuste de temperatura quando ninguém está em casa
-- **Segurança**: Ativação de alarmes quando todos saem
-- **Energia**: Modo poupança automático
-
-## 🌐 Configuração de Rede
-
-### 🔒 Proxy Reverso
-```yaml
-http:
-  use_x_forwarded_for: true
-  trusted_proxies:
-    - 172.0.0.0/8
-    - 192.168.1.221/32
-    - 192.168.1.222/32
-```
-
-### 🔐 Autenticação
-- Suporte para headers de autenticação externa
-- Integração com sistemas SSO (comentado)
-
-## 📊 Monitorização e Logging
-
-### 📈 Sistema de Métricas
-- **InfluxDB**: Armazenamento de métricas de longo prazo
-- **Recorder**: Base de dados MariaDB para histórico
-- **History**: Componente de histórico nativo
-
-### 📝 Configuração de Logging
-```yaml
-logger:
-  default: info
-  logs:
-    custom_components.pyscript.file.pv_excess_control: INFO
-    custom_components.auth_header: debug
-```
-
-### 🏷️ Tags InfluxDB
-```yaml
-tags:
-  source: HomeAssistant
-tags_attributes:
-  - friendly_name
-exclude:
-  entities:
-    - zone.home
-  domains:
-    - persistent_notification
-    - person
-```
-
-## 💾 Backups
-
-### 📅 Sistema de Backup Automático
-O sistema possui backups automáticos organizados em:
-
-#### 🔄 Backups Diários
-- **Localização**: `backups/DailyBackup*`
-- **Frequência**: Diária às 01:00
-- **Retenção**: Múltiplos dias guardados
-- **Formato**: TAR comprimido
-
-#### ⏰ Backups de Hora a Hora
-- **Localização**: `backups/HourlyBackup*`
-- **Frequência**: 12:00 AM e 12:00 PM
-- **Casos de Uso**: Recuperação rápida de alterações recentes
-
-### 📁 Estrutura de Backups
-```
-backups/
-├── DailyBackup_Friday_February_7_2025_2025-02-07_01.00_00258324.tar
-├── DailyBackup_Saturday_February_8_2025_2025-02-08_01.00_00396380.tar
-├── HourlyBackup_Friday_12:00_AM_February_7_2025_2025-02-07_00.00_00347505.tar
-└── HourlyBackup_Saturday_12:00_PM_February_8_2025_2025-02-08_12.00_00236523.tar
-```
-
-## 🔧 Manutenção
-
-### 🧹 Limpeza da Base de Dados
-```yaml
-recorder:
-  db_url: !secret mariadb_connection
-  auto_purge: false  # Purga manual controlada
-```
-
-### 📁 Organização de Ficheiros
-- **Configurações**: Ficheiros YAML separados por domínio
-- **Sensores**: Diretório `sensors/` com merge automático
-- **Templates**: Diretório `templates/` modular (ver detalhes abaixo)
-- **Scripts**: Ficheiros Python em `pyscript/`
-- **UI**: Componentes de interface em `lovelace/`, `popup/`, `button_card_templates/`
-- **Blueprints**: Automações reutilizáveis em `blueprints/`
-
-### � Sistema de Templates Avançado
-
-O sistema utiliza uma arquitectura modular de templates organizados por funcionalidade:
-
-#### 🌡️ **temperaturas.yaml** - Monitorização Climática
-Sensores agregados para monitorização completa da temperatura e humidade da casa:
-
-```yaml
-# Temperatura média de toda a casa
-- sensor:
-    - name: "Casa Temperatura Media"
-      state: >
-        {% set cave = states('sensor.bthome_sensor_25e6_temperature') | float %}
-        {% set cozinha = states('sensor.bthome_sensor_508c_temperature') | float %}
-        # ... agregação de 7 sensores de temperatura
-        {{ ((cave + cozinha + quarto_gui + quarto_luisa + sala + sala_superior + suite) / 7) | round(2) }}
-```
-
-**Funcionalidades**:
-- Agregação de 7 sensores de temperatura distribuídos pela casa
-- Cálculo automático de humidade relativa média
-- Atributos detalhados por divisão
-- Sensores BTHome para comunicação sem fios
-
-#### ⚡ **templates_energia_tarifarios.yaml** - Gestão Energética Avançada
-Sistema complexo para cálculo de tarifários energéticos em tempo real:
-
-```yaml
-# Iberdrola - Tarifário Bi-horário
-- sensor:
-    - name: "Iberdrola bi-horário Diário"
-      state: >
-        {% set vazio = 0.0776 -%}
-        {% set fora_vazio = 0.2141 -%}
-        {% set IVA = 1.23 -%}
-        {% set desconto = 0.881 -%}
-        {% set Preço = vazio if now().hour < 8 or now().hour > 21 else fora_vazio -%}
-        {{ ((Preço * desconto) + IEC) * IVA | round(4) }}
-```
-
-**Características**:
-- **Iberdrola**: Tarifário bi-horário com descontos para veículos elétricos
-- **Coopérnico**: Integração com preços spot OMIE em tempo real
-- Cálculo automático de impostos (IVA, IEC)
-- Preços diferenciados por horário (vazio/fora de vazio)
-
-#### 🏊 **piscina.yaml** - Automação de Piscina Inteligente
-Sistema completo de gestão da piscina com otimização energética:
-
-```yaml
-# Tempo restante de filtragem
-- sensor:
-    - name: "pool_pump_remaining_time"
-      state: >-
-        {% set time = (((states('input_number.pool_pump_duration_lower_threshold') | float(0))*60 
-                      - (states('sensor.bomba_piscina_horas_ligada_diario')|float(-1))*3600)| round | int, 0)|max %}
-        {% set hours = ((time % 86400) / 3600) | int %}
-        {{ '%02d:%02d'|format(hours, minutes) }}
-```
-
-**Funcionalidades**:
-- Controlo automático do tempo de filtragem
-- Monitorização de consumo energético
-- Interface de controlo manual/automático
-- Optimização baseada em condições meteorológicas
-
-#### 🚗 **carregamento_carros.yaml** - Carregamento Inteligente VE
-Gestão avançada de veículos elétricos com cálculo de custos:
-
-```yaml
-# Custo de carregamento em tempo real
-- sensor:
-    - name: "EV Electricity Spend"
-      state: >
-        {% set price = float(states('sensor.template_iberdrola_bihorario_diario'),0) %}
-        {% set meter = float(states('sensor.emoncms_evse_power_kwh'),0) %}
-        {% set delta = meter - float(this.attributes.last,0) %}
-        {{ '%0.6f'|format( (price) * delta ) }}
-```
-
-**Características**:
-- Monitorização de múltiplos veículos (EV e X1)
-- Cálculo automático de custos por kWh
-- Integração com tarifários dinâmicos
-- Tracking de consumo histórico
-
-#### 🌡️ **cop.yaml** - Bomba de Calor (COP Analysis)
-Sistema avançado para análise de eficiência da bomba de calor:
-
-```yaml
-# Potência térmica em tempo real
-- sensor:
-    - name: "HPSU.CAN Thermal Power"
-      state: >
-        {% set flow = states('sensor.hpsu_can_flow_rate') | float(0) %}
-        {% set leavingtemp = states('sensor.hpsu_can_flow_temperature_tv') | float(0) %}
-        {% set returntemp = states('sensor.hpsu_can_return_temperature_heating') | float(0) %}
-        {{ (max(0, (leavingtemp - returntemp) * (4.19 * flow) / 3600) | round(2)) }}
-```
-
-**Análises Disponíveis**:
-- Cálculo de COP (Coefficient of Performance) em tempo real
-- Delta T para aquecimento e AQS (Águas Quentes Sanitárias)
-- Potência térmica baseada em fluxo e temperatura
-- Monitorização de eficiência energética
-
-#### 🏠 **home_energy.yaml** - Gestão Energética Doméstica
-Centro de controlo energético da habitação:
-
-```yaml
-# Custo de eletricidade consumida
-- sensor:
-    - name: "Electricity Spend"
-      state: >
-        {% set price = float(states('sensor.template_iberdrola_bihorario_diario'),0) %}
-        {% set meter = float(states('sensor.emoncms_import_kwh'),0) %}
-        {{ '%0.6f'|format( (price) * delta ) }}
-```
-
-**Monitorização**:
-- Consumo vs. produção solar
-- Exportação positiva de energia
-- Integração com preços OMIE
-- Balanço energético em tempo real
-
-#### 🔥 **bomba_calor.yaml** - Otimização Horária
-Otimização automática baseada em preços energéticos:
-
-```yaml
-# Hora ideal para aquecimento de água
-- sensor:
-    - name: "Aquecimento Agua Noite"
-      state: >
-        {% from 'cheapest_energy_hours.jinja' import cheapest_energy_hours %}
-        {{ cheapest_energy_hours(
-            hours=1, 
-            start='22:00', 
-            end='08:00'
-        ) }}
-```
-
-#### 🌤️ **weather.yaml** - Previsões Meteorológicas
-Integração com dados meteorológicos para otimização:
-
-```yaml
-# Cobertura de nuvens para otimização solar
-- sensor:
-    - name: "Média de Nuvens Próximas 8h"
-      state: "{{ states('input_number.average_cloud_cover') }}"
-```
-
-#### 🗺️ **destinos_waze.yaml** - Navegação Inteligente
-Sistema de navegação integrado:
-
-```yaml
-# Endereços dinâmicos para Waze
-- sensor:
-    - name: "Destination address"
-      state: >-
-         {%- if is_state("input_select.destination", "Farfetch")  -%}
-           Centro Empresarial Lionesa, Portugal
-         {%- elif is_state("input_select.destination", "Parents")  -%}
-           Travessa da Cruz das Almas 10 Vila Real, Portugal
-```
-
-### 🔄 Atualizações e Manutenção
-```bash
-# Atualização via HACS
-cd /config/custom_components
-git pull origin main  # Para componentes versionados
-
-# Verificação de configuração
-ha core check
-
-# Backup antes de atualizações maiores
-ha backup new --name "pre_update_$(date +%Y%m%d)"
-
-# Reinício de serviços específicos
-ha core reload
-```
-
-### 📈 Métricas de Performance
-- **Templates Ativos**: 10+ ficheiros modulares
-- **Sensores Calculados**: 50+ sensores derivados
-- **Atualização**: Tempo real (trigger-based)
-- **Eficiência**: Cálculos otimizados com cache
-
-## 🛡️ Segurança
-
-### 🔐 Gestão de Segredos
-```yaml
-# secrets.yaml (não incluído no repositório)
-mariadb_connection: "mysql://user:pass@host/db"
-influxdb_token: "xxxxx-xxxx-xxxx"
-telegram_bot_api_key: "bot_token"
-```
-
-### 🚫 Exclusões de Segurança
-- Ficheiro `secrets.yaml` nunca deve ser versionado
-- Tokens e passwords em variáveis de ambiente
-- Logs filtrados para informações sensíveis
-
-### 🔒 Telegram Bot
-```yaml
-telegram_bot:
-  - platform: polling
-    api_key: !secret telegram_bot_api_key
-    allowed_chat_ids:
-      - 5258104860  # ID específico do utilizador
-
-notify:
-  - platform: telegram
-    name: "Gui"
-    chat_id: 45258104860
-```
-
-## 📞 Suporte e Comunidade
-
-### 🆘 Resolução de Problemas
-
-#### 🔍 **Diagnóstico Rápido**
-```bash
-# Verificação completa do sistema
-ha core check --verbose
-
-# Estado dos componentes críticos  
-ha supervisor info
-ha supervisor logs
-
-# Verificação de conectividade
-ping 8.8.8.8
-curl -I https://api.telegram.org
-
-# Estado da base de dados
-mysql -u root -p -e "SHOW PROCESSLIST;"
-```
-
-#### 📊 **Logs Importantes**
-1. **Core**: `home-assistant.log*` - Logs principais do sistema
-2. **Supervisor**: `supervisor.log` - Logs do supervisor HA OS
-3. **MariaDB**: `/var/log/mysql/error.log` - Erros de BD
-4. **Pyscript**: Filtrar por `custom_components.pyscript`
-5. **Templates**: Verificar erros de sintaxe YAML
-
-#### ⚠️ **Problemas Comuns e Soluções**
-
-**🔌 Problema: Templates não atualizam**
-```yaml
-# Solução: Verificar triggers
-- trigger:
-    - platform: state
-      entity_id: sensor.dependency_sensor
-  sensor:
-    - name: "My Template Sensor"
-      state: "{{ states('sensor.dependency_sensor') | float }}"
-```
-
-**📊 Problema: InfluxDB não recebe dados**
-```yaml
-# Verificar configuração
-influxdb:
-  host: influxdb
-  port: 8086
-  # Testar conectividade
-  # curl -I http://influxdb:8086/ping
-```
-
-**🚗 Problema: PV Excess Control não funciona**
-```python
-# Verificar logs pyscript
-# Developer Tools > Logs > custom_components.pyscript
-# Executar manualmente a automação
-# Configuration > Automations > Run
-```
-
-**🏊 Problema: Piscina não muda de modo**
-```yaml
-# Verificar input_boolean
-input_boolean.modo_automatico: "on/off"
-# Verificar automações relacionadas
-automation.automacao_bomba_piscina: "active/inactive"
-```
-
-#### 🔧 **Ferramentas de Debug**
-```yaml
-# Ativar debug específico
-logger:
-  default: info
-  logs:
-    homeassistant.components.template: debug
-    custom_components.pyscript: debug
-    homeassistant.helpers.template: debug
-```
-
-### 🔗 Links Úteis e Recursos
-
-#### 📚 **Documentação Oficial**
-- [Home Assistant Docs](https://home-assistant.io/docs/) - Documentação principal
-- [Template Reference](https://home-assistant.io/docs/configuration/templating/) - Referência de templates
-- [Automation Docs](https://home-assistant.io/docs/automation/) - Automações
-- [YAML Guide](https://home-assistant.io/docs/configuration/yaml/) - Guia YAML
-
-#### 🛠️ **Ferramentas e Extensões**
-- [HACS](https://hacs.xyz/) - Community Store
-- [VSCode Extension](https://marketplace.visualstudio.com/items?itemName=keesschollaart.vscode-home-assistant) - Editor HA
-- [Template Editor](https://home-assistant.io/docs/configuration/templating/#template-editor) - Developer Tools
-- [YAML Validator](https://codebeautify.org/yaml-validator) - Validação YAML online
-
-#### 🏘️ **Comunidade e Suporte**
-- [Community Forum](https://community.home-assistant.io/) - Fórum oficial
-- [Reddit r/homeassistant](https://reddit.com/r/homeassistant) - Discussões
-- [Discord](https://discord.gg/c5DvZ4e) - Chat em tempo real
-- [GitHub Issues](https://github.com/home-assistant/core/issues) - Bugs e features
-
-#### ⚡ **Integrações Específicas Deste Projeto**
-- [PV Excess Control](https://github.com/InventoCasa/ha-advanced-blueprints) - Controlo solar
-- [Optimal Humidity](https://github.com/TheRealWaldo/ha-optimal-humidity) - Humidade ideal
-- [Pyscript](https://github.com/custom-components/pyscript) - Scripts Python
-- [Solcast](https://github.com/oziee/ha-solcast-solar) - Previsões solares
-- [OMIE](https://github.com/dgomes/ha_omie) - Preços energéticos
-- [Thermal Comfort](https://github.com/dolezsa/thermal_comfort) - Conforto térmico
-
-#### 💰 **Recursos Energéticos (Portugal)**
-- [OMIE Market](https://www.omie.es/pt) - Mercado energético ibérico
-- [REN Dados](https://www.ren.pt/pt-PT/dados_de_sistema) - Dados do sistema elétrico
-- [Solcast](https://solcast.com/) - Previsões de irradiação solar
-- [ERSE](https://www.erse.pt/) - Regulador energético
-
-#### 🏠 **Domótica e IoT**
-- [Zigbee2MQTT](https://www.zigbee2mqtt.io/) - Bridge Zigbee
-- [Tasmota](https://tasmota.github.io/docs/) - Firmware para ESP
-- [ESPHome](https://esphome.io/) - Platform para ESP32/ESP8266
-- [Node-RED](https://nodered.org/) - Automação visual
-
-### 📧 **Contacto e Contribuições**
-
-#### 🤝 **Como Contribuir**
-1. **Fork** do repositório
-2. **Clone** para desenvolvimento local
-3. **Branch** para nova funcionalidade: `git checkout -b feature/nova-funcionalidade`
-4. **Commit** com mensagens descritivas: `git commit -m "Add: Nova funcionalidade X"`
-5. **Push** para o branch: `git push origin feature/nova-funcionalidade`
-6. **Pull Request** com descrição detalhada
-
-#### 📋 **Template para Issues**
-```markdown
-### Descrição do Problema
-[Descrição clara do problema]
-
-### Passos para Reproduzir
-1. Ir para...
-2. Clicar em...
-3. Ver erro...
-
-### Comportamento Esperado
-[O que deveria acontecer]
-
-### Comportamento Atual  
-[O que está a acontecer]
-
-### Logs Relevantes
-```yaml
-[Colar logs aqui]
-```
-
-### Ambiente
-- HA Version: [versão]
-- OS: [sistema operativo]
-- Integração: [qual componente]
-```
-
-#### 🎯 **Roadmap Futuro**
-- [ ] **Integração com Tesla API** para controlo de Powerwall
-- [ ] **Machine Learning** para previsão de consumo
-- [ ] **Integração com Grafana** para dashboards avançados
-- [ ] **API REST** para controlo externo
-- [ ] **Alexa/Google Assistant** integração completa
-- [ ] **Mobile App** personalizada
-- [ ] **Kubernetes Deployment** para alta disponibilidade
+- 💬 Discussões na comunidade Home Assistant
 
 ---
 
-**🏠 Este sistema representa uma implementação completa de home automation com foco em eficiência energética, conforto ambiental e automação inteligente baseada em dados reais e previsões.**
+## 📜 Licença
 
-**⚡ Características Únicas**:
-- ✅ **100% Open Source** - Sem dependências de cloud proprietário
-- ✅ **Eficiência Energética** - Algoritmos avançados de otimização solar
-- ✅ **Modular** - Componentes independentes e reutilizáveis  
-- ✅ **Português** - Totalmente adaptado ao mercado energético português
-- ✅ **Tempo Real** - Dados e controlo em tempo real
-- ✅ **Escalável** - Arquitetura preparada para expansão
-
-*📅 Última atualização da documentação: Julho 2025*  
-*👨‍💻 Mantido por: Guilherme Lima*  
-*📍 Localização: Portugal*
-
-### 📝 Notas de Desenvolvimento
-- **Versão Base**: Sistema testado com HA 2023.1+
-- **Compatibilidade**: Python 3.9+ e 3.10+ 
-- **Dependências Críticas**: 
-  - `pyscript` para automações avançadas
-  - `MariaDB` recomendada para recorder (performance)
-  - `InfluxDB v2` para métricas de longo prazo
-- **Hardware Mínimo**: 
-  - 4GB RAM (8GB recomendado)
-  - 32GB storage SSD
-  - CPU multi-core para processamento de templates
-- **Rede**: Largura de banda estável para integrações cloud
-
-### 🔧 Arquitectura Técnica Detalhada
-
-#### 📋 Stack Tecnológico
-```yaml
-# Core System
-home_assistant: "2023.1+"
-python: "3.10"
-operating_system: "Home Assistant OS / Docker"
-
-# Databases
-primary_db: "MariaDB 10.x"
-metrics_db: "InfluxDB 2.x" 
-cache: "Redis (opcional)"
-
-# External Services
-weather_api: "OpenWeatherMap + Solcast"
-energy_data: "OMIE + ENTSO-E"
-notifications: "Telegram Bot API"
-backup_storage: "Local + Cloud (opcional)"
-
-# Network
-reverse_proxy: "Nginx"
-ssl_termination: "Let's Encrypt"
-internal_network: "192.168.1.0/24"
-```
-
-#### 🔄 Fluxo de Dados
-```mermaid
-graph TB
-    A[Sensores Físicos] --> B[Home Assistant Core]
-    B --> C[Templates Engine]
-    C --> D[Automations Engine]
-    D --> E[Actions/Services]
-    B --> F[MariaDB Recorder]
-    B --> G[InfluxDB Metrics]
-    H[External APIs] --> B
-    I[Telegram Bot] <--> B
-    J[Mobile Apps] <--> B
-```
-
-#### 🏗️ Estrutura de Ficheiros Completa
-```
-/config/
-├── 📄 configuration.yaml          # Configuração principal
-├── 📄 automations.yaml           # 2500+ linhas de automações
-├── 📄 scripts.yaml               # Scripts reutilizáveis
-├── 📄 scenes.yaml                # Cenas predefinidas
-├── 📄 secrets.yaml               # Credenciais (não versionado)
-├── 📁 custom_components/         # Integrações personalizadas
-│   ├── 📁 alarmo/               # Sistema de alarmes
-│   ├── 📁 pyscript/             # Scripts Python
-│   ├── 📁 solcast_solar/        # Previsões solares
-│   └── ...                      # 20+ componentes
-├── 📁 templates/                 # Templates modulares
-│   ├── 📄 home_energy.yaml      # Gestão energética
-│   ├── 📄 piscina.yaml          # Controlo piscina
-│   ├── 📄 carregamento_carros.yaml # VE charging
-│   └── ...                      # 10+ ficheiros
-├── 📁 sensors/                   # Sensores organizados
-│   ├── 📄 history_stats.yaml    # Estatísticas históricas
-│   └── 📄 rest.yaml             # Sensores REST API
-├── 📁 pyscript/                  # Scripts Python avançados
-│   └── 📄 pv_excess_control.py  # Controlo solar principal
-├── 📁 blueprints/                # Automações reutilizáveis
-│   ├── 📁 automation/           # Blueprints de automação
-│   └── 📁 script/               # Blueprints de scripts
-├── 📁 lovelace/                  # Interface de utilizador
-├── 📁 www/                       # Ficheiros estáticos
-├── 📁 backups/                   # Backups automáticos
-└── 📁 deps/                      # Dependências Python
-```
-
-#### ⚙️ Configuração de Desenvolvimento
-```yaml
-# .devcontainer/configuration.yaml (para desenvolvimento)
-logger:
-  default: debug
-  logs:
-    custom_components: debug
-    homeassistant.core: info
-    
-# Configuração de teste
-recorder:
-  db_url: "sqlite:///test.db"
-  auto_purge: true
-  purge_keep_days: 1
-
-# Hot reload para desenvolvimento
-automation: !include automations.yaml
-script: !include scripts.yaml
-```
-
-### 📊 Métricas e Monitorização
-
-#### 🎯 KPIs do Sistema
-- **Uptime**: 99.8% (Target: 99.9%)
-- **Response Time**: <500ms para templates
-- **Database Size**: ~2GB MariaDB + ~5GB InfluxDB
-- **Backup Success Rate**: 100% (último mês)
-- **Template Errors**: <0.1% (muito baixo)
-- **Automation Execution**: 10,000+ triggers/dia
-
-#### 📈 Dashboards Importantes
-1. **Energy Management**: Produção vs Consumo solar
-2. **System Health**: CPU, Memória, Storage
-3. **Network Monitoring**: Latência, Throughput
-4. **Device Status**: Estado de todos os dispositivos
-5. **Cost Analysis**: Gastos energéticos em tempo real
-
-### 🔄 Procedimentos de Manutenção
-
-#### 🗓️ Manutenção Regular
-```bash
-# Diário (automatizado)
-ha core reload                    # Reload configuração
-ha supervisor repair              # Verificação de integridade
-automated_backup.sh               # Backup automático
-
-# Semanal
-ha core check                     # Verificação configuração
-ha supervisor update              # Atualizações disponíveis
-cleanup_logs.sh                   # Limpeza de logs antigos
-
-# Mensal  
-database_maintenance.sql          # Otimização BD
-ha addons update                  # Atualização add-ons
-security_audit.sh                 # Auditoria de segurança
-```
-
-#### 🆘 Procedimentos de Emergência
-```bash
-# Restauro de backup
-ha backup restore backup_name.tar
-
-# Modo de recuperação
-ha core restart --safe-mode
-
-# Limpeza de cache
-rm -rf /config/.storage/core.*
-ha core restart
-
-# Verificação de integridade
-ha core check --verbose
-```
-
-### 🧪 Ambiente de Teste
-
-#### 🔬 Setup de Desenvolvimento
-```yaml
-# docker-compose.test.yml
-version: '3.8'
-services:
-  homeassistant-test:
-    image: homeassistant/home-assistant:latest
-    volumes:
-      - ./test-config:/config
-    environment:
-      - TZ=Europe/Lisbon
-    ports:
-      - "8124:8123"
-    
-  mariadb-test:
-    image: mariadb:10.6
-    environment:
-      MYSQL_ROOT_PASSWORD: test
-      MYSQL_DATABASE: homeassistant_test
-```
-
-#### ✅ Testes Automatizados
-```python
-# tests/test_templates.py
-import pytest
-from homeassistant.core import HomeAssistant
-
-def test_energy_calculation_template():
-    """Test energy cost calculation template."""
-    # Implementação de testes unitários
-    pass
-
-def test_pool_automation_logic():
-    """Test pool automation decision logic.""" 
-    # Testes de lógica de automação
-    pass
-```
+Este projeto está sob licença MIT. Ver `LICENSE` para detalhes.
 
 ---
 
-**💡 Dicas de Performance**:
-- Use `trigger-based templates` em vez de `time_pattern` quando possível
-- Agrupe sensores similares em ficheiros de template únicos  
-- Configure `recorder` include/exclude para otimizar BD
-- Use `device_class` e `state_class` corretos para métricas
-- Implemente `unique_id` em todos os sensores para estabilidade
+## 🙏 Agradecimentos
+
+- [Home Assistant](https://www.home-assistant.io/) - Plataforma incrível
+- [PV Excess Control](https://github.com/InventoCasa/ha-advanced-blueprints) - Blueprint de energia solar
+- [LLM Vision](https://github.com/valentinfrlch/ha-llmvision) - Integração de IA para visão computacional
+- Comunidade Home Assistant Portugal 🇵🇹
 
 ---
 
-**🏠 Este sistema representa uma implementação completa de home automation com foco em eficiência energética, conforto ambiental e automação inteligente.**
-
-*Última atualização da documentação: Julho 2025*
+**Última atualização:** 11 de novembro de 2025  
+**Versão:** 2.0.0  
+**Manutenção:** Ativa ✅
