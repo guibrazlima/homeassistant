@@ -1,1 +1,0 @@
-DELETE FROM states WHERE entity_id="sensor.shelly1_piscina_temperature" and state > 100;
