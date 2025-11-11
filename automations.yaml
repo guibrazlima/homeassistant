@@ -218,3 +218,202 @@
       include_filename: false
     action: llmvision.data_analyzer
   mode: restart
+- id: '1759743326100'
+  alias: "[\U0001F3E1] Botão shelly Abrir Portão"
+  description: ''
+  triggers:
+  - device_id: f3ec058f8ec36d128a8eaf0dd7286320
+    domain: bthome
+    type: button
+    subtype: press
+    trigger: device
+  conditions: []
+  actions:
+  - action: cover.toggle
+    metadata: {}
+    data: {}
+    target:
+      entity_id: cover.gate
+  mode: single
+- id: '1759743411076'
+  alias: "[\U0001F3E1] Botão shelly Abrir Portãod"
+  description: ''
+  triggers:
+  - device_id: f3ec058f8ec36d128a8eaf0dd7286320
+    domain: bthome
+    type: button
+    subtype: press
+    trigger: device
+  conditions: []
+  actions:
+  - type: turn_on
+    device_id: 2388724c80b9ea53afaf76327d603991
+    entity_id: c1d7540c34d2b8b447ad390591bee382
+    domain: switch
+  mode: single
+- id: '1759744904335'
+  alias: "[\U0001F3E1] Botão shelly Abrir Portão"
+  description: ''
+  triggers:
+  - device_id: f3ec058f8ec36d128a8eaf0dd7286320
+    domain: bthome
+    type: button
+    subtype: press
+    trigger: device
+  conditions: []
+  actions:
+  - action: switch.turn_on
+    metadata: {}
+    data: {}
+    target:
+      entity_id: switch.portao
+  mode: single
+- id: '1759744993552'
+  alias: "\U0001F3CA\U0001F3FB Actualizar Horario Bomba Piscina Noite"
+  description: ''
+  triggers:
+  - trigger: time_pattern
+    minutes: /30
+    hours: /1
+  - trigger: state
+    entity_id:
+    - sensor.bomba_piscina_noite_horario
+  conditions:
+  - condition: time
+    after: '13:00:00'
+    before: '21:00:00'
+  actions:
+  - action: input_datetime.set_datetime
+    metadata: {}
+    data:
+      datetime: "{% set horario = states('sensor.bomba_piscina_noite_horario') %}\n{%
+        if horario not in ['unknown', 'unavailable', '', None] %}\n  {{ as_datetime(horario).astimezone().isoformat()
+        }}\n{% else %}\n  {{ (now() + timedelta(days=1)).replace(hour=2, minute=0,
+        second=0, microsecond=0).isoformat() }}\n{% endif %}"
+    target:
+      entity_id: input_datetime.horario_piscina_noite
+  mode: single
+- id: '1759745372670'
+  alias: teste2
+  description: ''
+  triggers:
+  - device_id: 2f9c9ea7fbfd91205bab02216a817afb
+    domain: button
+    entity_id: 526ce22089765dd42cdffef922d73e4f
+    type: pressed
+    trigger: device
+  conditions: []
+  actions: []
+  mode: single
+- id: '1759746285432'
+  alias: New automation
+  description: ''
+  triggers:
+  - type: changed_states
+    device_id: 4e24c98df1a701adad4a410e866e849c
+    entity_id: d7fce525957d23d70d8b6f95f362c0c0
+    domain: switch
+    trigger: device
+  conditions: []
+  actions: []
+  mode: single
+- id: '1759746541166'
+  alias: New automation
+  description: ''
+  triggers:
+  - device_id: 2f9c9ea7fbfd91205bab02216a817afb
+    domain: button
+    entity_id: 526ce22089765dd42cdffef922d73e4f
+    type: pressed
+    trigger: device
+  conditions: []
+  actions: []
+  mode: single
+- id: '1759860193797'
+  alias: "[\U0001F3E1] Botão shelly Abrir Portão"
+  description: ''
+  triggers:
+  - device_id: f3ec058f8ec36d128a8eaf0dd7286320
+    domain: bthome
+    type: button
+    subtype: press
+    trigger: device
+  conditions: []
+  actions:
+  - action: switch.turn_on
+    metadata: {}
+    data: {}
+    target:
+      entity_id: switch.portao
+  mode: single
+- id: '1759863158867'
+  alias: "\U0001F3E1Botão Sala Portão"
+  description: ''
+  triggers:
+  - device_id: e8a6c706997d87b98183e26e7598ae8b
+    domain: shelly
+    type: triple
+    subtype: button
+    trigger: device
+  - device_id: d686deeba13232cfa6ab008fa8c80dc0
+    domain: bthome
+    type: button_2
+    subtype: long_press
+    trigger: device
+  conditions: []
+  actions:
+  - type: turn_on
+    device_id: 2388724c80b9ea53afaf76327d603991
+    entity_id: c1d7540c34d2b8b447ad390591bee382
+    domain: switch
+  mode: single
+- id: '1759863163761'
+  alias: "\U0001F3E1Botão Sala Portão"
+  description: ''
+  triggers:
+  - device_id: e8a6c706997d87b98183e26e7598ae8b
+    domain: shelly
+    type: triple
+    subtype: button
+    trigger: device
+  - device_id: d686deeba13232cfa6ab008fa8c80dc0
+    domain: bthome
+    type: button_2
+    subtype: long_press
+    trigger: device
+  conditions: []
+  actions:
+  - type: turn_on
+    device_id: 2388724c80b9ea53afaf76327d603991
+    entity_id: c1d7540c34d2b8b447ad390591bee382
+    domain: switch
+  mode: single
+- id: '1759864348160'
+  alias: "[\U0001F3E1] Botão shelly Abrir Portão"
+  description: ''
+  triggers:
+  - device_id: f3ec058f8ec36d128a8eaf0dd7286320
+    domain: bthome
+    type: button
+    subtype: press
+    trigger: device
+  conditions: []
+  actions:
+  - action: switch.turn_on
+    metadata: {}
+    data: {}
+    target:
+      entity_id: switch.portao
+  mode: single
+- id: '1759864383684'
+  alias: New automation
+  description: ''
+  triggers:
+  - type: changed_states
+    device_id: 1fc5080f1934f44e78187d3cef50ff60
+    entity_id: c495f1e608ba0783c370be0f0cad7c8f
+    domain: switch
+    trigger: device
+  conditions: []
+  actions: []
+  mode: single

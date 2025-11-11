@@ -432,313 +432,7 @@
           message: "⚠️O portão não fechou!!!⚠️\U0001F513"
           title: '------------'
   mode: single
-- id: '1717786241528'
-  alias: "\U0001F3CA\U0001F3FB Bomba Piscina Noite"
-  description: ''
-  trigger:
-  - at: input_datetime.horario_piscina_noite
-    trigger: time
-  conditions:
-  - condition: and
-    condition:
-    - condition: template
-      value_template: '{%- set filtragemdiaria = state_attr(''sensor.filtragem_piscina_historico_s'',
-        ''today-1'') | int -%}
 
-        {%- set duration = states(''input_number.pool_pump_duration_lower_threshold'')
-        | int -%}
-
-        {%- set durationt = duration * 60 -%}
-
-
-        {{ filtragemdiaria < durationt }}'
-    - condition: or
-      conditions:
-      - condition: numeric_state
-        entity_id: sensor.media_de_cobertura_de_nuvens_10_00_18_00
-        above: 35
-      - condition: template
-        value_template: '{%- set filtragemdiaria = states(''sensor.filtragem_piscina_historico_s'')
-          | int -%}
-
-
-
-          {{ filtragemdiaria <= 3600 }}'
-  action:
-  - if:
-    - condition: or
-      condition:
-      - condition: state
-        entity_id: sensor.season
-        state: spring
-      - condition: state
-        entity_id: sensor.season
-        state: summer
-    then:
-    - metadata: {}
-      data: {}
-      target:
-        entity_id:
-        - switch.bomba_piscina_switch_0
-      action: switch.turn_on
-    - repeat:
-        sequence:
-        - delay:
-            hours: 0
-            minutes: 0
-            seconds: 5
-            milliseconds: 0
-        - type: turn_on
-          device_id: d752f893fd0bb44490ec4bfcb83c333f
-          entity_id: ae742d0d2f0dc5dea53a674346911926
-          domain: switch
-        while:
-        - condition: device
-          type: is_off
-          device_id: d752f893fd0bb44490ec4bfcb83c333f
-          entity_id: ae742d0d2f0dc5dea53a674346911926
-          domain: switch
-        - condition: template
-          value_template: '{{ repeat.index <= 10 }}'
-    - delay: '{{ [(states(''input_number.pool_pump_duration_lower_threshold'') | int)
-        * 60 - state_attr(''sensor.filtragem_piscina_historico_s'', ''today-1'') |
-        int(0),0] | max }}'
-    - target:
-        entity_id:
-        - switch.bomba_piscina_switch_0
-      data: {}
-      action: switch.turn_off
-    else:
-    - metadata: {}
-      data: {}
-      target:
-        entity_id:
-        - switch.bomba_piscina_switch_0
-      action: switch.turn_on
-    - repeat:
-        sequence:
-        - delay:
-            hours: 0
-            minutes: 0
-            seconds: 5
-            milliseconds: 0
-        - type: turn_on
-          device_id: d752f893fd0bb44490ec4bfcb83c333f
-          entity_id: ae742d0d2f0dc5dea53a674346911926
-          domain: switch
-        while:
-        - condition: device
-          type: is_off
-          device_id: d752f893fd0bb44490ec4bfcb83c333f
-          entity_id: ae742d0d2f0dc5dea53a674346911926
-          domain: switch
-        - condition: template
-          value_template: '{{ repeat.index <= 10 }}'
-    - delay: '{{ [(states(''input_number.pool_pump_duration_inverno'') | int) * 60
-        -  state_attr(''sensor.filtragem_piscina_historico_s'', ''today-1'') | int(0),0]
-        | max }}'
-    - target:
-        entity_id:
-        - switch.bomba_piscina_switch_0
-      data: {}
-      action: switch.turn_off
-  mode: single
-- id: '1717786251723'
-  alias: "\U0001F3CA\U0001F3FB Cascata"
-  description: Inicia ou para a Cascata na piscina com 1 click no botão shelly
-  trigger:
-  - device_id: 50eb20ac53472c3cc1b1da733634d1c8
-    domain: bthome
-    type: button
-    subtype: press
-    trigger: device
-  conditions: []
-  action:
-  - type: toggle
-    device_id: ed7ccde197e708b2a6b6cd25ef2e60c5
-    entity_id: 44b25a719c3fa50cbbd4ebd6e57fcdb9
-    domain: switch
-    enabled: true
-  mode: single
-- id: '1717786261877'
-  alias: "\U0001F3CA\U0001F3FB Hidrojet"
-  description: ''
-  trigger:
-  - platform: device
-    device_id: 50eb20ac53472c3cc1b1da733634d1c8
-    domain: bthome
-    type: button
-    subtype: double_press
-  condition: []
-  action:
-  - if:
-    - condition: device
-      type: is_off
-      device_id: 8be4eb1cd22d4bd03d7c70c99e84930b
-      entity_id: a282d1ef3a0591beb9ddf1392c8e3e42
-      domain: switch
-    then:
-    - type: turn_off
-      device_id: d752f893fd0bb44490ec4bfcb83c333f
-      entity_id: ae742d0d2f0dc5dea53a674346911926
-      domain: switch
-    - service: automation.turn_off
-      data:
-        stop_actions: true
-      target:
-        entity_id: automation.new_automation_3
-    - delay:
-        hours: 0
-        minutes: 0
-        seconds: 5
-        milliseconds: 0
-    - type: turn_on
-      device_id: 8be4eb1cd22d4bd03d7c70c99e84930b
-      entity_id: a282d1ef3a0591beb9ddf1392c8e3e42
-      domain: switch
-    - repeat:
-        sequence:
-        - delay:
-            hours: 0
-            minutes: 0
-            seconds: 30
-            milliseconds: 0
-        while:
-        - condition: device
-          type: is_on
-          device_id: 8be4eb1cd22d4bd03d7c70c99e84930b
-          entity_id: a282d1ef3a0591beb9ddf1392c8e3e42
-          domain: switch
-    - service: automation.turn_on
-      data: {}
-      target:
-        entity_id: automation.new_automation_3
-    else:
-    - type: turn_off
-      device_id: 8be4eb1cd22d4bd03d7c70c99e84930b
-      entity_id: a282d1ef3a0591beb9ddf1392c8e3e42
-      domain: switch
-    - service: automation.turn_on
-      data: {}
-      target:
-        entity_id: automation.new_automation_3
-  mode: restart
-- id: '1717786272132'
-  alias: "\U0001F3CA\U0001F3FB Ligar/Desligar Automação Piscina"
-  description: Liga e desliga a Wallbox
-  trigger:
-  - minutes: /5
-    trigger: time_pattern
-  conditions: []
-  action:
-  - if:
-    - condition: and
-      condition:
-      - condition: sun
-        after: sunrise
-        before: sunset
-      - condition: numeric_state
-        entity_id: sensor.duracao_filtragem_piscina_diario_em_segundos
-        above: 10800
-      - condition: state
-        entity_id: device_tracker.i4_edrive40
-        state: home
-      - condition: state
-        entity_id: binary_sensor.i4_edrive40_connection_status
-        state: 'on'
-      - condition: numeric_state
-        entity_id: sensor.i4_edrive40_remaining_battery_percent
-        below: 100
-    then:
-    - data:
-        stop_actions: true
-      target:
-        entity_id: automation.new_automation_3
-      action: automation.turn_off
-    - metadata: {}
-      data: {}
-      target:
-        entity_id:
-        - switch.bomba_piscina_switch_0
-      action: switch.turn_off
-    - metadata: {}
-      data: {}
-      target:
-        entity_id: switch.wallbox_charging_enabled
-      action: switch.turn_on
-    else:
-    - if:
-      - condition: time
-        after: 09:00:00
-        before: '18:00:00'
-      then:
-      - data: {}
-        target:
-          entity_id: automation.new_automation_3
-        action: automation.turn_on
-      - metadata: {}
-        data: {}
-        target:
-          entity_id: switch.wallbox_charging_enabled
-        enabled: false
-        action: switch.turn_off
-      - metadata: {}
-        data:
-          skip_condition: true
-        target:
-          entity_id: automation.new_automation_3
-        action: automation.trigger
-      else:
-      - data:
-          stop_actions: true
-        target:
-          entity_id: automation.new_automation_3
-        action: automation.turn_off
-      - target:
-          entity_id:
-          - switch.wallbox_charging_enabled
-        data: {}
-        enabled: false
-        action: switch.turn_on
-  mode: single
-- id: '1717786282800'
-  alias: "\U0001F3CA\U0001F3FB Variable Piscina timer"
-  description: ''
-  trigger:
-  - at: 00:00:00
-    trigger: time
-  conditions: []
-  action:
-  - metadata: {}
-    data:
-      replace_attributes: false
-      value: '{{ states(''sensor.duracao_filtragem_piscina_diario_em_segundos'') |
-        default(0) | int }}'
-      attributes:
-        today-1: '{{ states(''sensor.filtragem_piscina_historico_s'') |  default(0)|
-          int }}'
-        today-2: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-1'')
-          | default(0) | int }}'
-        today-3: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-2'')
-          | default(0) | int }}'
-        today-4: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-3'')
-          | default(0) | int }}'
-        today-5: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-4'')
-          | default(0) | int }}'
-        today-6: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-5'')
-          | default(0) | int }}'
-        today-7: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-6'')
-          | default(0) | int }}'
-        today-8: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-7'')
-          | default(0) | int }}'
-        today-9: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-8'')
-          | default(0) | int }}'
-        today-10: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-9'')
-          | default(0) | int }}'
-    target:
-      entity_id: sensor.filtragem_piscina_historico_s
-    action: variable.update_sensor
-  mode: single
 - id: '1717786439250'
   alias: "\U0001F50B\U0001F697⚡Change charge completion time"
   description: ''
@@ -1208,7 +902,30 @@
     target:
       entity_id: cover.estores
   mode: single
-  
+- id: '1717786571925'
+  alias: Smart Grid Auto on
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - sensor.template_coopernico_spot_price_bihorario
+  condition: []
+  action:
+  - if:
+    - condition: numeric_state
+      entity_id: sensor.template_coopernico_spot_price_bihorario
+      below: 76
+    then:
+    - type: turn_on
+      device_id: fdb41e98b294e9204d61b1a6320f6c91
+      entity_id: 812cfe69bc952bc3c627fef200856b27
+      domain: switch
+    else:
+    - type: turn_off
+      device_id: fdb41e98b294e9204d61b1a6320f6c91
+      entity_id: 812cfe69bc952bc3c627fef200856b27
+      domain: switch
+  mode: single
 - id: '1717786590629'
   alias: Status Portão
   description: Status do portão de casa, para resolver o flapping do sensor e o switch
@@ -1814,67 +1531,7 @@
       title: Qualidade do Ar em Casa
       message: '{{agent.response.speech.plain.speech}}'
   mode: single
-- id: '1744301274357'
-  alias: "\U0001F3CA\U0001F3FB Automação Bomba Piscina"
-  description: ''
-  trigger:
-  - platform: numeric_state
-    entity_id:
-    - sensor.potencia_emonpi_import_export_media_5_minutos
-    below: -750
-    id: 'ON'
-  - platform: numeric_state
-    entity_id:
-    - sensor.potencia_emonpi_import_export_media_5_minutos
-    id: 'OFF'
-    above: 750
-  condition:
-  - condition: sun
-    after: sunrise
-    before: sunset
-  action:
-  - if:
-    - condition: trigger
-      id:
-      - 'ON'
-    then:
-    - type: turn_on
-      device_id: 1cb87651e79e117ef2610fc7e5c6a170
-      entity_id: d1b3ca4d6a019622064ef94336bbd650
-      domain: switch
-    - type: turn_on
-      device_id: d752f893fd0bb44490ec4bfcb83c333f
-      entity_id: ae742d0d2f0dc5dea53a674346911926
-      domain: switch
-  - if:
-    - condition: trigger
-      id:
-      - 'OFF'
-    then:
-    - type: turn_off
-      device_id: 1cb87651e79e117ef2610fc7e5c6a170
-      entity_id: d1b3ca4d6a019622064ef94336bbd650
-      domain: switch
-    - type: turn_off
-      device_id: d752f893fd0bb44490ec4bfcb83c333f
-      entity_id: ae742d0d2f0dc5dea53a674346911926
-      domain: switch
-  mode: single
-- id: '1744308459186'
-  alias: "\U0001F3CA\U0001F3FB Bomba piscina botão"
-  description: ''
-  trigger:
-  - device_id: e6ae30b2d7855ae2d2b83b4497674bfb
-    domain: bthome
-    type: button
-    subtype: press
-    trigger: device
-  conditions: []
-  action:
-  - type: toggle
-    device_id: d752f893fd0bb44490ec4bfcb83c333f
-    entity_id: ae742d0d2f0dc5dea53a674346911926
-    domain: switch
+
 - id: '1744915008704'
   alias: 'OpenAI Daily: Piscina'
   description: ''
@@ -2018,8 +1675,8 @@
   conditions: []
   action:
   - type: toggle
-    device_id: 2388724c80b9ea53afaf76327d603991
-    entity_id: c1d7540c34d2b8b447ad390591bee382
+    device_id: c943a1b7851c56da555470902baf07a1
+    entity_id: 9e3a402090766bb2d314909658c4ee90
     domain: switch
   mode: single
 - id: '1745085892451'
@@ -2141,11 +1798,10 @@
     trigger: device
   conditions: []
   action:
-    - action: switch.turn_on
-      metadata: {}
-      data: {}
-      target:
-        entity_id: switch.portao
+  - type: toggle
+    device_id: c943a1b7851c56da555470902baf07a1
+    entity_id: 9e3a402090766bb2d314909658c4ee90
+    domain: switch
   mode: single
 - id: '1745945849501'
   alias: "\U0001FA9FBotão Sala Estore1 "
@@ -2373,15 +2029,15 @@
   condition:
   - condition: device
     type: is_on
-    device_id: d752f893fd0bb44490ec4bfcb83c333f
-    entity_id: ae742d0d2f0dc5dea53a674346911926
+    device_id: e5f1b9b1d10308b32ef8f69bc0d20d74
+    entity_id: 43f5cd2f7257fed3e55788df58ce96de
     domain: switch
   action:
   - if:
     - condition: device
       type: is_on
-      device_id: d752f893fd0bb44490ec4bfcb83c333f
-      entity_id: ae742d0d2f0dc5dea53a674346911926
+      device_id: e5f1b9b1d10308b32ef8f69bc0d20d74
+      entity_id: 43f5cd2f7257fed3e55788df58ce96de
       domain: switch
     - condition: numeric_state
       entity_id: sensor.ph_corrigido_filtrado
