@@ -124,6 +124,8 @@ automation:
     action:
       # Leitura imediata
       - service: llmvision.data_analyzer
+        continue_on_error: true  # ✨ NOVO: Continuar se houver erro
+        timeout: 30              # ✨ NOVO: Timeout de 30 segundos
         data:
           provider: "{{ provider }}"
           model: "{{ model }}"
@@ -160,6 +162,8 @@ automation:
               entity_id: switch.bomba_piscina_switch_0  # <-- ALTERA
               state: "on"
             - service: llmvision.data_analyzer
+              continue_on_error: true  # ✨ NOVO: Continuar se houver erro
+              timeout: 30              # ✨ NOVO: Timeout de 30 segundos
               data:
                 provider: "{{ provider }}"
                 model: "{{ model }}"

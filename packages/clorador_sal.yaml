@@ -73,6 +73,7 @@ automation:
       - repeat:
           sequence:
             - service: llmvision.data_analyzer
+              continue_on_error: true  # ✨ NOVO: Continuar se houver erro
               data:
                 provider: "{{ provider_id }}"
                 model: gpt-4o-mini
@@ -81,7 +82,7 @@ automation:
                   - "{{ camera_entity }}"
                 target_width: 1280
                 include_filename: false
-                max_tokens: 3   # curto e "à prova" de verbosidade (exemplo recomenda baixo)
+                max_tokens: 3
                 message: >-
                   Observa APENAS o painel frontal do clorador CTX Go Salt.
                   Foca a luz/LED de SAL BAIXO (canto superior direito do painel).
@@ -89,6 +90,7 @@ automation:
                   Caso contrário, responde: off
                   Responde apenas com 'on' ou 'off' — sem mais texto.
               response_variable: response
+              timeout: 30  # ✨ NOVO: Timeout de 30 segundos
             - delay: "00:00:01.2"
           until:
             - or:

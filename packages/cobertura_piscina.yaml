@@ -39,6 +39,8 @@ automation:
         state: "on"
     action:
       - service: llmvision.data_analyzer
+        continue_on_error: true  # ✨ NOVO: Continuar se houver erro
+        timeout: 30              # ✨ NOVO: Timeout de 30 segundos
         response_variable: llmresp
         data:
           # IMPORTANTE: seleciona no UI o teu provider; aqui é só exemplo.
@@ -77,6 +79,8 @@ automation:
     action:
       # 1) Analisar a imagem via LLM Vision
       - service: llmvision.data_analyzer
+        continue_on_error: true  # ✨ NOVO: Continuar se houver erro
+        timeout: 30              # ✨ NOVO: Timeout de 30 segundos
         response_variable: llmresp
         data:
           # IMPORTANTE: seleciona no UI o teu provider; aqui é só exemplo.
