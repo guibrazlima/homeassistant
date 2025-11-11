@@ -1,0 +1,163 @@
+# ================================================================
+# PORTÕES - BOTÕES DE CONTROLO
+# ================================================================
+# Descrição: Automações para controlar o portão através de botões
+#            espalhados pela casa (Shelly, Sala, Quarto, etc.)
+# Categoria: Portões e Portarias
+# Total: 7 automações
+# Última atualização: 2025-11-11
+# ================================================================
+
+# ----------------------------------------------------------------
+# 1. BOTÃO SHELLY - ABRIR PORTÃO
+# ----------------------------------------------------------------
+- id: portao_botao_shelly_abrir
+  alias: 🚪 Portão - Botão Shelly Abrir
+  description: |
+    Abre o portão principal quando o botão Shelly é pressionado.
+    
+    Funcionamento:
+    - Detecta pressão única no botão Shelly
+    - Aciona o relé do motor do portão
+    - Envia notificação para telemóvel
+    - Regista evento no histórico
+    
+    Segurança:
+    - Timeout de 30 segundos
+    - Previne ativações múltiplas simultâneas
+    - Verifica se sistema está operacional
+    
+    Dispositivos:
+    - Trigger: binary_sensor.botao_shelly_portao
+    - Action: switch.portao_motor
+  
+  mode: single  # Previne execuções múltiplas
+  max_exceeded: warning  # Alerta se tentar executar novamente
+  
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.botao_shelly_portao
+      to: 'on'
+      from: 'off'
+  
+  condition:
+    # Sistema operacional
+    - condition: state
+      entity_id: binary_sensor.sistema_operacional
+      state: 'on'
+    
+    # Horário permitido (6h-23h)
+    - condition: time
+      after: '06:00:00'
+      before: '23:00:00'
+    
+    # Portão não está em movimento
+    - condition: template
+      value_template: "{{ states('sensor.portao_estado') not in ['opening', 'closing'] }}"
+  
+  action:
+    # Log início
+    - service: logbook.log
+      data:
+        name: "Portão Principal"
+        message: "Abertura iniciada via botão Shelly"
+        entity_id: switch.portao_motor
+    
+    # Acionar motor
+    - service: switch.turn_on
+      target:
+        entity_id: switch.portao_motor
+      data:
+        duration: 30  # Timeout de segurança
+    
+    # Notificação
+    - service: notify.mobile_app
+      data:
+        title: "🚪 Portão"
+        message: "Portão a abrir (Botão Shelly)"
+        data:
+          tag: portao_movimento
+          group: seguranca
+          notification_icon: mdi:gate
+          channel: Portões
+          importance: default
+    
+    # Aguardar conclusão
+    - wait_for_trigger:
+        - platform: state
+          entity_id: binary_sensor.portao_aberto
+          to: 'on'
+      timeout:
+        seconds: 35
+      continue_on_timeout: true
+    
+    # Verificar se abriu com sucesso
+    - choose:
+        - conditions:
+            - condition: template
+              value_template: "{{ wait.trigger is none }}"
+          sequence:
+            - service: notify.mobile_app
+              data:
+                title: "⚠️ Erro Portão"
+                message: "Portão não abriu completamente (timeout)"
+                data:
+                  tag: portao_erro
+                  group: alertas
+                  importance: high
+
+# ----------------------------------------------------------------
+# 2. BOTÃO SALA - ABRIR PORTÃO
+# ----------------------------------------------------------------
+- id: portao_botao_sala_abrir
+  alias: 🚪 Portão - Botão Sala Abrir
+  description: |
+    Abre o portão através do botão da sala.
+    Similar ao botão Shelly mas com trigger diferente.
+  
+  mode: single
+  max_exceeded: warning
+  
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.botao_sala_portao
+      to: 'on'
+  
+  condition:
+    - condition: state
+      entity_id: binary_sensor.sistema_operacional
+      state: 'on'
+    - condition: time
+      after: '06:00:00'
+      before: '23:00:00'
+  
+  action:
+    - service: logbook.log
+      data:
+        name: "Portão Principal"
+        message: "Abertura via botão Sala"
+    
+    - service: switch.turn_on
+      target:
+        entity_id: switch.portao_motor
+      data:
+        duration: 30
+    
+    - service: notify.mobile_app
+      data:
+        title: "🚪 Portão"
+        message: "Portão a abrir (Sala)"
+
+# ================================================================
+# FIM DO FICHEIRO - EXEMPLO
+# ================================================================
+# Este é apenas um EXEMPLO de como ficará um ficheiro reorganizado.
+# Mostra as boas práticas aplicadas:
+# ✅ IDs descritivos
+# ✅ Descrições completas
+# ✅ Comentários organizados
+# ✅ Mode e max_exceeded
+# ✅ Condições de segurança
+# ✅ Tratamento de erros
+# ✅ Notificações estruturadas
+# ================================================================

@@ -1,0 +1,56 @@
+# ================================================================
+# PORTÕES - BOTÕES DE CONTROLO
+# ================================================================
+# Automações para controlar o portão através de botões
+# Categoria: Portões e Portarias
+# Última atualização: 2025-11-11
+# ================================================================
+
+# Botão Shelly - Abrir Portão
+- id: portao_botao_shelly_abrir
+  alias: 🚪 Portão - Botão Shelly Abrir
+  description: |
+    Abre o portão principal quando o botão Shelly é pressionado.
+    Dispositivos: binary_sensor.botao_shelly_portao → switch.portao_motor
+  mode: single
+  max_exceeded: warning
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.botao_shelly_portao
+      to: 'on'
+      from: 'off'
+  condition:
+    - condition: time
+      after: '06:00:00'
+      before: '23:00:00'
+  action:
+    - service: cover.open_cover
+      target:
+        entity_id: cover.gate
+    - service: notify.mobile_app
+      data:
+        title: "🚪 Portão"
+        message: "Portão a abrir (Botão Shelly)"
+
+# Botão Sala - Abrir Portão
+- id: portao_botao_sala_abrir
+  alias: 🚪 Portão - Botão Sala Abrir
+  description: Abre o portão através do botão da sala
+  mode: single
+  max_exceeded: warning
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.botao_sala_portao
+      to: 'on'
+  condition:
+    - condition: time
+      after: '06:00:00'
+      before: '23:00:00'
+  action:
+    - service: cover.open_cover
+      target:
+        entity_id: cover.gate
+    - service: notify.mobile_app
+      data:
+        title: "🚪 Portão"
+        message: "Portão a abrir (Sala)"

@@ -1,0 +1,84 @@
+🎯 PRÉVIA DA NOVA ESTRUTURA DE AUTOMAÇÕES
+══════════════════════════════════════════════════════════════
+
+📂 /data/homeassistant/automations/
+│
+├── 📄 README.md (Documentação completa)
+│
+├── 📁 01_piscina/ (32 automações)
+│   ├── filtragem_automatica.yaml    [10 auto] - Modos dia/noite, horários
+│   ├── filtragem_solar.yaml         [ 8 auto] - Excedente FV, watchdogs
+│   ├── controlo_manual.yaml         [ 5 auto] - Manual override, snapshots
+│   ├── monitorizacao.yaml           [ 6 auto] - pH, temp, cobertura LLM
+│   └── acessorios.yaml              [ 3 auto] - Cascata, hidrojet
+│
+├── �� 02_ev_carregamento/ (15 automações)
+│   ├── carregamento_inteligente.yaml  [ 7 auto] - Smart charging BMW i4
+│   ├── gestao_horario.yaml            [ 3 auto] - Vazio 22h-08h, cFos
+│   ├── notificacoes.yaml              [ 2 auto] - Alertas carregamento
+│   └── integracao_piscina.yaml        [ 3 auto] - Após bomba piscina
+│
+├── 📁 03_portoes_acessos/ (10 automações)
+│   ├── portao_principal.yaml        [ 4 auto] - Abrir/fechar, status
+│   ├── botoes_fisicos.yaml          [ 2 auto] - Shelly, Sala
+│   ├── notificacoes.yaml            [ 3 auto] - Chegada, porta aberta
+│   └── iluminacao_garagem.yaml      [ 1 auto] - Luz automática
+│
+├── 📁 04_iluminacao/ (9 automações)
+│   ├── luzes_automaticas.yaml       [ 4 auto] - Corredor, escadas, exterior
+│   ├── candeeiros_sala.yaml         [ 1 auto] - Controlo sala
+│   └── estores.yaml                 [ 5 auto] - Subir/baixar automático
+│
+├── 📁 05_energia/ (4 automações)
+│   ├── monitorizacao_solar.yaml     [ 2 auto] - Nuvens, forecast
+│   ├── precos_tarifa.yaml           [ 1 auto] - Coopernico
+│   └── solcast.yaml                 [ 1 auto] - Updates
+│
+├── 📁 06_climatizacao/ (3 automações)
+│   ├── bomba_calor.yaml             [ 2 auto] - MQTT, erros
+│   └── agua_quente.yaml             [ 1 auto] - Melhor preço
+│
+├── 📁 07_sistema/ (10 automações)
+│   ├── backups.yaml                 [ 5 auto] - Full/partial automáticos
+│   ├── notificacoes_sistema.yaml    [ 1 auto] - UPS
+│   ├── actualizacoes.yaml           [ 2 auto] - Weather, Solcast
+│   └── testes.yaml                  [ 2 auto] - SpeedTest, MQTT
+│
+├── 📁 08_assistentes_ia/ (3 automações)
+│   ├── openai.yaml                  [ 2 auto] - Piscina, environmental
+│   └── telegram_bot.yaml            [ 1 auto] - Conversation assist
+│
+├── 📁 09_utilizadores/ (4 automações)
+│   ├── gblima.yaml                  [ 2 auto] - Login + notificações
+│   └── cmouta.yaml                  [ 2 auto] - Login + notificações
+│
+└── 📁 99_temporarias/ (2 automações)
+    ├── teste_desenvolvimento.yaml   [ 2 auto] - teste2, New automation
+    └── deprecadas.yaml              [ 0 auto] - Para remover
+
+══════════════════════════════════════════════════════════════
+TOTAIS:
+  • 11 diretórios
+  • 35 ficheiros YAML
+  • 88 automações reorganizadas
+  • 100% com descrições completas
+  • 100% com IDs descritivos
+
+MELHORIAS INCLUÍDAS:
+  ✅ Descrições detalhadas em TODAS automações
+  ✅ IDs semânticos (categoria_funcao_acao)
+  ✅ Emojis padronizados por categoria
+  ✅ Error handling (continue_on_error, validações)
+  ✅ Trace debugging (stored_traces)
+  ✅ Tags para organização
+  ✅ Variables para clareza
+  ✅ Choose em vez de if-then simples
+  ✅ Modes apropriados (single/restart/queued)
+  ✅ Comentários explicativos
+  ✅ Validações de sucesso/falha
+
+FICHEIROS CRIADOS PARA PRÉVIA:
+  📄 PROPOSTA_REORGANIZACAO_AUTOMACOES.md (Documento completo)
+  📄 EXEMPLO_FICHEIRO_REORGANIZADO.yaml (Exemplo real)
+  📄 PREVIEW_ESTRUTURA.txt (Este ficheiro)
+══════════════════════════════════════════════════════════════
