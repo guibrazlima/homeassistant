@@ -1,7 +1,7 @@
 #############################################
 # 📦 Package: Clima - Sensores de Conforto
 # 🎯 Objetivo: Calcular métricas de conforto térmico para todas as divisões
-# 📂 Localização: /config/packages/climate_comfort.yaml
+# 📂 Localização: /config/packages/climate_comfort_monolitico.yaml
 # 🔗 Dependências:
 #    - Sensores BTHome de temperatura e humidade em cada divisão
 # 📊 Métricas calculadas:

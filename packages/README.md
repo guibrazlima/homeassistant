@@ -20,9 +20,9 @@
 ### Clima
 | Ficheiro | Descrição | Entidades |
 |----------|-----------|-----------|
-| `climate_comfort_MONOLITICO.yaml` | ⚠️ Sensores conforto térmico (4 divisões) | 32 template sensors |
+| `climate_comfort_monolitico.yaml` | ⚠️ Sensores conforto térmico (4 divisões) | 32 template sensors |
 
-> ⚠️ **NOTA:** `climate_comfort_MONOLITICO.yaml` (51 KB, 1140 linhas) contém código muito duplicado
+> ⚠️ **NOTA:** `climate_comfort_monolitico.yaml` (51 KB, 1140 linhas) contém código muito duplicado
 > para 4 divisões (Sala Inferior, Cave, Cozinha, Quarto Luisa). Cada divisão tem 8 sensores idênticos.
 > 
 > **TODO:** Subdividir em `clima_sala_inferior.yaml`, `clima_cave.yaml`, `clima_cozinha.yaml`, 
