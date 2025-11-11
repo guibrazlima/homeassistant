@@ -1,5 +1,9 @@
 #############################################
-# Piscina — Sal baixo via LLM Vision (Package)
+#############################################
+# 📦 Package: Piscina - Clorador Sal (LLM Vision)
+# 🎯 Objetivo: Detetar LED "sal baixo" do clorador CTX via análise de imagem
+# 📂 Localização: /config/packages/piscina_clorador_sal.yaml
+# 🔗 Dependências: (Package)
 # - Amostragem múltipla (até 3 capturas, 1.2s)
 # - Debounce para desligar só após N 'off' seguidos
 #############################################

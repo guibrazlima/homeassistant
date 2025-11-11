@@ -1,7 +1,7 @@
 #############################################
-# 📦 Package: HP90 - Estimador Térmico Solar
+# 📦 Package: AQS - HP90 Estimador Térmico Solar
 # 🎯 Objetivo: Estimar energia térmica produzida por 50 tubos Varisol HP90
-# 📂 Localização: /config/packages/hp90_thermal_estimator_v2.yaml
+# 📂 Localização: /config/packages/aqs_hp90_estimador_termico.yaml
 # 🔗 Dependências:
 #    - aqs_common.yaml (dhw_volume_l, aqs_target_temp)
 #    - Forecast.Solar (1000 Wp, Tilt=20°, Azimuth=174°)

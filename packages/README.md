@@ -7,14 +7,14 @@
 |----------|-----------|-----------|
 | `aqs_common.yaml` | Configurações partilhadas (volume, temp. alvo) | 2 input_number |
 | `aqs_perdas.yaml` | Perdas térmicas do depósito Daikin 500L | 3 sensor, 4 binary_sensor, 10 template |
-| `hp90_thermal_estimator_v2.yaml` | Estimador térmico tubos solares HP90 | 4 input_number, ~15 template |
+| `aqs_hp90_estimador_termico.yaml` | Estimador térmico tubos solares HP90 | 4 input_number, ~15 template |
 
 ### Piscina
 | Ficheiro | Descrição | Entidades |
 |----------|-----------|-----------|
-| `clorador_sal.yaml` | Deteção sal baixo via LLM Vision | 2 input_boolean, 2 input_number, 1 binary_sensor, 1 automation |
-| `cobertura_piscina.yaml` | Estado cobertura via LLM Vision | 1 binary_sensor, 2 automation |
-| `piscina_cloro_tpo_por_cobertura.yaml` | Ajuste tempo produção cloro por cobertura | 1 input_boolean, 3 input_number, 2 automation, 1 binary_sensor, 3 sensor |
+| `piscina_clorador_sal.yaml` | Deteção sal baixo via LLM Vision | 2 input_boolean, 2 input_number, 1 binary_sensor, 1 automation |
+| `piscina_cobertura.yaml` | Estado cobertura via LLM Vision | 1 binary_sensor, 2 automation |
+| `piscina_cloro_tpo.yaml` | Ajuste tempo produção cloro por cobertura | 1 input_boolean, 3 input_number, 2 automation, 1 binary_sensor, 3 sensor |
 | `piscina_ph.yaml` | Leitura pH via OCR (LLM Vision) | 2 input_number, 2 input_text, 1 template, 4 sensor stats, 1 automation |
 
 ### Clima
@@ -40,8 +40,8 @@
 **Modelo:** `gpt-4o-mini`
 
 **Usado em:**
-- `clorador_sal.yaml` → `camera.cave_hd_stream` (detetar LED "sal baixo")
-- `cobertura_piscina.yaml` → `camera.eira_piscina_hd_stream` (estado cobertura)
+- `piscina_clorador_sal.yaml` → `camera.cave_hd_stream` (detetar LED "sal baixo")
+- `piscina_cobertura.yaml` → `camera.eira_piscina_hd_stream` (estado cobertura)
 - `piscina_ph.yaml` → `camera.cave_hd_stream` (OCR do valor pH)
 
 **Configuração:**
@@ -76,7 +76,7 @@ sensor.bthome_sensor_YYYY_humidity
 ```
 
 ### Forecast.Solar
-**Usado por:** `hp90_thermal_estimator_v2.yaml`
+**Usado por:** `aqs_hp90_estimador_termico.yaml`
 
 **Configuração da instância:**
 - Potência: 1000 Wp

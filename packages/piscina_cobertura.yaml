@@ -1,7 +1,7 @@
 #############################################
 # 📦 Package: Piscina - Cobertura (LLM Vision)
 # 🎯 Objetivo: Detetar estado da cobertura da piscina via análise de imagem
-# 📂 Localização: /config/packages/cobertura_piscina.yaml
+# 📂 Localização: /config/packages/piscina_cobertura.yaml
 # 🔗 Dependências:
 #    - LLM Vision custom component
 #    - Provider: 01K5S60RJSW6MFMB543KEDHE23 (gpt-4o-mini)
