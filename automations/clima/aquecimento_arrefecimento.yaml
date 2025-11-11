@@ -1,0 +1,358 @@
+# ======================================================================
+# 🌡️ CLIMA
+# ======================================================================
+# Ficheiro: aquecimento_arrefecimento.yaml
+# Automações: 2
+# Última atualização: 2025-11-11
+# Migrado automaticamente - Fase 2
+# ======================================================================
+
+
+- id: callback_notification_to_open_garage
+  alias: '[📣📲] Callback notification to open garage'
+  description: Automação ativada por evento ios.action_fired, evento ios.action_fired.
+  trigger:
+  - platform: event
+    event_type: ios.action_fired
+    event_data:
+      actionID: 06BE95EF-F583-440C-9BED-C5FEB7684C15
+    context:
+      user_id:
+      - fc76053283b948f39e0979158ba02875
+    alias: gblima
+    id: gblima2
+  - platform: event
+    event_type: ios.action_fired
+    event_data:
+      actionID: EA13513A-5C16-44C1-B9ED-8AEC747DC1D0
+    context:
+      user_id:
+      - 7df539210ca3465e9ca91c3e2f1bd7e0
+    alias: cmouta
+    id: cmouta2
+  condition: []
+  action:
+  - service: cover.open_cover
+    data: {}
+    target:
+      entity_id:
+      - cover.gate
+  - delay:
+      hours: 0
+      minutes: 2
+      seconds: 0
+      milliseconds: 0
+  - alias: gblima notificações
+    if:
+    - condition:
+      - condition: trigger
+        id:
+        - gblima2
+      - condition: state
+        entity_id: cover.gate
+        state: closed
+      - condition: state
+        entity_id: input_boolean.gblima_present
+        state: 'off'
+    then:
+    - service: notify.mobile_app_glphone
+      metadata: {}
+      data:
+        message: O portão está fechado.✅🔒
+        title: 🚗 Ate Logo! 🙂
+        data:
+          tag: open-home-gate
+    - delay:
+        hours: 0
+        minutes: 5
+        seconds: 0
+        milliseconds: 0
+    - service: notify.mobile_app_glphone
+      metadata: {}
+      data:
+        message: clear_notification
+        data:
+          tag: open-home-gate
+    else:
+    - if:
+      - condition:
+        - condition: trigger
+          id:
+          - gblima2
+        - condition: state
+          entity_id: input_boolean.gblima_present
+          state: 'off'
+      then:
+      - service: notify.mobile_app_glphone
+        metadata: {}
+        data:
+          message: ⚠️O portão não fechou!!!⚠️🔓
+          data:
+            push:
+              interruption-level: critical
+          title: '------------'
+  - alias: cmouta notificações
+    if:
+    - condition:
+      - condition: trigger
+        id:
+        - cmouta2
+      - condition: state
+        entity_id: cover.gate
+        state: closed
+      - condition: state
+        entity_id: input_boolean.cmouta_present
+        state: 'off'
+    then:
+    - service: notify.mobile_app_iphone_de_cristina_3
+      data:
+        data:
+          tag: open-home-gate
+        message: O portão está fechado.✅🔒
+        title: 🚗 Ate Logo! 🙂
+    - delay:
+        hours: 0
+        minutes: 5
+        seconds: 0
+        milliseconds: 0
+    - service: notify.mobile_app_iphone_de_cristina_3
+      metadata: {}
+      data:
+        message: clear_notification
+        data:
+          tag: open-home-gate
+    else:
+    - if:
+      - condition:
+        - condition: trigger
+          id:
+          - cmouta2
+        - condition: state
+          entity_id: input_boolean.cmouta_present
+          state: 'off'
+      then:
+      - service: notify.mobile_app_iphone_de_cristina_3
+        data:
+          data:
+            push:
+              interruption-level: critical
+          message: ⚠️O portão não fechou!!!⚠️🔓
+          title: '------------'
+  mode: single
+  max_exceeded: warning
+- id: automatic_backups
+  alias: Automatic Backups
+  description: Automação ativada por horário (01:00:00).
+  trigger:
+  - id: daily
+    platform: time
+    at: 01:00:00
+  - id: hourly
+    enabled: true
+    platform: time_pattern
+    hours: /12
+  condition: []
+  action:
+  - if:
+    - condition: trigger
+      id: daily
+    then:
+    - choose:
+      - conditions:
+        - condition: template
+          value_template: '{{ enable_yearly }}'
+        - condition: template
+          value_template: '{{ now().day == 1 and now().month == 1 }}'
+        sequence:
+        - variables:
+            backup_type: yearly
+            keep_days: 365
+        - variables:
+            name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A, \"\n    ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~ \"%B %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2, 2006 #}\n{# DailyBackup: Monday, January 2, 2006 #}\n"
+            backup_action:
+            - service: auto_backup.backup
+              data:
+                name: '{{ name }}'
+                password: '{{ password }}'
+                keep_days: '{{ keep_days }}'
+                include_folders:
+                - config
+        - if:
+          - condition: template
+            value_template: '{{ not use_action_hourly }}'
+          - condition: template
+            value_template: '{{ backup_action | length > 0 }}'
+          then:
+          - service: auto_backup.backup
+            data:
+              name: '{{ name }}'
+              password: '{{ password }}'
+              keep_days: '{{ keep_days }}'
+              include_folders:
+              - config
+          else:
+          - alias: Creating a full backup (default action)
+            service: auto_backup.backup
+            data:
+              name: '{{ name }}'
+              password: '{{ password }}'
+              keep_days: '{{ keep_days }}'
+      - conditions:
+        - condition: template
+          value_template: '{{ enable_monthly }}'
+        - condition: template
+          value_template: '{{ now().day == 1 }}'
+        sequence:
+        - variables:
+            backup_type: monthly
+            keep_days: 90
+        - variables:
+            name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A, \"\n    ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~ \"%B %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2, 2006 #}\n{# DailyBackup: Monday, January 2, 2006 #}\n"
+            backup_action:
+            - service: auto_backup.backup
+              data:
+                name: '{{ name }}'
+                password: '{{ password }}'
+                keep_days: '{{ keep_days }}'
+                include_folders:
+                - config
+        - if:
+          - condition: template
+            value_template: '{{ not use_action_hourly }}'
+          - condition: template
+            value_template: '{{ backup_action | length > 0 }}'
+          then:
+          - service: auto_backup.backup
+            data:
+              name: '{{ name }}'
+              password: '{{ password }}'
+              keep_days: '{{ keep_days }}'
+              include_folders:
+              - config
+          else:
+          - alias: Creating a full backup (default action)
+            service: auto_backup.backup
+            data:
+              name: '{{ name }}'
+              password: '{{ password }}'
+              keep_days: '{{ keep_days }}'
+      - conditions:
+        - condition: template
+          value_template: '{{ enable_weekly }}'
+        - condition: template
+          value_template: '{{ now().weekday() == 0 }}'
+        sequence:
+        - variables:
+            backup_type: weekly
+            keep_days: 30
+        - variables:
+            name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A, \"\n    ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~ \"%B %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2, 2006 #}\n{# DailyBackup: Monday, January 2, 2006 #}\n"
+            backup_action:
+            - service: auto_backup.backup
+              data:
+                name: '{{ name }}'
+                password: '{{ password }}'
+                keep_days: '{{ keep_days }}'
+                include_folders:
+                - config
+        - if:
+          - condition: template
+            value_template: '{{ not use_action_hourly }}'
+          - condition: template
+            value_template: '{{ backup_action | length > 0 }}'
+          then:
+          - service: auto_backup.backup
+            data:
+              name: '{{ name }}'
+              password: '{{ password }}'
+              keep_days: '{{ keep_days }}'
+              include_folders:
+              - config
+          else:
+          - alias: Creating a full backup (default action)
+            service: auto_backup.backup
+            data:
+              name: '{{ name }}'
+              password: '{{ password }}'
+              keep_days: '{{ keep_days }}'
+      - conditions:
+        - condition: template
+          value_template: '{{ enable_daily }}'
+        sequence:
+        - variables:
+            backup_type: daily
+            keep_days: 7
+        - variables:
+            name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A, \"\n    ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~ \"%B %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2, 2006 #}\n{# DailyBackup: Monday, January 2, 2006 #}\n"
+            backup_action:
+            - service: auto_backup.backup
+              data:
+                name: '{{ name }}'
+                password: '{{ password }}'
+                keep_days: '{{ keep_days }}'
+                include_folders:
+                - config
+        - if:
+          - condition: template
+            value_template: '{{ not use_action_hourly }}'
+          - condition: template
+            value_template: '{{ backup_action | length > 0 }}'
+          then:
+          - service: auto_backup.backup
+            data:
+              name: '{{ name }}'
+              password: '{{ password }}'
+              keep_days: '{{ keep_days }}'
+              include_folders:
+              - config
+          else:
+          - alias: Creating a full backup (default action)
+            service: auto_backup.backup
+            data:
+              name: '{{ name }}'
+              password: '{{ password }}'
+              keep_days: '{{ keep_days }}'
+    else:
+    - variables:
+        backup_type: hourly
+        keep_days: 1
+    - variables:
+        name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A, \"\n    ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~ \"%B %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2, 2006 #}\n{# DailyBackup: Monday, January 2, 2006 #}\n"
+        backup_action:
+        - service: auto_backup.backup
+          data:
+            name: '{{ name }}'
+            password: '{{ password }}'
+            keep_days: '{{ keep_days }}'
+            include_folders:
+            - config
+    - if:
+      - condition: template
+        value_template: '{{ backup_action | length > 0 }}'
+      then:
+      - service: auto_backup.backup
+        data:
+          name: '{{ name }}'
+          password: '{{ password }}'
+          keep_days: '{{ keep_days }}'
+          include_folders:
+          - config
+      else:
+      - alias: Creating a partial backup (default action)
+        service: auto_backup.backup
+        data:
+          name: '{{ name }}'
+          password: '{{ password }}'
+          keep_days: '{{ keep_days }}'
+          include_folders:
+          - config
+  mode: single
+  variables:
+    password: ''
+    enable_hourly: true
+    enable_daily: true
+    enable_weekly: true
+    enable_monthly: false
+    enable_yearly: false
+    use_action_hourly: true
+  max_exceeded: warning

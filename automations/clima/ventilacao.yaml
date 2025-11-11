@@ -1,0 +1,27 @@
+# ======================================================================
+# 🌡️ CLIMA
+# ======================================================================
+# Ficheiro: ventilacao.yaml
+# Automações: 1
+# Última atualização: 2025-11-11
+# Migrado automaticamente - Fase 2
+# ======================================================================
+
+
+- id: ventilador_cave_solar
+  alias: Ventilador Cave Solar
+  description: Automação do Home Assistant.
+  use_blueprint:
+    path: PVExcessControl/pv_excess_control.yaml
+    input:
+      automation_id: automation.ventilador_cave
+      appliance_priority: 2
+      pv_power: sensor.emoncms_solar
+      export_power: sensor.emoncms_export_power_positive
+      load_power: sensor.emoncms_use
+      appliance_switch: switch.ventilador_cave_switch
+      appliance_switch_interval: 2
+      actual_power: sensor.ventilador_cave_switch_0_power
+      defined_current: 0.2
+  mode: single
+  max_exceeded: warning

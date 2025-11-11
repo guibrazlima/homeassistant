@@ -1,0 +1,299 @@
+# ======================================================================
+# 🚗 VEÍCULO ELÉTRICO
+# ======================================================================
+# Ficheiro: ev_carregamento.yaml
+# Automações: 7
+# Última atualização: 2025-11-11
+# Migrado automaticamente - Fase 2
+# ======================================================================
+
+
+- id: notificacao_para_ligar_o_carro_ao_carregador
+  alias: '[💡🏡]Notificação para ligar o carro ao carregador'
+  description: Automação do Home Assistant.
+  trigger:
+  - platform: time_pattern
+    minutes: /15
+  condition:
+  - condition: numeric_state
+    entity_id: sensor.i4_edrive40_remaining_battery_percent
+    below: 46
+  - condition: state
+    entity_id: device_tracker.i4_edrive40
+    state: home
+  action:
+  - delay:
+      hours: 0
+      minutes: 10
+      seconds: 0
+      milliseconds: 0
+  - repeat:
+      sequence:
+      - parallel:
+        - if:
+          - condition: state
+            entity_id: binary_sensor.hk_presence_cmouta
+            state: 'on'
+          then:
+          - metadata: {}
+            data:
+              title: 🔋🚗⚡🔌BMW i4
+              message: Amor, não te esqueças de ligar o carro ao carregador! ❤️😘
+            action: notify.mobile_app_iphone_de_cristina_3
+        - if:
+          - condition: state
+            entity_id: binary_sensor.hk_presence_gblima
+            state: 'on'
+          then:
+          - metadata: {}
+            data:
+              message: O i4 não está ligado ao carregador!
+              title: 🔋🚗⚡🔌BMW i4
+            action: notify.notify
+      - delay:
+          hours: 0
+          minutes: 15
+          seconds: 0
+          milliseconds: 0
+      while:
+      - condition: state
+        entity_id: device_tracker.i4_edrive40
+        state: home
+        for:
+          hours: 0
+          minutes: 0
+          seconds: 0
+      - condition: numeric_state
+        entity_id: sensor.i4_edrive40_remaining_battery_percent
+        below: 70
+      - condition: state
+        entity_id: binary_sensor.i4_edrive40_connection_status
+        state: 'off'
+        for:
+          hours: 0
+          minutes: 0
+          seconds: 0
+      - condition: template
+        value_template: '{{ repeat.index <= 8 }}'
+  mode: single
+  max_exceeded: warning
+- id: ev_connected_to_charger
+  alias: 🔋🚗⚡EV Connected to Charger
+  description: Automação do Home Assistant.
+  trigger:
+  - entity_id:
+    - binary_sensor.i4_edrive40_connection_status
+    trigger: state
+    id: i4
+  - entity_id:
+    - sensor.ev_smart_charging_status_2
+    trigger: state
+    id: x1
+  conditions: []
+  action:
+  - if:
+    - condition:
+      - condition: trigger
+        id:
+        - i4
+      - condition: state
+        entity_id: binary_sensor.i4_edrive40_connection_status
+        state: 'on'
+    then:
+    - data: {}
+      target:
+        entity_id: switch.ev_smart_charging_ev_connected
+      action: switch.turn_on
+    else:
+    - data: {}
+      target:
+        entity_id: switch.ev_smart_charging_ev_connected
+      action: switch.turn_off
+  - if:
+    - condition:
+      - condition: trigger
+        id:
+        - x1
+      - condition: state
+        entity_id: binary_sensor.x1_xdrive25e_connection_status
+        state: 'on'
+    then:
+    - data: {}
+      target:
+        entity_id:
+        - switch.ev_smart_charging_ev_connected_2
+      action: switch.turn_on
+    else:
+    - data: {}
+      target:
+        entity_id:
+        - switch.ev_smart_charging_ev_connected_2
+      action: switch.turn_off
+  mode: single
+  max_exceeded: warning
+- id: ev_set_soc_to_80
+  alias: '🔋🚗⚡EV Set SOC to 80% '
+  description: sempre que chega a casa e é ligado ao carregador.
+  trigger:
+  - platform: device
+    device_id: 73087b9e1e3a0ceb0fc6d4024bd9ffe1
+    domain: device_tracker
+    entity_id: 17973f520f671f084cc637505d0c747d
+    type: enters
+    zone: zone.home
+  condition:
+  - condition: time
+    after: '18:00:00'
+    before: 08:00:00
+    weekday:
+    - sun
+    - mon
+    - tue
+    - wed
+    - thu
+    - fri
+    - sat
+  action:
+  - delay:
+      hours: 0
+      minutes: 5
+      seconds: 0
+      milliseconds: 0
+  - service: number.set_value
+    metadata: {}
+    data:
+      value: '80'
+    target:
+      entity_id: number.i4_edrive40_target_soc
+  mode: single
+  max_exceeded: warning
+- id: ev_set_target_soc_dia
+  alias: 🔋🚗⚡EV Set Target SOC Dia
+  description: Automação do Home Assistant.
+  trigger:
+  - platform: time_pattern
+    minutes: /5
+  condition:
+  - condition:
+    - condition: time
+      after: 08:00:00
+      before: '18:00:00'
+      weekday:
+      - sun
+      - mon
+      - tue
+      - wed
+      - thu
+      - fri
+      - sat
+    - condition: state
+      entity_id: automation.new_automation_3
+      state: 'off'
+    - condition: state
+      entity_id: device_tracker.i4_edrive40
+      state: home
+    - condition: state
+      entity_id: binary_sensor.i4_edrive40_connection_status
+      state: 'on'
+      enabled: true
+  action:
+  - if:
+    - condition:
+      - condition: numeric_state
+        entity_id: number.i4_edrive40_target_soc
+        above: 79
+      - condition: numeric_state
+        entity_id: sensor.i4_edrive40_remaining_battery_percent
+        above: 79
+        enabled: true
+    then:
+    - service: number.set_value
+      metadata: {}
+      data:
+        value: '100'
+      target:
+        entity_id: number.i4_edrive40_target_soc
+  mode: single
+  max_exceeded: warning
+- id: ev_smart_charging_-_start
+  alias: 🔋🚗⚡EV Smart Charging - Start
+  description: Automação do Home Assistant.
+  trigger:
+  - entity_id:
+    - sensor.ev_smart_charging_charging
+    from: 'Off'
+    to: 'On'
+    trigger: state
+  - entity_id:
+    - sensor.ev_smart_charging_charging_2
+    from: 'Off'
+    to: 'On'
+    trigger: state
+  conditions: []
+  action:
+  - data: {}
+    target:
+      entity_id: switch.evse_admin_rules_inverted
+    action: switch.turn_on
+  mode: single
+  max_exceeded: warning
+- id: ev_smart_charging_-_stop
+  alias: 🔋🚗⚡EV Smart Charging - Stop
+  description: Automação do Home Assistant.
+  trigger:
+  - entity_id:
+    - sensor.ev_smart_charging_charging
+    from: 'On'
+    to: 'Off'
+    trigger: state
+  - entity_id:
+    - sensor.ev_smart_charging_charging_2
+    from: 'On'
+    to: 'Off'
+    trigger: state
+  conditions: []
+  action:
+  - data: {}
+    target:
+      entity_id: switch.evse_admin_rules_inverted
+    action: switch.turn_off
+  mode: single
+  max_exceeded: warning
+- id: ev_smart_charging_set_ac_current_limit
+  alias: 🔋🚗⚡EV Smart Charging Set AC Current Limit
+  description: Automação ativada por mudança de estado em ['binary_sensor.i4_edrive40_charging_status'].
+  trigger:
+  - platform: state
+    entity_id:
+    - binary_sensor.i4_edrive40_charging_status
+    from: null
+    to: 'on'
+  condition:
+  - condition: device
+    device_id: 73087b9e1e3a0ceb0fc6d4024bd9ffe1
+    domain: device_tracker
+    entity_id: 17973f520f671f084cc637505d0c747d
+    type: is_home
+  action:
+  - repeat:
+      sequence:
+      - service: select.select_option
+        metadata: {}
+        data:
+          option: '32'
+        target:
+          entity_id: select.i4_edrive40_ac_charging_limit
+      - delay:
+          hours: 0
+          minutes: 1
+          seconds: 0
+          milliseconds: 0
+      while:
+      - condition: numeric_state
+        entity_id: sensor.i4_edrive40_ac_current_limit
+        above: 5
+        below: 32
+      - condition: template
+        value_template: '{{ repeat.index <= 30 }}'
+  mode: single
+  max_exceeded: warning

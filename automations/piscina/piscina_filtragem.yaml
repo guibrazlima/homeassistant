@@ -1,270 +1,35 @@
-# ADAPTA o equipamento real da bomba:
-# switch.bomba_piscina → substitui pelo teu switch/relé
-# binary_sensor.piscina_excedente_fv_bomba → ajusta ao teu binário de excedente
-# input_number.piscina_filtracao_min_restantes → contador de minutos restantes
-# sensor.piscina_minutos_recomendados → minutos alvo/dia calculados
+# ======================================================================
+# 🏊 PISCINA
+# ======================================================================
+# Ficheiro: piscina_filtragem.yaml
+# Automações: 1
+# Última atualização: 2025-11-11
+# Migrado automaticamente - Fase 2
+# ======================================================================
 
-########################################
-# 1) Execução no vazio 22:00–08:00
-########################################
-- id: piscina_vazio_start
-  alias: 🏊🏻 Piscina - Início vazio 22:00
+
+- id: atualizar_temperatura_piscina_filtrado_com_bomba_d
+  alias: 🏊🏻Atualizar Temperatura Piscina filtrado com bomba de aquecimento ligada
+  description: Automação do Home Assistant.
   trigger:
-    - platform: time
-      at: "22:00:00"
+  - platform: time_pattern
+    minutes: /5
   condition:
-    - condition: state
-      entity_id: input_boolean.piscina_override_manual
-      state: "off"
-    - condition: numeric_state
-      entity_id: input_number.piscina_filtracao_min_restantes
-      above: 0
+  - condition: state
+    entity_id: switch.aquecimento_piscina_channel_1
+    state: 'on'
+    for:
+      hours: 0
+      minutes: 10
+      seconds: 0
+  - condition: template
+    value_template: '{{ states(''sensor.bomba_piscina_temperature'') not in [''unavailable'', ''unknown''] }}'
   action:
-    - service: switch.turn_on
-      target:
-        entity_id: switch.bomba_piscina_switch_0   # ADAPTA
-
-- id: piscina_vazio_stop_por_objetivo
-  alias: 🏊🏻 Piscina - Paragem no vazio quando completar
-  trigger:
-    - platform: numeric_state
-      entity_id: input_number.piscina_filtracao_min_restantes
-      below: 1
-  condition:
-    - condition: state
-      entity_id: input_boolean.piscina_override_manual
-      state: "off"
-    - condition: time
-      after: "22:00:00"
-      before: "08:00:00"
-  action:
-    - service: switch.turn_off
-      target:
-        entity_id: switch.bomba_piscina_switch_0   # ADAPTA
-
-- id: piscina_vazio_stop_08
-  alias: 🏊🏻 Piscina - Paragem às 08:00
-  trigger:
-    - platform: time
-      at: "08:00:00"
-  condition:
-    - condition: state
-      entity_id: input_boolean.piscina_override_manual
-      state: "off"
-  action:
-    - service: switch.turn_off
-      target:
-        entity_id: switch.bomba_piscina_switch_0   # ADAPTA
-
-########################################
-# 2) Reset diário imediatamente após 08:00
-########################################
-- id: piscina_reset_diario_minutos
-  alias: 🏊🏻 Piscina - Reset diário minutos (08:00:05)
-  trigger:
-    - platform: time
-      at: "08:00:06"
-  action:
-    - service: input_number.set_value
-      target:
-        entity_id: input_number.piscina_filtracao_min_restantes
-    # Define o alvo para o novo dia operacional (08:00→08:00)
-      data:
-        value: "{{ states('sensor.piscina_minutos_recomendados') | int(480) }}"
-
-########################################
-# 3) Contador de minutos (decrementa 1/min quando ON)
-########################################
-#- id: piscina_contador_minutos
-#  alias: 🏊🏻 Piscina - Contador de minutos
-#  trigger:
-#    - platform: time_pattern
-#      minutes: "/1"
-#  condition:
-#    - condition: state
-#      entity_id: switch.bomba_piscina_switch_0   # ADAPTA
-#      state: "on"
-#    - condition: numeric_state
-#      entity_id: input_number.piscina_filtracao_min_restantes
-#      above: 0
-#  action:
-#    - service: input_number.set_value
-#      target:
-#        entity_id: input_number.piscina_filtracao_min_restantes
-#      data:
-#        value: >
-#          {% set v = states('input_number.piscina_filtracao_min_restantes')|int(0) - 1 %}
-#          {{ [v, 0] | max }}
-
-########################################
-# 4) Arranque por excedente FV (janela solar)
-########################################
-- id: piscina_arranque_solar
-  alias: 🏊🏻 Piscina - Arranque com excedente FV
-  trigger:
-    - platform: state
-      entity_id: binary_sensor.piscina_excedente_fv_bomba   # ADAPTA
-      to: "on"
-      for: "00:05:00"     # antioscilação
-  condition:
-    - condition: state
-      entity_id: input_boolean.piscina_override_manual
-      state: "off"
-    - condition: numeric_state
-      entity_id: input_number.piscina_filtracao_min_restantes
-      above: 0
-    - condition: sun
-      after: sunrise
-      after_offset: "00:15:00"
-      before: sunset
-      before_offset: "-00:15:00"
-  action:
-    - service: switch.turn_on
-      target:
-        entity_id: switch.bomba_piscina_switch_0  # ADAPTA
-
-########################################
-# 5) Paragem se acabar excedente/objetivo/janela solar
-########################################
-- id: piscina_paragem_solar
-  alias: 🏊🏻 Piscina - Paragem quando não há excedente ou objetivo cumprido
-  trigger:
-    - platform: state
-      entity_id: binary_sensor.piscina_excedente_fv_bomba   # ADAPTA
-      to: "off"
-      for: "00:05:00"
-    - platform: numeric_state
-      entity_id: input_number.piscina_filtracao_min_restantes
-      below: 1
-    - platform: sun
-      event: sunset
-      offset: "-00:10:00"
-  condition:
-    - condition: state
-      entity_id: input_boolean.piscina_override_manual
-      state: "off"
-  action:
-    - service: switch.turn_off
-      target:
-        entity_id: switch.bomba_piscina_switch_0   # ADAPTA
-
-########################################
-# 6) Watchdog de arranque FV (*/2min)
-########################################
-- id: piscina_arranque_solar_watchdog
-  alias: 🏊🏻 Piscina - Watchdog arranque FV (*/2min)
-  trigger:
-    - platform: time_pattern
-      minutes: "/2"
-  condition:
-    - condition: state
-      entity_id: input_boolean.piscina_override_manual
-      state: "off"
-    - condition: state
-      entity_id: switch.bomba_piscina_switch_0
-      state: "off"
-    - condition: numeric_state
-      entity_id: input_number.piscina_filtracao_min_restantes
-      above: 0
-    - condition: state
-      entity_id: binary_sensor.piscina_excedente_fv_bomba   # ADAPTA
-      state: "on"
-    - condition: sun
-      after: sunrise
-      after_offset: "00:15:00"
-      before: sunset
-      before_offset: "-00:15:00"
-  action:
-    - service: switch.turn_on
-      target:
-        entity_id: switch.bomba_piscina_switch_0  # ADAPTA
-
-# Fecha o modo manual quando o timer termina (apanha por evento e por estado)
-- id: piscina_manual_finished
-  alias: 🏊🏻 Piscina - Manual terminou (voltar ao automático)
-  mode: single
-  trigger:
-    - platform: event
-      event_type: timer.finished
-      event_data:
-        entity_id: timer.piscina_manual
-    - platform: state
-      entity_id: timer.piscina_manual
-      from: active
-      to: idle
-  action:
-    - service: switch.turn_off
-      target:
-        entity_id: switch.bomba_piscina_switch_0   # ADAPTA
-    - service: input_boolean.turn_off
-      target:
-        entity_id: input_boolean.piscina_override_manual
-
-# Garante fecho se, por alguma razão, o timer já não estiver activo
-- id: piscina_manual_watchdog
-  alias: 🏊🏻 Piscina - Watchdog manual (*/1min)
-  trigger:
-    - platform: time_pattern
-      minutes: "/1"
-  condition:
-    - condition: state
-      entity_id: input_boolean.piscina_override_manual
-      state: "on"
-    - condition: not
-      conditions:
-        - condition: state
-          entity_id: timer.piscina_manual
-          state: "active"
-  action:
-    - service: switch.turn_off
-      target:
-        entity_id: switch.bomba_piscina_switch_0   # ADAPTA
-    - service: input_boolean.turn_off
-      target:
-        entity_id: input_boolean.piscina_override_manual
-
-- id: piscina_sync_restantes_recomendado_menos_corridos
-  alias: 🏊🏻 Piscina - Restantes = Recomendado − Corridos (auto)
-  trigger:
-    - platform: state
+  - target:
       entity_id:
-        - sensor.piscina_minutos_recomendados
-        - sensor.piscina_minutos_on_08_08       # atenção ao nome real após criar
-        - timer.piscina_manual                  # para reagir quando termina manual
-    - platform: homeassistant
-      event: start
-    - platform: time
-      at: "08:00:05"
-  condition:
-    - condition: state
-      entity_id: input_boolean.piscina_override_manual
-      state: "off"     # só em modo automático
-  action:
-    - variables:
-        recomendado: "{{ states('sensor.piscina_minutos_recomendados') | int(0) }}"
-        corridos: "{{ states('sensor.piscina_minutos_on_08_08') | int(0) }}"
-        novos: "{{ [recomendado - corridos, 0] | max }}"
-    - service: input_number.set_value
-      target:
-        entity_id: input_number.piscina_filtracao_min_restantes
-    # clamp para o intervalo do helper (0..1440)
-      data:
-        value: "{{ [novos, 1440] | min }}"
-
-- id: Sincronizar_bomba_piscina_com_bomba_peristaltica
-  alias: 🏊🏻 Piscina - Sincronizar bomba piscina com bomba peristaltica
-  description: Liga/Desliga o bomba piscina sempre que a bomba piscina mudar de estado
-  mode: restart
-  trigger:
-    - platform: state
-      entity_id: switch.bomba_piscina_switch_0
-  action:
-    - service: "switch.turn_{{ trigger.to_state.state }}"
-      target:
-        entity_id: switch.bomba_peristaltica_switch_0
-
-
-
-
-
-
+      - input_number.temperatura_piscina_filtrado
+    data:
+      value: '{{ states(''sensor.bomba_piscina_temperature'') | float(2) }}'
+    action: input_number.set_value
+  mode: single
+  max_exceeded: warning
