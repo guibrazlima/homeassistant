@@ -48,6 +48,171 @@ home-assistant.log.*
 ozw_log.txt
 
 # Development files
-custom_components
+# custom_components  # Comentado - queremos versionar componentes custom
 
 # End of https://www.toptal.com/developers/gitignore/api/homeassistant
+
+# ========================================
+# ADIÇÕES PERSONALIZADAS
+# ========================================
+
+# Bases de Dados SQLite
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Logs Adicionais
+*.log.*
+*.log.fault
+*.log.1
+OZW_Log.txt
+
+# Cache Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Ambientes Virtuais
+venv/
+ENV/
+env/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Secrets e Credenciais (CRÍTICO)
+secrets.yaml
+*.secret
+*.secrets
+.env
+.env.*
+
+# Tokens e Chaves
+*.token
+*.pem
+*.p12
+google_calendars.yaml
+*.conf
+
+# Dados Solcast (podem conter API keys)
+solcast-*.json
+
+# Dados de dispositivos
+known_devices.yaml
+entity_registry.yaml
+device_registry.yaml
+
+# Backups (ocupam muito espaço)
+backups/
+*.tar
+*.gz
+*.zip
+*.backup
+
+# Imagens e Media
+image/
+media/
+www/community/
+www/custom-icons/
+
+# TTS Cache
+tts/
+*.mp3
+*.wav
+
+# Logs de SQL
+sqldump/
+*.sql
+*.sql_old
+
+# Ficheiros temporários do sistema
+.DS_Store
+Thumbs.db
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Ficheiros de configuração local
+.HA_VERSION
+.uuid
+.cloud
+.storage/
+.vagrant/
+
+# Node modules (se usar npm)
+node_modules/
+package-lock.json
+
+# Dependências
+deps/
+lib/
+*.whl
+
+# SSH
+.ssh/
+*.pub
+
+# InfluxDB local
+influxdb/
+*.influxdb
+
+# Histórico e cache
+.cache/
+*.pickle
+*.pkl
+
+# Ficheiros grandes de dados
+*.csv
+*.tsv
+*.dat
+
+# Certificados SSL/TLS
+*.crt
+*.csr
+*.key
+*.pem
+*.p12
+certbot/
+letsencrypt/
+
+# IP Bans
+ip_bans.yaml
+
+# Outros componentes específicos
+icloud/
+phue.conf
+plex.conf
+tradfri.conf
+webostv.conf
+harmony_*.conf
+html5_push_registrations.conf
+
+# Mantém ficheiros importantes
+!.gitignore
+!.github/
+!README.md
+!MAINTENANCE.md
+!automations/
+!sensors/
+!templates/
+!scripts/
+!lovelace/
+
+# Mantém custom components (importante para o repositório)
+!custom_components/
+
+# Mas ignora deps dentro de custom components
+custom_components/*/deps/
+custom_components/*/__pycache__/

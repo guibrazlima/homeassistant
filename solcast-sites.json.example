@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "sites": [
+    {
+      "resource_id": "xxxx-xxxx-xxxx-xxxx",
+      "name": "Telhado Principal",
+      "capacity": 10.0,
+      "latitude": 41.0,
+      "longitude": -8.0,
+      "tilt": 30,
+      "azimuth": 180,
+      "install_date": "2023-01-01"
+    }
+  ]
+}

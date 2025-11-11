@@ -1,5 +1,7 @@
 # 🏠 Sistema Home Assistant - Documentação Completa
 
+> ⚠️ **IMPORTANTE:** Este repositório contém configurações públicas. Ficheiros sensíveis como `secrets.yaml`, bases de dados e tokens **NÃO** estão incluídos. Consulte [SECURITY.md](SECURITY.md) antes de fazer fork ou contribuir.
+
 ## 📋 Índice
 1. [Visão Geral](#-visão-geral)
 2. [Arquitetura do Sistema](#-arquitetura-do-sistema)
@@ -17,7 +19,7 @@
 Este é um sistema Home Assistant completo e avançado que implementa uma solução de domótica integrada para automação residencial. O sistema inclui controlo de energia solar, gestão de humidade, automações inteligentes e monitorização completa da casa.
 
 ### 📊 Estatísticas do Sistema
-- **Data de Última Atualização**: Julho 2025
+- **Data de Última Atualização**: Novembro 2025
 - **Versão HA**: 2023.1+
 - **Automações Ativas**: 2500+ linhas
 - **Componentes Personalizados**: 24+ integrações
