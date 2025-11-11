@@ -1,517 +1,260 @@
-# 🏠 Home Assistant - Sistema de Automação Residencial# 🏠 Sistema Home Assistant - Documentação Completa
+# 🏠 Sistema Home Assistant - Documentação Completa
 
+> ⚠️ **IMPORTANTE:** Este repositório contém configurações públicas. Ficheiros sensíveis como `secrets.yaml`, bases de dados e tokens **NÃO** estão incluídos. Consulte [SECURITY.md](SECURITY.md) antes de fazer fork ou contribuir.
 
-
-> **Sistema Home Assistant** com automações inteligentes, controlo de energia solar, gestão de piscina e climatização avançada.> ⚠️ **IMPORTANTE:** Este repositório contém configurações públicas. Ficheiros sensíveis como `secrets.yaml`, bases de dados e tokens **NÃO** estão incluídos. Consulte [SECURITY.md](SECURITY.md) antes de fazer fork ou contribuir.
-
-
-
-[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2023.1+-blue.svg)](https://www.home-assistant.io/)## 📋 Índice
-
-[![Maintenance](https://img.shields.io/badge/Maintained-Yes-green.svg)](https://github.com/guibrazlima/homeassistant)1. [Visão Geral](#-visão-geral)
-
+## 📋 Índice
+1. [Visão Geral](#-visão-geral)
 2. [Arquitetura do Sistema](#-arquitetura-do-sistema)
-
----3. [Componentes Principais](#-componentes-principais)
-
+3. [Componentes Principais](#-componentes-principais)
 4. [Integrações Personalizadas](#-integrações-personalizadas)
-
-## 🚀 Início Rápido5. [Automações](#-automações)
-
+5. [Automações](#-automações)
 6. [Configuração de Rede](#-configuração-de-rede)
-
-### Componentes Principais7. [Monitorização e Logging](#-monitorização-e-logging)
-
+7. [Monitorização e Logging](#-monitorização-e-logging)
 8. [Backups](#-backups)
+9. [Manutenção](#-manutenção)
+10. [Segurança](#-segurança)
 
-- **🤖 Automações:** 68+ automações organizadas em 13 categorias9. [Manutenção](#-manutenção)
+## 🔍 Visão Geral
 
-- **📦 Packages:** 8 packages modulares (AQS, Piscina, Climatização)10. [Segurança](#-segurança)
+Este é um sistema Home Assistant completo e avançado que implementa uma solução de domótica integrada para automação residencial. O sistema inclui controlo de energia solar, gestão de humidade, automações inteligentes e monitorização completa da casa.
 
-- **🔌 Integrações:** 24+ integrações personalizadas
-
-- **☀️ Energia Solar:** Controlo automático de excesso PV## 🔍 Visão Geral
-
-- **🏊 Piscina:** Gestão completa (cloro, pH, cobertura)
-
-- **🌡️ Climatização:** Sensores de conforto térmicoEste é um sistema Home Assistant completo e avançado que implementa uma solução de domótica integrada para automação residencial. O sistema inclui controlo de energia solar, gestão de humidade, automações inteligentes e monitorização completa da casa.
-
-
-
-### Estrutura do Projeto### 📊 Estatísticas do Sistema
-
+### 📊 Estatísticas do Sistema
 - **Data de Última Atualização**: Novembro 2025
+- **Versão HA**: 2023.1+
+- **Automações Ativas**: 2500+ linhas
+- **Componentes Personalizados**: 24+ integrações
+- **Sensores**: 100+ entidades monitorizadas
 
-```- **Versão HA**: 2023.1+
+## 🏗 Arquitetura do Sistema
 
-homeassistant/- **Automações Ativas**: 2500+ linhas
-
-├── automations/           # 13 ficheiros de automações categorizadas- **Componentes Personalizados**: 24+ integrações
-
-├── packages/              # 8 packages modulares- **Sensores**: 100+ entidades monitorizadas
-
-├── custom_components/     # Integrações personalizadas
-
-├── docs/                  # 📚 Documentação consolidada## 🏗 Arquitetura do Sistema
-
-│   ├── historico/         # Histórico de reorganizações
-
-│   ├── analises/          # Análises técnicas### 🔗 Componentes Base
-
-│   └── SECURITY.md        # Guia de segurança```yaml
-
-├── scripts/               # Scripts de automação# Configuração principal (configuration.yaml)
-
-└── configuration.yaml     # Configuração principaldefault_config:          # Configuração padrão do HA
-
-```recorder:                # Base de dados MariaDB
-
+### 🔗 Componentes Base
+```yaml
+# Configuração principal (configuration.yaml)
+default_config:          # Configuração padrão do HA
+recorder:                # Base de dados MariaDB
 history:                 # Histórico de entidades
-
----influxdb:               # Base de dados para métricas
-
+influxdb:               # Base de dados para métricas
 logger:                 # Sistema de logging
-
-## 📚 Documentação```
-
-
-
-### 📖 Guias Principais### 📡 Conectividade
-
-- **Base de Dados**: MariaDB (externa)
-
-| Documento | Descrição |- **Métricas**: InfluxDB v2
-
-|-----------|-----------|- **Proxy Reverso**: Nginx (172.0.0.0/8, 192.168.1.221/32, 192.168.1.222/32)
-
-| [📋 Histórico de Reorganização](docs/historico/REORGANIZACAO.md) | Completo histórico de todas as reorganizações |- **Notificações**: Telegram Bot
-
-| [📦 Análise de Packages](docs/analises/PACKAGES.md) | Análise técnica detalhada de todos os packages |
-
-| [🔍 Análise de Erros](docs/analises/ERROS_LOGS.md) | Diagnóstico de erros e soluções |## 🧩 Componentes Principais
-
-| [🚀 Melhorias Técnicas](docs/analises/MELHORIAS_TECNICAS.md) | Guia completo de boas práticas |
-
-| [🔒 Segurança](docs/SECURITY.md) | Guia de segurança e ficheiros sensíveis |### 🔋 Sistema de Energia Solar
-
-**PV Excess Control** - Controlo automático de excesso de energia solar
-
-### 🎯 Documentação por Categoria- **Localização**: `pv_excess_control.yaml`, `pyscript/pv_excess_control.py`
-
-- **Funcionalidades**:
-
-#### Automações  - Gestão automática de aparelhos baseada no excesso de energia solar
-
-- Ver: [`automations/README.md`](automations/README.md)  - Suporte para inversores híbridos e standard
-
-- 13 ficheiros categorizados  - Controlo dinâmico de corrente (wallboxes)
-
-- 100% IDs únicos  - Sistema de prioridades configurável
-
-- Descrições completas  - Integração com previsões Solcast
-
-  - Suporte mono e trifásico
-
-#### Packages
-
-- Ver: [`packages/README.md`](packages/README.md)**Configuração Típica**:
-
-- 8 packages modulares```yaml
-
-- Dependências documentadasautomation_id: automation.pv_excess_wallbox
-
-- Error handling implementadoappliance_priority: 100
-
-grid_voltage: 230
-
----min_home_battery_level: 20
-
 ```
 
-## 🏗️ Arquitetura
+### 📡 Conectividade
+- **Base de Dados**: MariaDB (externa)
+- **Métricas**: InfluxDB v2
+- **Proxy Reverso**: Nginx (172.0.0.0/8, 192.168.1.221/32, 192.168.1.222/32)
+- **Notificações**: Telegram Bot
+
+## 🧩 Componentes Principais
+
+### 🔋 Sistema de Energia Solar
+**PV Excess Control** - Controlo automático de excesso de energia solar
+- **Localização**: `pv_excess_control.yaml`, `pyscript/pv_excess_control.py`
+- **Funcionalidades**:
+  - Gestão automática de aparelhos baseada no excesso de energia solar
+  - Suporte para inversores híbridos e standard
+  - Controlo dinâmico de corrente (wallboxes)
+  - Sistema de prioridades configurável
+  - Integração com previsões Solcast
+  - Suporte mono e trifásico
+
+**Configuração Típica**:
+```yaml
+automation_id: automation.pv_excess_wallbox
+appliance_priority: 100
+grid_voltage: 230
+min_home_battery_level: 20
+```
 
 ### 🌡️ Controlo de Humidade Otimizada
-
-### Componentes do Sistema**Optimal Humidity** - Sensor inteligente de humidade
-
+**Optimal Humidity** - Sensor inteligente de humidade
 - **Localização**: `custom_components/optimal_humidity/`
+- **Funcionalidades**:
+  - Cálculo automático da humidade ideal
+  - Prevenção de condensação e mofo
+  - Índice de conforto Humidex
+  - Monitorização de ponto de orvalho
+  - Alertas de risco de mofo
 
-```- **Funcionalidades**:
+**Sensores Disponíveis**:
+- `dewpoint` - Ponto de orvalho
+- `specific_humidity` - Humidade específica
+- `optimal_humidity` - Humidade ideal
+- `mold_warning` - Alerta de mofo
+- `humidex` - Índice Humidex
 
-┌─────────────────────────────────────────────┐  - Cálculo automático da humidade ideal
-
-│         Home Assistant Core                 │  - Prevenção de condensação e mofo
-
-├─────────────────────────────────────────────┤  - Índice de conforto Humidex
-
-│  Automações (13 ficheiros)                  │  - Monitorização de ponto de orvalho
-
-│  Packages (8 módulos)                       │  - Alertas de risco de mofo
-
-│  Custom Components (24+)                    │
-
-└─────────────────────────────────────────────┘**Sensores Disponíveis**:
-
-         │              │              │- `dewpoint` - Ponto de orvalho
-
-    ┌────┴────┐    ┌───┴───┐    ┌────┴────┐- `specific_humidity` - Humidade específica
-
-    │ MariaDB │    │InfluxDB│    │ Telegram│- `optimal_humidity` - Humidade ideal
-
-    └─────────┘    └────────┘    └─────────┘- `mold_warning` - Alerta de mofo
-
-```- `humidex` - Índice Humidex
-
-
-
-### Integrações Principais### 🚪 Sistema de Portões e Acessos
-
+### 🚪 Sistema de Portões e Acessos
 ```yaml
-
-- **☀️ Solar:** PV Excess Control, Solcast# Automação de portão com callback
-
-- **📷 Câmaras:** Tapo Control, ONVIF- alias: "🏡 Callback to open gate from action"
-
-- **🌡️ Sensores:** Thermal Comfort, Sensor avançados  trigger:
-
-- **🔌 Dispositivos:** TP-Link Deco, dispositivos Zigbee/WiFi    - platform: event
-
-- **🤖 IA:** LLM Vision para análise de imagens      event_type: mobile_app_notification_action
-
+# Automação de portão com callback
+- alias: "🏡 Callback to open gate from action"
+  trigger:
+    - platform: event
+      event_type: mobile_app_notification_action
       event_data:
-
----        action: ABRIR_PORTAO
-
+        action: ABRIR_PORTAO
   action:
-
-## 💡 Funcionalidades Destacadas    - service: cover.open_cover
-
+    - service: cover.open_cover
       target:
+        entity_id: cover.gate
+```
 
-### 🌞 Gestão de Energia Solar        entity_id: cover.gate
+## 🔧 Integrações Personalizadas
 
-- Controlo automático de excesso de produção solar```
+### 📦 Componentes Instalados via HACS
+O sistema utiliza 24+ integrações personalizadas para funcionalidades avançadas:
 
-- Otimização de autoconsumo
-
-- Integração com previsões Solcast## 🔧 Integrações Personalizadas
-
-
-
-### 🏊 Automação de Piscina### 📦 Componentes Instalados via HACS
-
-- **Clorador de sal:** Controlo automático de produção de cloroO sistema utiliza 24+ integrações personalizadas para funcionalidades avançadas:
-
-- **pH:** Monitorização e alertas
-
-- **Cobertura:** Deteção automática via IA (LLM Vision)#### 🚨 **alarmo** - Sistema de Alarmes
-
-- **TPO:** Cálculo de tempo ótimo de cloração- **Função**: Sistema completo de alarmes residenciais
-
+#### 🚨 **alarmo** - Sistema de Alarmes
+- **Função**: Sistema completo de alarmes residenciais
 - **Características**: Múltiplas zonas, códigos de utilizador, notificações
+- **Integração**: Sensores de movimento, contactos de porta/janela
 
-### 🌡️ Conforto Térmico- **Integração**: Sensores de movimento, contactos de porta/janela
-
-- Sensores de conforto para 4 divisões
-
-- Cálculos de ponto de orvalho#### 🔄 **auto_backup** - Backups Automáticos  
-
-- Alertas de humidade ideal- **Função**: Gestão automática de backups do sistema
-
+#### 🔄 **auto_backup** - Backups Automáticos  
+- **Função**: Gestão automática de backups do sistema
 - **Scheduling**: Backups diários às 01:00 e de hora a hora
+- **Retenção**: Limpeza automática de backups antigos
+- **Formato**: TAR comprimido com timestamp
 
-### 💧 Água Quente Sanitária (AQS)- **Retenção**: Limpeza automática de backups antigos
-
-- Estimador térmico para bomba de calor HP90- **Formato**: TAR comprimido com timestamp
-
-- Cálculo de perdas térmicas
-
-- Otimização de aquecimento#### 📶 **ble_monitor** - Monitor Bluetooth LE
-
+#### 📶 **ble_monitor** - Monitor Bluetooth LE
 - **Função**: Monitorização de dispositivos Bluetooth Low Energy
-
----- **Sensores**: BTHome (temperatura, humidade, movimento)
-
+- **Sensores**: BTHome (temperatura, humidade, movimento)
 - **Alcance**: Cobertura completa da habitação
+- **Protocolo**: BTHome v2 para máxima compatibilidade
 
-## 🔧 Instalação e Configuração- **Protocolo**: BTHome v2 para máxima compatibilidade
-
-
-
-### Pré-requisitos#### 🌐 **browser_mod** - Controlo do Navegador
-
+#### 🌐 **browser_mod** - Controlo do Navegador
 - **Função**: Controlo avançado do navegador para dashboards
+- **Características**: Pop-ups dinâmicos, navegação automática
+- **Media Player**: Controlo de reprodução de media
+- **Notification**: Notificações no navegador
 
-- Home Assistant 2023.1 ou superior- **Características**: Pop-ups dinâmicos, navegação automática
-
-- MariaDB (para recorder)- **Media Player**: Controlo de reprodução de media
-
-- Python 3.11+- **Notification**: Notificações no navegador
-
-
-
-### Configuração Inicial#### ⚡ **entsoe** - Dados Energéticos Europeus
-
+#### ⚡ **entsoe** - Dados Energéticos Europeus
 - **Função**: Acesso a dados energéticos em tempo real da Europa
+- **API**: ENTSO-E Transparency Platform
+- **Dados**: Preços spot, produção renovável, consumo
+- **Região**: Portugal/Península Ibérica
 
-1. **Clonar repositório:**- **API**: ENTSO-E Transparency Platform
-
-   ```bash- **Dados**: Preços spot, produção renovável, consumo
-
-   git clone https://github.com/guibrazlima/homeassistant.git- **Região**: Portugal/Península Ibérica
-
-   cd homeassistant
-
-   ```#### 🚗 **ev_smart_charging** - Carregamento Inteligente VE
-
+#### 🚗 **ev_smart_charging** - Carregamento Inteligente VE
 - **Função**: Otimização de carregamento de veículos elétricos
+- **Algoritmos**: Baseado em preços energéticos e produção solar
+- **Suporte**: OCPP, wallboxes Tesla, outros protocolos
+- **Scheduling**: Carregamento em horários de menor custo
 
-2. **Configurar secrets:**- **Algoritmos**: Baseado em preços energéticos e produção solar
-
-   ```bash- **Suporte**: OCPP, wallboxes Tesla, outros protocolos
-
-   cp secrets.yaml.example secrets.yaml- **Scheduling**: Carregamento em horários de menor custo
-
-   # Editar secrets.yaml com as suas credenciais
-
-   ```#### 🏪 **hacs** - Home Assistant Community Store
-
+#### 🏪 **hacs** - Home Assistant Community Store
 - **Função**: Loja de componentes da comunidade
-
-3. **Validar configuração:**- **Repositórios**: 1000+ integrações disponíveis
-
-   ```bash- **Atualizações**: Gestão automática de versões
-
-   hass --script check_config- **Backup**: Restauração de configurações
-
-   ```
+- **Repositórios**: 1000+ integrações disponíveis
+- **Atualizações**: Gestão automática de versões
+- **Backup**: Restauração de configurações
 
 #### 🌡️ **midea_ac** + **midea_dehumidifier_lan** 
-
-4. **Reiniciar Home Assistant**- **Função**: Controlo de equipamentos Midea via LAN
-
+- **Função**: Controlo de equipamentos Midea via LAN
 - **Dispositivos**: Ares condicionados, desumidificadores
-
-### ⚠️ Ficheiros Sensíveis- **Protocolo**: Comunicação direta sem cloud
-
+- **Protocolo**: Comunicação direta sem cloud
 - **Funcionalidades**: Temperatura, modo, velocidade, timer
 
-Os seguintes ficheiros **NÃO** estão no repositório e devem ser criados manualmente:
-
 #### 🔌 **ocpp** - Open Charge Point Protocol
+- **Função**: Protocolo standard para wallboxes
+- **Compatibilidade**: Wallboxes comerciais e DIY
+- **Monitorização**: Energia, estado de carregamento, erros
+- **Controlo**: Start/stop, limite de corrente, scheduling
 
-- `secrets.yaml` (credenciais)- **Função**: Protocolo standard para wallboxes
-
-- `*.db*` (bases de dados)- **Compatibilidade**: Wallboxes comerciais e DIY
-
-- `known_devices.yaml` (dispositivos)- **Monitorização**: Energia, estado de carregamento, erros
-
-- `home-assistant.log*` (logs)- **Controlo**: Start/stop, limite de corrente, scheduling
-
-
-
-Ver [SECURITY.md](docs/SECURITY.md) para detalhes completos.#### 💰 **omie** - Mercado Energético Ibérico
-
+#### 💰 **omie** - Mercado Energético Ibérico
 - **Função**: Preços spot do mercado OMIE em tempo real
-
----- **Frequência**: Atualização horária
-
+- **Frequência**: Atualização horária
 - **Dados**: Preços PT/ES, previsões, histórico
+- **Integração**: Templates de tarifários dinâmicos
 
-## 📊 Estatísticas- **Integração**: Templates de tarifários dinâmicos
+#### 🧠 **powerbrain** - Gestão Inteligente de Energia
+- **Função**: Otimização automática do consumo energético
+- **IA**: Algoritmos de machine learning para padrões
+- **Previsões**: Consumo futuro baseado em histórico
+- **Controlo**: Gestão automática de cargas
 
-
-
-| Categoria | Quantidade | Estado |#### 🧠 **powerbrain** - Gestão Inteligente de Energia
-
-|-----------|------------|--------|- **Função**: Otimização automática do consumo energético
-
-| **Automações** | 68+ | ✅ 100% válidas |- **IA**: Algoritmos de machine learning para padrões
-
-| **Packages** | 8 | ✅ 100% documentados |- **Previsões**: Consumo futuro baseado em histórico
-
-| **Integrações** | 24+ | ✅ Funcionais |- **Controlo**: Gestão automática de cargas
-
-| **Sensores** | 100+ | ✅ Monitorizados |
-
-| **Documentação** | 2000+ linhas | ✅ Consolidada |#### 🐍 **pyscript** - Scripts Python Avançados
-
+#### 🐍 **pyscript** - Scripts Python Avançados
 - **Função**: Execução de código Python nativo no HA
-
-### Qualidade do Código- **Características**: 
-
+- **Características**: 
   - Triggers temporais e de estado
-
-- ✅ **100%** YAML válido  - Acesso completo à API do HA
-
-- ✅ **100%** Unique IDs nos sensores  - Bibliotecas Python externas
-
-- ✅ **100%** Error handling em automações críticas- **Scripts Ativos**:
-
-- ✅ **95%** Documentação completa  - `pv_excess_control.py` - Controlo de excesso solar
-
-- ✅ **Nomenclatura padronizada:** `categoria_descricao.yaml`  - Scripts de cálculo energético
-
+  - Acesso completo à API do HA
+  - Bibliotecas Python externas
+- **Scripts Ativos**:
+  - `pv_excess_control.py` - Controlo de excesso solar
+  - Scripts de cálculo energético
   - Automações complexas
 
----
-
 #### ☀️ **solcast_solar** - Previsões Solares
-
-## 🚀 Melhorias Recentes- **Função**: Previsões precisas de produção solar
-
+- **Função**: Previsões precisas de produção solar
 - **API**: Solcast.com.au com dados meteorológicos
-
-### Novembro 2025- **Dados**: Produção estimada, irradiação, cobertura nuvens
-
+- **Dados**: Produção estimada, irradiação, cobertura nuvens
 - **Ficheiros de Configuração**:
-
-#### ✨ Reorganização Completa  ```json
-
-- ✅ 68 automações reorganizadas em 13 ficheiros categorizados  // solcast-sites.json
-
-- ✅ 8 packages otimizados e documentados  {
-
-- ✅ Documentação consolidada em `docs/`    "sites": [
-
-- ✅ Eliminação de duplicações      {
-
-- ✅ Padronização de nomenclatura        "resource_id": "xxxxx-xxxx-xxxx",
-
+  ```json
+  // solcast-sites.json
+  {
+    "sites": [
+      {
+        "resource_id": "xxxxx-xxxx-xxxx",
         "capacity": 10.0,
-
-#### 🔧 Melhorias Técnicas        "tilt": 30,
-
-- ✅ Unique IDs em 100% dos sensores        "azimuth": 180
-
-- ✅ Timeout e error handling em automações LLM Vision      }
-
-- ✅ Criação de `aqs_common.yaml` para inputs partilhados    ]
-
-- ✅ README.md para automações e packages  }
-
+        "tilt": 30,
+        "azimuth": 180
+      }
+    ]
+  }
   ```
 
-Ver [REORGANIZACAO.md](docs/historico/REORGANIZACAO.md) para histórico completo.
-
 #### 🔌 **tapo_control** - Dispositivos TP-Link Tapo
-
----- **Função**: Controlo de dispositivos Tapo (plugs, câmaras, lâmpadas)
-
+- **Função**: Controlo de dispositivos Tapo (plugs, câmaras, lâmpadas)
 - **Protocolo**: Comunicação local sem cloud
-
-## 🤝 Contribuir- **Monitorização**: Consumo energético, estado, programação
-
+- **Monitorização**: Consumo energético, estado, programação
 - **Automação**: Integração completa com automações HA
 
-### Como Contribuir
-
 #### 🌡️ **thermal_comfort** - Conforto Térmico
-
-1. Fork o repositório- **Função**: Cálculos avançados de conforto térmico
-
-2. Criar branch: `git checkout -b feature/nova-funcionalidade`- **Métricas**: 
-
-3. Validar YAML: `hass --script check_config`  - Heat Index
-
-4. Commit: `git commit -m "Adicionar nova funcionalidade"`  - Simmer Index  
-
-5. Push: `git push origin feature/nova-funcionalidade`  - Frost Point
-
-6. Abrir Pull Request  - Thermal Perception
-
+- **Função**: Cálculos avançados de conforto térmico
+- **Métricas**: 
+  - Heat Index
+  - Simmer Index  
+  - Frost Point
+  - Thermal Perception
 - **Sensores**: Baseado em temperatura e humidade existentes
 
-### Boas Práticas
-
 #### 💻 **ui_lovelace_minimalist** - Interface Minimalista
-
-- ✅ Sempre adicionar `unique_id` a sensores- **Função**: Framework de UI moderna e minimalista
-
-- ✅ Usar nomenclatura: `categoria_descricao.yaml`- **Características**:
-
-- ✅ Documentar dependências em cabeçalhos  - Design cards personalizadas
-
-- ✅ Adicionar timeout em services externos  - Temas adaptativos
-
-- ✅ Nunca commitar `secrets.yaml`  - Performance otimizada
-
+- **Função**: Framework de UI moderna e minimalista
+- **Características**:
+  - Design cards personalizadas
+  - Temas adaptativos
+  - Performance otimizada
 - **Localização**: `ui_lovelace_minimalist/`, `button_card_templates/`
 
-Ver [MELHORIAS_TECNICAS.md](docs/analises/MELHORIAS_TECNICAS.md) para guia completo.
-
 #### 📊 **variable** - Variáveis Persistentes
-
----- **Função**: Criação de variáveis que persistem entre reinícios
-
+- **Função**: Criação de variáveis que persistem entre reinícios
 - **Casos de Uso**: Contadores, estados temporários, configurações
-
-## 📞 Suporte- **API**: Serviços para set/get de valores
-
+- **API**: Serviços para set/get de valores
 - **Backup**: Incluído nos backups automáticos
 
-### Documentação
-
 #### 🌪️ **xiaomi_miio** - Dispositivos Xiaomi
-
-- 📚 [Documentação Home Assistant](https://www.home-assistant.io/docs/)- **Função**: Integração com ecosistema Xiaomi/Mijia
-
-- 🔧 [Guia de Troubleshooting](docs/analises/ERROS_LOGS.md)- **Dispositivos**: Ventoinhas, purificadores ar, robots aspirador
-
-- 💡 [Boas Práticas](docs/analises/MELHORIAS_TECNICAS.md)- **Protocolos**: miIO protocol, raw commands
-
+- **Função**: Integração com ecosistema Xiaomi/Mijia
+- **Dispositivos**: Ventoinhas, purificadores ar, robots aspirador
+- **Protocolos**: miIO protocol, raw commands
 - **Controlo**: Speed, oscilação, timer, modo
-
-### Issues
 
 ### 🎯 Configurações Específicas Avançadas
 
-- 🐛 Reportar bugs via [GitHub Issues](https://github.com/guibrazlima/homeassistant/issues)
-
-- 💬 Discussões na comunidade Home Assistant#### 📊 InfluxDB v2 - Base de Dados de Métricas
-
+#### 📊 InfluxDB v2 - Base de Dados de Métricas
 ```yaml
-
----influxdb:
-
+influxdb:
   api_version: 2
-
-## 📜 Licença  ssl: false
-
+  ssl: false
   host: influxdb
-
-Este projeto está sob licença MIT. Ver `LICENSE` para detalhes.  port: 8086
-
+  port: 8086
   token: !secret influxdb_token
-
----  organization: gl
-
+  organization: gl
   bucket: homeassistant
-
-## 🙏 Agradecimentos  tags:
-
+  tags:
     source: HomeAssistant
-
-- [Home Assistant](https://www.home-assistant.io/) - Plataforma incrível    installation: production
-
-- [PV Excess Control](https://github.com/InventoCasa/ha-advanced-blueprints) - Blueprint de energia solar  tags_attributes:
-
-- [LLM Vision](https://github.com/valentinfrlch/ha-llmvision) - Integração de IA para visão computacional    - friendly_name
-
-- Comunidade Home Assistant Portugal 🇵🇹    - device_class
-
+    installation: production
+  tags_attributes:
+    - friendly_name
+    - device_class
   default_measurement: units
-
----  ignore_attributes:
-
+  ignore_attributes:
     - icon
-
-**Última atualização:** 11 de novembro de 2025      - entity_picture
-
-**Versão:** 2.0.0    exclude:
-
-**Manutenção:** Ativa ✅    entities:
-
+    - entity_picture
+  exclude:
+    entities:
       - zone.home
       - sun.sun
     domains:
