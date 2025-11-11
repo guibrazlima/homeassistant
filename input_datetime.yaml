@@ -1,4 +1,0 @@
-horario_piscina_noite:
-  name: "Horario Bomba Piscina Noite"
-  has_time: true
-  has_date: true

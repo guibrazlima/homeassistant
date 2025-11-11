@@ -11,7 +11,8 @@
 | Categoria | Documentos | Descrição |
 |-----------|------------|-----------|
 | **📜 Histórico** | [Reorganização](historico/REORGANIZACAO.md) | Histórico completo de reorganizações |
-| **🔍 Análises** | [Packages](analises/PACKAGES.md), [Erros](analises/ERROS_LOGS.md), [Melhorias](analises/MELHORIAS_TECNICAS.md) | Análises técnicas detalhadas |
+| **🔍 Análises** | [Packages](analises/PACKAGES.md), [Erros](analises/ERROS_LOGS.md), [Melhorias](analises/MELHORIAS_TECNICAS.md), [Raiz](analises/ORGANIZACAO_RAIZ.md) | Análises técnicas detalhadas |
+| **🚀 Melhorias** | [Fase 2](analises/MELHORIAS_APLICADAS_FASE2.md) | Melhorias aplicadas (logs, inputs) |
 | **🔒 Segurança** | [Segurança](SECURITY.md) | Guia de segurança e boas práticas |
 
 ### 🚀 Por Objetivo

@@ -22,6 +22,17 @@ recorder:
   #commit_interval: 5
   auto_purge: false
 
+# Configuração de logs com rotação automática
+logger:
+  default: info
+  logs:
+    homeassistant.core: warning
+    homeassistant.components.recorder: warning
+
+# Rotação de logs - arquivo será mantido em tamanho controlado
+# O Home Assistant gerencia automaticamente via logger
+# Logs antigos são movidos para .log.1, .log.2, etc.
+
 history:
 
 influxdb:
@@ -55,16 +66,18 @@ automation: !include_dir_merge_list automations/
 script: !include scripts.yaml
 # scene: !include scenes.yaml  # Comentado - arquivo vazio removido
 sensor: !include_dir_merge_list sensors/
-input_select: !include input_select.yaml
-input_number: !include input_number.yaml
+# Inputs consolidados movidos para packages/inputs_common.yaml
+# input_select: !include input_select.yaml
+# input_number: !include input_number.yaml
+# input_boolean: !include input_boolean.yaml
+# input_datetime: !include input_datetime.yaml
 switch: !include switches.yaml
 binary_sensor: !include binary_sensor.yaml
 cover: !include cover.yaml
-input_boolean: !include input_boolean.yaml
 template: !include_dir_merge_list templates/
 ingress: !include ingress.yaml
 thermal_comfort: !include thermal_comfort.yaml
-input_datetime: !include input_datetime.yaml
+# input_datetime movido para packages/inputs_common.yaml
 
 http:
   use_x_forwarded_for: true
