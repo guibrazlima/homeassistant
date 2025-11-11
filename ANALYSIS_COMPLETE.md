@@ -74,7 +74,7 @@ rest_command:
 
 ---
 
-### 3. 🟡 **ORGANIZAÇÃO: Comentários "ADAPTA" Não Resolvidos**
+### 3. 🟡 **ORGANIZAÇÃO: Comentários "ADAPTA" Não Resolvidos*input_boolean.portao_status*
 
 **Encontrados:** 31 ocorrências de `# ADAPTA` em vários ficheiros
 
