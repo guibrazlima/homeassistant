@@ -1,0 +1,35 @@
+# ======================================================================
+# 🏊 PISCINA
+# ======================================================================
+# Ficheiro: piscina_filtragem.yaml
+# Automações: 1
+# Última atualização: 2025-11-11
+# Migrado automaticamente - Fase 2
+# ======================================================================
+
+
+- id: atualizar_temperatura_piscina_filtrado_com_bomba_d
+  alias: 🏊🏻Atualizar Temperatura Piscina filtrado com bomba de aquecimento ligada
+  description: Automação do Home Assistant.
+  trigger:
+  - platform: time_pattern
+    minutes: /5
+  condition:
+  - condition: state
+    entity_id: switch.aquecimento_piscina_channel_1
+    state: 'on'
+    for:
+      hours: 0
+      minutes: 10
+      seconds: 0
+  - condition: template
+    value_template: '{{ states(''sensor.bomba_piscina_temperature'') not in [''unavailable'', ''unknown''] }}'
+  action:
+  - target:
+      entity_id:
+      - input_number.temperatura_piscina_filtrado
+    data:
+      value: '{{ states(''sensor.bomba_piscina_temperature'') | float(2) }}'
+    action: input_number.set_value
+  mode: single
+  max_exceeded: warning

@@ -1,0 +1,25 @@
+# ======================================================================
+# 💡 ILUMINAÇÃO
+# ======================================================================
+# Ficheiro: luzes_exterior.yaml
+# Automações: 1
+# Última atualização: 2025-11-11
+# Migrado automaticamente - Fase 2
+# ======================================================================
+
+
+- id: luz_exterior_auto
+  alias: 💡Luz Exterior Auto
+  description: Automação do Home Assistant.
+  use_blueprint:
+    path: Blackshome/sensor-light.yaml
+    input:
+      motion_trigger:
+      - binary_sensor.shelly_b_0114_window
+      light_switch:
+        entity_id: light.exterior
+      time_delay: 10
+      include_sun: sun_enabled
+      night_lights_conditions: []
+  mode: single
+  max_exceeded: warning

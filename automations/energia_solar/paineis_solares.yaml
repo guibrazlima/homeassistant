@@ -1,0 +1,75 @@
+# ======================================================================
+# ☀️ ENERGIA SOLAR
+# ======================================================================
+# Ficheiro: paineis_solares.yaml
+# Automações: 1
+# Última atualização: 2025-11-11
+# Migrado automaticamente - Fase 2
+# ======================================================================
+
+
+- id: pool_pump_solar_optimizationsdsdsd
+  alias: Pool Pump Solar Optimizationsdsdsd
+  description: Gerencia a bomba da piscina priorizando energia solar e garantindo filtragem diária
+  trigger:
+  - minutes: /15
+    trigger: time_pattern
+  - entity_id: sensor.solar_power
+    trigger: state
+  - at: 08:00:00
+    trigger: time
+  - at: '22:00:00'
+    trigger: time
+  condition:
+  - condition: template
+    value_template: '{{ not is_state(''binary_sensor.pool_pump_malfunction'', ''on'') }}
+
+      '
+  action:
+  - target:
+      entity_id: sensor.pool_pump_daily_runtime
+    action: homeassistant.update_entity
+  - choose:
+    - conditions:
+      - condition: time
+        after: 08:00:00
+        before: '22:00:00'
+      - condition: template
+        value_template: '{{ states(''sensor.solar_power'')|float > min_solar_power }}
+
+          '
+      sequence:
+      - target:
+          entity_id: switch.pool_pump
+        action: switch.turn_on
+      - target:
+          entity_id: input_number.pool_pump_priority
+        data:
+          value: 1
+        action: input_number.set
+    - conditions:
+      - condition: time
+        after: '22:00:00'
+        before: 08:00:00
+      - condition: template
+        value_template: '{% set daily_runtime = states(''sensor.pool_pump_daily_runtime'')|float %} {% set tomorrow_forecast = states(''sensor.tomorrow_solar_forecast'')|float %} {{ daily_runtime < min_daily_hours and tomorrow_forecast < 0.7 }}
+
+          '
+      sequence:
+      - target:
+          entity_id: switch.pool_pump
+        action: switch.turn_on
+      - target:
+          entity_id: input_number.pool_pump_priority
+        data:
+          value: 2
+        action: input_number.set
+    default:
+    - target:
+        entity_id: switch.pool_pump
+      action: switch.turn_off
+  variables:
+    min_daily_hours: 5
+    min_solar_power: 1000
+    pump_power: 800
+  mode: restart
