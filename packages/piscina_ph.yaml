@@ -54,6 +54,7 @@ template:
 sensor:
   - platform: statistics
     name: "pH — Mín 24h"
+    unique_id: ph_piscina_min_24h
     entity_id: sensor.piscina_ph
     state_characteristic: value_min
     max_age:
@@ -63,6 +64,7 @@ sensor:
 
   - platform: statistics
     name: "pH — Máx 24h"
+    unique_id: ph_piscina_max_24h
     entity_id: sensor.piscina_ph
     state_characteristic: value_max
     max_age:
@@ -72,6 +74,7 @@ sensor:
 
   - platform: statistics
     name: "pH — Mín 7d"
+    unique_id: ph_piscina_min_7d
     entity_id: sensor.piscina_ph
     state_characteristic: value_min
     max_age:
@@ -81,6 +84,7 @@ sensor:
 
   - platform: statistics
     name: "pH — Máx 7d"
+    unique_id: ph_piscina_max_7d
     entity_id: sensor.piscina_ph
     state_characteristic: value_max
     max_age:

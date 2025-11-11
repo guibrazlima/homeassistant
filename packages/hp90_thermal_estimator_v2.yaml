@@ -1,12 +1,15 @@
-# package: hp90_thermal_estimator_v2.yaml
-#
-# Estimador térmico p/ 50 tubos Varisol HP90 + sensores AQS HP90 (com fator de calibração)
-# Baseado no Forecast.Solar (instância configurada para 1000 Wp, Tilt=20°, Azimuth=174°)
-# Todos os atributos são STRINGS conforme pedido.
-#
-# -> NOVO: sensores "AQS HP90 - Energia Hoje/Amanhã/Restante", "Litros Hoje (T alvo)",
-#          "Litros Próxima Hora", "Carga Estimada Depósito", "Pico Hoje/Amanhã", "Potência Agora".
-#
+#############################################
+# 📦 Package: HP90 - Estimador Térmico Solar
+# 🎯 Objetivo: Estimar energia térmica produzida por 50 tubos Varisol HP90
+# 📂 Localização: /config/packages/hp90_thermal_estimator_v2.yaml
+# 🔗 Dependências:
+#    - aqs_common.yaml (dhw_volume_l, aqs_target_temp)
+#    - Forecast.Solar (1000 Wp, Tilt=20°, Azimuth=174°)
+#    - sensor.power_production_now_tubos_hp90
+#    - sensor.energy_production_today_tubos_hp90
+# 📅 Última atualização: 2025-11-11
+#############################################
+
 input_number:
   solar_hp_n_tubos:
     name: "HP90 — Nº de tubos"
@@ -33,32 +36,17 @@ input_number:
     initial: 0.55
     icon: mdi:percent
 
-  dhw_volume_l:
-    name: "AQS — Volume (L)"
-    min: 50
-    max: 1000
-    step: 10
-    unit_of_measurement: "L"
-    initial: 500
-    icon: mdi:water-boiler
+  # NOTA: dhw_volume_l e aqs_target_temp agora estão em aqs_common.yaml
 
   aqs_hp90_kwh_factor:
     name: "AQS HP90 — Fator kWh térmicos"
+
     min: 0.5
     max: 2.0
     step: 0.05
     unit_of_measurement: "×"
     initial: 1.0
     icon: mdi:tune-variant
-
-  aqs_target_temp:
-    name: "AQS — Temperatura alvo"
-    min: 35
-    max: 60
-    step: 1
-    unit_of_measurement: "°C"
-    initial: 45
-    icon: mdi:thermometer-water
 
   aqs_min_liters_window:
     name: "AQS — Mín. litros/1h p/ janela boa"

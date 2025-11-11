@@ -1,4 +1,16 @@
-# climate_confort_fixed4_full.yaml (completo, atributos em string)
+#############################################
+# 📦 Package: Clima - Sensores de Conforto
+# 🎯 Objetivo: Calcular métricas de conforto térmico para todas as divisões
+# 📂 Localização: /config/packages/climate_comfort.yaml
+# 🔗 Dependências:
+#    - Sensores BTHome de temperatura e humidade em cada divisão
+# 📊 Métricas calculadas:
+#    - Ponto de orvalho, Humidade absoluta, Margem de condensação
+#    - Comfort score, Heat Index, Humidex, WBGT, Enthalpia
+# ⚠️ NOTA: Este ficheiro é muito grande (1128 linhas)
+#    TODO: Considerar subdividir por divisão
+# 📅 Última atualização: 2025-11-11
+#############################################
 
 template:
 

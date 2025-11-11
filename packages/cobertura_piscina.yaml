@@ -1,3 +1,16 @@
+#############################################
+# 📦 Package: Piscina - Cobertura (LLM Vision)
+# 🎯 Objetivo: Detetar estado da cobertura da piscina via análise de imagem
+# 📂 Localização: /config/packages/cobertura_piscina.yaml
+# 🔗 Dependências:
+#    - LLM Vision custom component
+#    - Provider: 01K5S60RJSW6MFMB543KEDHE23 (gpt-4o-mini)
+#    - camera.eira_piscina_hd_stream
+#    - switch.bomba_piscina_switch_0
+#    - input_boolean.piscina_cobertura_fechada
+# 📅 Última atualização: 2025-11-11
+#############################################
+
 template:
   - binary_sensor:
       - name: piscina_cobertura_fechada_ai

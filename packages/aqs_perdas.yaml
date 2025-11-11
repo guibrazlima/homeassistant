@@ -1,19 +1,17 @@
-#
-# Pacote Home Assistant — Perdas térmicas AQS Daikin 500 L
-# Colocar em: /config/packages/aqs_perdas.yaml
-# Requer no configuration.yaml:
-#   homeassistant:
-#     packages: !include_dir_named packages
-#
+#############################################
+# 📦 Package: AQS - Perdas Térmicas
+# 🎯 Objetivo: Monitorizar e calcular perdas térmicas do depósito AQS Daikin 500L
+# 📂 Localização: /config/packages/aqs_perdas.yaml
+# 🔗 Dependências:
+#    - aqs_common.yaml (dhw_volume_l)
+#    - sensor.hpsu_can_hot_water_temperature
+#    - sensor.hpsu_can_outside_temperature
+#    - sensor.hpsu_can_mode_of_operating
+#    - select.hpsu_can_target_hot_water_temperature
+# 📅 Última atualização: 2025-11-11
+#############################################
 
-input_number:
-  dhw_volume_l:
-    name: "AQS - Volume (L)"
-    min: 50
-    max: 800
-    step: 10
-    unit_of_measurement: "L"
-    initial: 500
+# NOTA: dhw_volume_l agora está em aqs_common.yaml
 
 # --- 1) Filtragem da temperatura para reduzir ruído/serrilhado ---
 sensor:

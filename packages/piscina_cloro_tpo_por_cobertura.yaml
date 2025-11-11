@@ -1,4 +1,14 @@
-# packages/piscina_cloro_tpo_por_cobertura.yaml
+#############################################
+# 📦 Package: Piscina - Cloração TPO por Cobertura
+# 🎯 Objetivo: Ajustar tempo de produção de cloro baseado no estado da cobertura
+# 📂 Localização: /config/packages/piscina_cloro_tpo_por_cobertura.yaml
+# 🔗 Dependências:
+#    - input_boolean.piscina_cobertura_fechada
+#    - switch.bomba_piscina_switch_0
+#    - switch.piscina_cloro_permitir_producao
+# 📝 Lógica: Cobertura aberta = 100% tempo, fechada = 30% tempo (ajustável)
+# 📅 Última atualização: 2025-11-11
+#############################################
 
 input_boolean:
   piscina_cloro_tpo_enable:
