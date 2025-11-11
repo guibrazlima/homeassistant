@@ -1,0 +1,33 @@
+{
+  "title": "cFos Powerbrain",
+  "config": {
+    "step": {
+      "user": {
+        "description": "If you need help with the configuration have a look here: https://github.com/mb-software/homeassistant-powerbrain",
+        "data": {
+          "host": "Host",
+          "username": "Admin Username",
+          "password": "Admin Password",
+          "scan_interval": "Update Interval [s]"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "invalid_auth": "Invalid authentication",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "single_instance_allowed": "Only a single instance is allowed."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "scan_interval": "Update Interval [s]"
+        }
+      }
+    }
+  }
+}

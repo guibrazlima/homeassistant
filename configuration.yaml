@@ -102,9 +102,9 @@ timer:
 
 rest_command:
   cfos_disable_charging:
-    url: "http://admin:!!!LixoLogico111@192.168.1.174/cnf?cmd=override_device&dev_id=E1&flags=CE"
+    url: !secret cfos_disable_url
 
   cfos_enable_charging:
-    url: "http://admin:!!!LixoLogico111@192.168.1.174/cnf?cmd=override_device&dev_id=E1&flags=ce"
+    url: !secret cfos_enable_url
 
 
