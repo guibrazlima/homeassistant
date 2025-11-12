@@ -1,0 +1,22 @@
+#################################################################
+## Thermal Comfort - Áreas Comuns
+## Salas, cozinha, corredores, hall
+#################################################################
+
+thermal_comfort:
+  - custom_icons: true
+    sensor:
+      - name: Sala Superior
+        temperature_sensor: sensor.sala_superior_temperature
+        humidity_sensor: sensor.sala_superior_humidity
+        unique_id: thermal_comfort_sala_superior
+        # Conforto ideal para estar:
+        # - Temperatura: 20-24°C (ideal: 21°C)
+        # - Humidade: 40-60% (ideal: 50%)
+        # 
+        # Sensores derivados:
+        # - sensor.sala_superior_absolute_humidity
+        # - sensor.sala_superior_heat_index
+        # - sensor.sala_superior_dew_point
+        # - sensor.sala_superior_thermal_perception
+        # - sensor.sala_superior_simmer_index

@@ -1,0 +1,19 @@
+#################################################################
+## Thermal Comfort - Áreas Exteriores
+## Monitorização de temperatura e humidade em espaços exteriores
+#################################################################
+
+thermal_comfort:
+  - custom_icons: true
+    sensor:
+      - name: Eira Exterior
+        temperature_sensor: sensor.bthome_sensor_6a2b_temperature
+        humidity_sensor: sensor.bthome_sensor_6a2b_humidity
+        unique_id: thermal_comfort_eira_exterior
+        # Sensores derivados criados automaticamente:
+        # - sensor.eira_exterior_absolute_humidity
+        # - sensor.eira_exterior_heat_index
+        # - sensor.eira_exterior_dew_point
+        # - sensor.eira_exterior_thermal_perception
+        # - sensor.eira_exterior_frost_risk (risco de geada)
+        # - sensor.eira_exterior_simmer_index

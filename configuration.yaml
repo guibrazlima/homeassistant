@@ -76,7 +76,9 @@ binary_sensor: !include binary_sensor.yaml
 cover: !include cover.yaml
 template: !include_dir_merge_list templates/
 ingress: !include ingress.yaml
-thermal_comfort: !include thermal_comfort.yaml
+# thermal_comfort: !include thermal_comfort.yaml  # Movido para packages/thermal_comfort/
+# A nova estrutura modular está em packages/thermal_comfort/ (exterior, utilidade, comum, quartos)
+# Backup original: backups/old_configs/thermal_comfort.yaml.backup
 # input_datetime movido para packages/inputs_common.yaml
 
 http:

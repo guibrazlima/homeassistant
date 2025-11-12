@@ -1,0 +1,41 @@
+#################################################################
+## Thermal Comfort - Quartos
+## Monitorização de conforto térmico nos quartos
+## IMPORTANTE: Temperatura e humidade afetam qualidade do sono
+#################################################################
+
+thermal_comfort:
+  - custom_icons: true
+    sensor:
+      # Suite Principal
+      - name: Suite Principal
+        temperature_sensor: sensor.meu_quarto_temperature
+        humidity_sensor: sensor.meu_quarto_humidity
+        unique_id: thermal_comfort_suite_principal
+        # Conforto ideal para sono:
+        # - Temperatura: 18-22°C (ideal: 19°C)
+        # - Humidade: 40-60% (ideal: 50%)
+        #
+        # Sensores derivados:
+        # - sensor.suite_principal_absolute_humidity
+        # - sensor.suite_principal_heat_index
+        # - sensor.suite_principal_dew_point
+        # - sensor.suite_principal_thermal_perception
+        
+      # Quarto das Crianças
+      - name: Quarto Miúdos
+        temperature_sensor: sensor.quarto_miudos_temperature
+        humidity_sensor: sensor.quarto_miudos_humidity
+        unique_id: thermal_comfort_quarto_miudos
+        # NOTA: Crianças são mais sensíveis a variações de temperatura
+        # Temperatura ideal: 19-21°C (ligeiramente mais alta que adultos)
+        # Evitar: <18°C (muito frio) ou >24°C (muito quente)
+        #
+        # Sensores derivados:
+        # - sensor.quarto_miudos_absolute_humidity
+        # - sensor.quarto_miudos_heat_index
+        # - sensor.quarto_miudos_dew_point
+        # - sensor.quarto_miudos_thermal_perception
+        #
+        # Automação recomendada:
+        # - Alerta se temperatura <18°C ou >24°C durante a noite

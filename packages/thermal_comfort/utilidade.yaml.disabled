@@ -1,0 +1,18 @@
+#################################################################
+## Thermal Comfort - Áreas de Utilidade
+## Cave, garagem, arrumos - Foco em prevenção de humidade/bolor
+#################################################################
+
+thermal_comfort:
+  - custom_icons: true
+    sensor:
+      - name: Cave
+        temperature_sensor: sensor.bthome_sensor_25e6_temperature
+        humidity_sensor: sensor.bthome_sensor_25e6_humidity
+        unique_id: thermal_comfort_cave
+        # Importante: Monitorizar humidade para prevenir bolor
+        # Alerta recomendado: humidade > 70%
+        # Sensores derivados:
+        # - sensor.cave_absolute_humidity
+        # - sensor.cave_dew_point (importante para condensação)
+        # - sensor.cave_thermal_perception
