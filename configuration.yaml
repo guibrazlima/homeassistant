@@ -1,5 +1,15 @@
 homeassistant:
-  packages: !include_dir_named packages
+  packages:
+    aqs_common: !include packages/aqs_common.yaml
+    aqs_hp90: !include packages/aqs_hp90_estimador_termico.yaml
+    aqs_perdas: !include packages/aqs_perdas.yaml
+    climate_comfort: !include packages/climate_comfort_monolitico.yaml
+    inputs_common: !include packages/inputs_common.yaml
+    piscina_clorador_sal: !include packages/piscina_clorador_sal.yaml
+    piscina_cloro_tpo: !include packages/piscina_cloro_tpo.yaml
+    piscina_cobertura: !include packages/piscina_cobertura.yaml
+    piscina_ph: !include packages/piscina_ph.yaml
+    thermal_comfort: !include_dir_merge_named packages/thermal_comfort/
 
 
 # Configure a default setup of Home Assistant (frontend, api, etc)
@@ -112,13 +122,13 @@ notify:
 timer:
   piscina_manual:
     name: Piscina — Temporizador manual
-    duration: "00:00:00"   # a duração real define-se no arranque do script
+    duration: "00:00:00"
 
-rest_command:
-  cfos_disable_charging:
-    url: !secret cfos_disable_url
+#rest_command:
+#  cfos_disable_charging:
+#    url: !secret cfos_disable_url
 
-  cfos_enable_charging:
-    url: !secret cfos_enable_url
+#  cfos_enable_charging:
+#    url: !secret cfos_enable_url
 
 

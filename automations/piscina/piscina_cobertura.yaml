@@ -27,9 +27,7 @@
     data:
       provider: 01K5S60RJSW6MFMB543KEDHE23
       model: gpt-4o-mini
-      message: 'Observa esta imagem da piscina e responde apenas com um valor booleano para atualizar o sensor alvo: "true" se a COBERTURA estiver FECHADA. "false" se a COBERTURA estiver ABERTA. Regras: - Considera fechada apenas se a cobertura visivelmente cobre totalmente a lâmina de água. - Se a cobertura estiver a meio (a mover) ou houver dúvida, responde "false" (trata como aberta). - Não expliques. Não uses outras palavras.
-
-        '
+      message: 'Observa esta imagem da piscina e responde apenas com um valor booleano para atualizar o sensor alvo: "true" se a COBERTURA estiver FECHADA. "false" se a COBERTURA estiver ABERTA. Regras: - Considera fechada apenas se a cobertura visivelmente cobre totalmente a lâmina de água. - Se a cobertura estiver a meio (a mover) ou houver dúvida, responde "false" (trata como aberta). - Não expliques. Não uses outras palavras.'
       sensor_entity: input_boolean.piscina_cobertura_fechada
       image_entity:
       - camera.eira_piscina_hd_stream

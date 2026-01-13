@@ -40,7 +40,7 @@ input_number:
 
 automation:
   - id: piscina_cloro_tpo_seconds
-    alias: Piscina - Cloração TPO por Cobertura (segundos)
+    alias: 🏊🏻 Piscina - Cloração TPO por Cobertura (segundos)
     trigger:
       - platform: time_pattern
         seconds: "/30"
@@ -82,7 +82,7 @@ automation:
     mode: single
 
   - id: piscina_cloro_tpo_failsafe
-    alias: Piscina - Cloração TPO (failsafe OFF)
+    alias: 🏊🏻 Piscina - Cloração TPO (failsafe OFF)
     trigger:
       - platform: state
         entity_id: switch.bomba_piscina_switch_0

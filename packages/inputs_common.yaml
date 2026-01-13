@@ -33,60 +33,113 @@ input_boolean:
     icon: mdi:robot
     initial: true
 
-  # Piscina
   piscina_override_manual:
-    name: Piscina — Modo Manual (ignorar automações)
-    icon: mdi:hand
+    name: "Piscina - Override Manual"
+    icon: mdi:hand-back-right
+    initial: false
 
   piscina_cobertura_fechada:
-    name: Piscina — Cobertura fechada
-    icon: mdi:shield-sun
+    name: "Piscina - Cobertura Fechada"
+    icon: mdi:pool
+    initial: true
 
 #################################################################
 ## Input Number
 #################################################################
 
 input_number:
-  # Configurações da bomba da piscina
   pool_pump_duration_lower_threshold:
     name: Pool Pump Duration Lower Threshold
-    initial: 360
-    min: 60
+    min: 0
     max: 1440
     step: 1
-    unit_of_measurement: minutes
-    mode: box
+    unit_of_measurement: 'min'
+    icon: mdi:timer-sand
+    initial: 180
 
   pool_pump_duration_inverno:
-    name: Pool Pump Duration inverno
-    initial: 180
-    min: 60
+    name: Pool Pump Duration Inverno
+    min: 0
     max: 1440
     step: 1
-    unit_of_measurement: minutes
-    mode: box
+    unit_of_measurement: 'min'
+    icon: mdi:timer-sand
+    initial: 120
 
-  # Sensores filtrados
   ph_filtrado:
     name: pH Filtrado
     min: 0
     max: 14
     step: 0.01
-    unit_of_measurement: "pH"
+    mode: box
 
   ph_sensor_filtrado:
     name: pH Sensor Filtrado
     min: 0
     max: 14
     step: 0.01
-    unit_of_measurement: "pH"
+    mode: box
 
   temperatura_piscina_filtrado:
     name: Temperatura Piscina Filtrado
-    min: 10
-    max: 40
-    step: 0.01
-    unit_of_measurement: "°C"
+    min: 0
+    max: 50
+    step: 0.1
+    unit_of_measurement: '°C'
+    mode: box
+
+  piscina_volume_m3:
+    name: Piscina - Volume (m³)
+    min: 0
+    max: 200
+    step: 0.1
+    unit_of_measurement: 'm³'
+    icon: mdi:pool
+    initial: 60
+
+  bomba_caudal_m3h:
+    name: Bomba - Caudal (m³/h)
+    min: 0
+    max: 50
+    step: 0.1
+    unit_of_measurement: 'm³/h'
+    icon: mdi:pump
+    initial: 13.5
+
+  piscina_potencia_bomba_w:
+    name: Piscina - Potência Bomba (W)
+    min: 0
+    max: 3000
+    step: 10
+    unit_of_measurement: 'W'
+    icon: mdi:flash
+    initial: 720
+
+  piscina_buffer_w:
+    name: Piscina - Buffer (W)
+    min: 0
+    max: 1000
+    step: 10
+    unit_of_measurement: 'W'
+    icon: mdi:buffer
+    initial: 100
+
+  piscina_filtracao_min_restantes:
+    name: Piscina - Filtração Min Restantes
+    min: 0
+    max: 1440
+    step: 1
+    unit_of_measurement: 'min'
+    icon: mdi:timer-sand
+
+  piscina_manual_min:
+    name: Piscina - Manual (min)
+    min: 0
+    max: 480
+    step: 5
+    unit_of_measurement: 'min'
+    icon: mdi:timer
+    initial: 60
 
   # Cobertura de nuvens
   average_cloud_cover:
@@ -102,61 +155,6 @@ input_number:
     max: 100
     step: 0.1
     unit_of_measurement: '%'
-
-  # Parâmetros da piscina
-  piscina_volume_m3:
-    name: Piscina - Volume (m³)
-    min: 1
-    max: 200
-    step: 1
-    unit_of_measurement: "m³"
-    icon: mdi:pool
-    initial: 66
-
-  bomba_caudal_m3h:
-    name: Piscina - Caudal bomba (m³/h)
-    min: 1
-    max: 50
-    step: 0.1
-    unit_of_measurement: "m³/h"
-    icon: mdi:pump
-    initial: 21.6
-
-  piscina_potencia_bomba_w:
-    name: Piscina - Potência bomba (W)
-    min: 100
-    max: 5000
-    step: 10
-    unit_of_measurement: "W"
-    icon: mdi:flash
-    initial: 1550
-
-  piscina_buffer_w:
-    name: Piscina - Reserva FV (W)
-    min: 0
-    max: 1000
-    step: 50
-    unit_of_measurement: "W"
-    icon: mdi:shield
-    initial: 0
-
-  piscina_filtracao_min_restantes:
-    name: Piscina - Minutos restantes do dia
-    min: 0
-    max: 1440
-    step: 1
-    unit_of_measurement: "min"
-    icon: mdi:timer-sand
-    initial: 0
-
-  piscina_manual_min:
-    name: Piscina — Tempo manual (min)
-    min: 1
-    max: 600
-    step: 1
-    unit_of_measurement: "min"
-    icon: mdi:timer-cog
-    initial: 30
 
   piscina_import_max_w:
     name: Piscina — Importação máxima (W)
@@ -209,6 +207,7 @@ input_select:
 
 input_datetime:
   horario_piscina_noite:
-    name: "Horario Bomba Piscina Noite"
+    name: Horário Piscina Noite
+    has_date: false
     has_time: true
-    has_date: true
+    icon: mdi:clock-time-eight

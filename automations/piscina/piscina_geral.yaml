@@ -3,114 +3,164 @@
 # ======================================================================
 # Ficheiro: piscina_geral.yaml
 # Automações: 12
-# Última atualização: 2025-11-11
+# Última atualização: 2026-01-13
 # Migrado automaticamente - Fase 2
 # ======================================================================
 
 
 - id: bomba_piscina_noite
   alias: 🏊🏻 Bomba Piscina Noite
-  description: Automação do Home Assistant.
+  description: >
+    Liga a bomba da piscina à noite para compensar filtragem insuficiente
+    durante o dia (prioridade solar). Ajusta duração por estação.
+    Só liga se faltar mais de 1 hora de filtragem.
+  
   trigger:
-  - at: input_datetime.horario_piscina_noite
-    trigger: time
+    - trigger: time
+      at: "00:00:00"
+      id: meia_noite
+    - trigger: time
+      at: input_datetime.horario_piscina_noite
+      id: horario_dinamico
+
+  variables:
+    # Centralizar todas as variáveis no início
+    filtragem_ontem: >
+      {{ state_attr('sensor.filtragem_piscina_historico_s', 'today-1') | int(0) }}
+    filtragem_hoje: >
+      {{ states('sensor.filtragem_piscina_historico_s') | int(0) }}
+    threshold_verao: >
+      {{ states('input_number.pool_pump_duration_lower_threshold') | int(240) }}
+    threshold_inverno: >
+      {{ states('input_number.pool_pump_duration_inverno') | int(120) }}
+    cobertura_nuvens: >
+      {{ states('sensor.media_de_cobertura_de_nuvens_10_00_18_00') | float(100) }}
+    e_verao_primavera: >
+      {{ states('sensor.season') in ['summer', 'spring'] }}
+    threshold_ativo: >
+      {{ threshold_verao if e_verao_primavera else threshold_inverno }}
+    threshold_segundos: >
+      {{ threshold_ativo * 60 }}
+    tempo_compensar: >
+      {{ [threshold_segundos - filtragem_ontem, 0] | max }}
+    ultima_execucao: >
+      {{ state_attr('automation.bomba_piscina_noite', 'last_triggered') }}
+    ja_correu_hoje: >
+      {{ ultima_execucao is not none and ultima_execucao.date() == now().date() }}
+
   conditions:
-  - condition:
-    - condition: template
-      value_template: '{%- set filtragemdiaria = state_attr(''sensor.filtragem_piscina_historico_s'', ''today-1'') | int -%}
-
-        {%- set duration = states(''input_number.pool_pump_duration_lower_threshold'') | int -%}
-
-        {%- set durationt = duration * 60 -%}
-
-
-        {{ filtragemdiaria < durationt }}'
-    - condition: or
+    # Condição 1: Não repetir no mesmo dia
+    - alias: "Ainda não correu hoje"
+      condition: template
+      value_template: "{{ not ja_correu_hoje }}"
+    
+    # Condição 2: Falta mais de 1 hora de filtragem
+    - alias: "Falta mais de 1 hora de filtragem"
+      condition: template
+      value_template: "{{ tempo_compensar > 3600 }}"
+    
+    # Condição 3: Confirmar que foi dia problemático
+    - alias: "Dia nublado OU filtragem hoje muito baixa"
+      condition: or
       conditions:
-      - condition: numeric_state
-        entity_id: sensor.media_de_cobertura_de_nuvens_10_00_18_00
-        above: 35
-      - condition: template
-        value_template: '{%- set filtragemdiaria = states(''sensor.filtragem_piscina_historico_s'') | int -%}
+        - condition: template
+          value_template: "{{ cobertura_nuvens > 35 }}"
+        - condition: template
+          value_template: "{{ filtragem_hoje <= 3600 }}"
 
-
-
-          {{ filtragemdiaria <= 3600 }}'
   action:
-  - if:
-    - condition:
-      - condition: state
-        entity_id: sensor.season
-        state: spring
-      - condition: state
-        entity_id: sensor.season
-        state: summer
-    then:
-    - metadata: {}
-      data: {}
-      target:
-        entity_id:
-        - switch.bomba_piscina_switch_0
-      action: switch.turn_on
-    - repeat:
-        sequence:
-        - delay:
-            hours: 0
-            minutes: 0
-            seconds: 5
-            milliseconds: 0
-        - type: turn_on
-          device_id: d752f893fd0bb44490ec4bfcb83c333f
-          entity_id: ae742d0d2f0dc5dea53a674346911926
-          domain: switch
+    # Log inicial para debugging
+    - alias: "Registar início da filtragem noturna"
+      action: system_log.write
+      data:
+        message: >
+          Bomba Piscina Noite iniciada:
+          Trigger={{ trigger.id }},
+          Filtragem ontem={{ (filtragem_ontem / 3600) | round(2) }}h,
+          Threshold={{ threshold_ativo }}min ({{ 'verão/primavera' if e_verao_primavera else 'outono/inverno' }}),
+          Tempo a compensar={{ (tempo_compensar / 60) | round(0) }}min,
+          Nuvens={{ cobertura_nuvens }}%
+        level: info
+        logger: automations.piscina
+    
+    # Notificação opcional
+    - alias: "Notificar início"
+      action: persistent_notification.create
+      data:
+        title: "🏊 Bomba Piscina Noite"
+        message: >
+          A iniciar filtragem noturna.
+          Duração prevista: {{ (tempo_compensar / 60) | round(0) }} minutos.
+          Motivo: Filtragem ontem ({{ (filtragem_ontem / 3600) | round(1) }}h) < mínimo ({{ threshold_ativo / 60 }}h)
+        notification_id: bomba_piscina_noite
+
+    # Ligar bomba com retry robusto
+    - alias: "Ligar bomba com retry"
+      repeat:
         while:
-        - condition: device
-          type: is_off
-          device_id: d752f893fd0bb44490ec4bfcb83c333f
-          entity_id: ae742d0d2f0dc5dea53a674346911926
-          domain: switch
-        - condition: template
-          value_template: '{{ repeat.index <= 10 }}'
-    - delay: '{{ [(states(''input_number.pool_pump_duration_lower_threshold'') | int) * 60 - state_attr(''sensor.filtragem_piscina_historico_s'', ''today-1'') | int(0),0] | max }}'
-    - target:
-        entity_id:
-        - switch.bomba_piscina_switch_0
-      data: {}
-      action: switch.turn_off
-    else:
-    - metadata: {}
-      data: {}
-      target:
-        entity_id:
-        - switch.bomba_piscina_switch_0
-      action: switch.turn_on
-    - repeat:
+          - condition: state
+            entity_id: switch.bomba_piscina_switch_0
+            state: "off"
+          - condition: template
+            value_template: "{{ repeat.index <= 20 }}"
         sequence:
-        - delay:
-            hours: 0
-            minutes: 0
-            seconds: 5
-            milliseconds: 0
-        - type: turn_on
-          device_id: d752f893fd0bb44490ec4bfcb83c333f
-          entity_id: ae742d0d2f0dc5dea53a674346911926
-          domain: switch
-        while:
-        - condition: device
-          type: is_off
-          device_id: d752f893fd0bb44490ec4bfcb83c333f
-          entity_id: ae742d0d2f0dc5dea53a674346911926
-          domain: switch
-        - condition: template
-          value_template: '{{ repeat.index <= 10 }}'
-    - delay: '{{ [(states(''input_number.pool_pump_duration_inverno'') | int) * 60 -  state_attr(''sensor.filtragem_piscina_historico_s'', ''today-1'') | int(0),0] | max }}'
-    - target:
-        entity_id:
-        - switch.bomba_piscina_switch_0
-      data: {}
+          - action: switch.turn_on
+            target:
+              entity_id: switch.bomba_piscina_switch_0
+          - delay:
+              seconds: 10
+          - if:
+              - condition: state
+                entity_id: switch.bomba_piscina_switch_0
+                state: "off"
+            then:
+              - action: system_log.write
+                data:
+                  message: "Bomba Piscina: Tentativa {{ repeat.index }} falhou, a tentar novamente..."
+                  level: warning
+                  logger: automations.piscina
+
+    # Verificar se conseguiu ligar
+    - alias: "Verificar se bomba ligou"
+      if:
+        - condition: state
+          entity_id: switch.bomba_piscina_switch_0
+          state: "off"
+      then:
+        - action: persistent_notification.create
+          data:
+            title: "⚠️ Bomba Piscina - ERRO"
+            message: "Não foi possível ligar a bomba após 10 tentativas!"
+            notification_id: bomba_piscina_erro
+        - stop: "Bomba não ligou após 10 tentativas"
+
+    # Aguardar tempo necessário
+    - alias: "Aguardar tempo de filtragem"
+      delay:
+        seconds: "{{ tempo_compensar }}"
+
+    # Desligar bomba
+    - alias: "Desligar bomba"
       action: switch.turn_off
+      target:
+        entity_id: switch.bomba_piscina_switch_0
+
+    # Log final
+    - alias: "Registar fim da filtragem noturna"
+      action: system_log.write
+      data:
+        message: "Bomba Piscina Noite concluída: {{ (tempo_compensar / 60) | round(0) }} minutos de filtragem"
+        level: info
+        logger: automations.piscina
+
+    # Limpar notificação
+    - action: persistent_notification.dismiss
+      data:
+        notification_id: bomba_piscina_noite
+
   mode: single
   max_exceeded: warning
+
 - id: ligardesligar_automacao_piscina
   alias: 🏊🏻 Ligar/Desligar Automação Piscina
   description: Liga e desliga a Wallbox
@@ -200,18 +250,18 @@
   - metadata: {}
     data:
       replace_attributes: false
-      value: '{{ states(''sensor.duracao_filtragem_piscina_diario_em_segundos'') | default(0) | int }}'
+      value: '{{ states(''sensor.duracao_filtragem_piscina_diario_em_segundos'') | int(0) }}'
       attributes:
-        today-1: '{{ states(''sensor.filtragem_piscina_historico_s'') |  default(0)| int }}'
-        today-2: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-1'') | default(0) | int }}'
-        today-3: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-2'') | default(0) | int }}'
-        today-4: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-3'') | default(0) | int }}'
-        today-5: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-4'') | default(0) | int }}'
-        today-6: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-5'') | default(0) | int }}'
-        today-7: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-6'') | default(0) | int }}'
-        today-8: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-7'') | default(0) | int }}'
-        today-9: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-8'') | default(0) | int }}'
-        today-10: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-9'') | default(0) | int }}'
+        today-1: '{{ states(''sensor.filtragem_piscina_historico_s'') | int(0) }}'
+        today-2: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-1'') | int(0) }}'
+        today-3: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-2'') | int(0) }}'
+        today-4: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-3'') | int(0) }}'
+        today-5: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-4'') | int(0) }}'
+        today-6: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-5'') | int(0) }}'
+        today-7: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-6'') | int(0) }}'
+        today-8: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-7'') | int(0) }}'
+        today-9: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-8'') | int(0) }}'
+        today-10: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-9'') | int(0) }}'
     target:
       entity_id: sensor.filtragem_piscina_historico_s
     action: variable.update_sensor
