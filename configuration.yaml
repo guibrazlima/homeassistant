@@ -38,6 +38,10 @@ logger:
   logs:
     homeassistant.core: warning
     homeassistant.components.recorder: warning
+    homeassistant.components.automation: debug
+    custom_components.pyscript.file.pv_excess_control: INFO
+    custom_components.llmvision: debug
+    #custom_components.auth_header: debug
 
 # Rotação de logs - arquivo será mantido em tamanho controlado
 # O Home Assistant gerencia automaticamente via logger
@@ -96,15 +100,6 @@ http:
   trusted_proxies:
     - 172.0.0.0/8
     - 192.168.1.0/24
-
-
-logger:
-  default: info
-  logs:
-    custom_components.pyscript.file.pv_excess_control: INFO
-    #custom_components.auth_header: debug
-    custom_components.llmvision: debug
-    homeassistant.components.automation: debug
 
 # Telegram Bot
 telegram_bot:
