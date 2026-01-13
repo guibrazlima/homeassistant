@@ -1,0 +1,29 @@
+- platform: history_stats
+  name: Bomba Piscina horas ligada Diario
+  unique_id: Bomba_Piscina_horas_ligada_Diario
+  entity_id: switch.bomba_piscina_switch_0
+  state: 'on'
+  type: time
+  start: "{{ now().replace(hour=0).replace(minute=0).replace(second=0) }}"
+  end: "{{ now() }}"
+  
+- platform: history_stats
+  name: Aquecimento Piscina horas ligada Diario
+  unique_id: Aquecimento_Piscina_horas_ligada:Diario
+  entity_id: switch.aquecimento_piscina_channel_1
+  state: 'on'
+  type: time
+  start: "{{ now().replace(hour=0).replace(minute=0).replace(second=0) }}"
+  end: "{{ now() }}"
+
+- platform: history_stats
+  name: "Piscina - Horas ON (08-08)"
+  unique_id: piscina_horas_on_08_08
+  entity_id: switch.bomba_piscina_switch_0   # ADAPTA
+  state: "on"
+  type: time
+  start: >
+    {% set now = now() %}
+    {% set start = now.replace(hour=8, minute=0, second=0, microsecond=0) %}
+    {{ start if now >= start else (start - timedelta(days=1)) }}
+  end: "{{ now() }}"

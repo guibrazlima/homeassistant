@@ -928,16 +928,32 @@ class ChargePoint(cp):
                     if is_eair and idx != best_eair_idx:
                         continue
 
-                    self._metrics[(target_cid, measurand)].value = value
-                    self._metrics[(target_cid, measurand)].unit = unit
+                    # Determine whether to skip writing EAIR to the main metric:
+                    # - Skip only if this is an EAIR reading,
+                    # - AND the charger reports session energy (meter_start == 0),
+                    # - AND the reading belongs to an active transaction.
+                    #
+                    # Reason: in this situation, the EAIR value represents **session energy** for the current transaction,
+                    # not the lifetime total meter. Writing it to the main metric would overwrite the true cumulative
+                    # energy with a session-only value. For all other cases (non-EAIR readings or non-transaction readings),
+                    # it is safe to write the metric normally.
+                    skip_eair = (
+                        is_eair
+                        and self._charger_reports_session_energy
+                        and is_transaction
+                    )
 
-                    if location is not None:
+                    if not skip_eair:
+                        # Normal write
+                        self._metrics[(target_cid, measurand)].value = value
+                        self._metrics[(target_cid, measurand)].unit = unit
+                        if location is not None:
+                            self._metrics[(target_cid, measurand)].extra_attr[
+                                om.location.value
+                            ] = location
                         self._metrics[(target_cid, measurand)].extra_attr[
-                            om.location.value
-                        ] = location
-                    self._metrics[(target_cid, measurand)].extra_attr[
-                        om.context.value
-                    ] = context
+                            om.context.value
+                        ] = context
 
                     # Session handling, only for EAIR during a transaction (per-connector)
                     if is_transaction and is_eair:
@@ -992,16 +1008,24 @@ class ChargePoint(cp):
         base = self.settings.cpid.lower()
         meas_slug = measurand.lower().replace(".", "_")
 
+        # Build list of possible sensor entity IDs.
+        # Include connector-specific ID if applicable, then the generic one as fallback.
         candidates: list[str] = []
         if connector_id and connector_id > 0:
             candidates.append(f"sensor.{base}_connector_{connector_id}_{meas_slug}")
-        else:
-            candidates.append(f"sensor.{base}_{meas_slug}")
+        candidates.append(f"sensor.{base}_{meas_slug}")
 
+        # Return the first valid state found among candidates.
         for entity_id in candidates:
-            st = self.hass.states.get(entity_id)
+            try:
+                st = self.hass.states.get(entity_id)
+            except Exception as e:
+                _LOGGER.debug("Error getting entity %s from HA: %s", entity_id, e)
+                st = None
+
             if st and st.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN, None):
                 return st.state
+
         return None
 
     async def notify_ha(self, msg: str, title: str = "Ocpp integration"):

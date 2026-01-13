@@ -1030,17 +1030,11 @@
   conditions: []
   action:
   - if:
-    - condition:
-      - condition: device
-        device_id: cfd18037256cb019fa29781e93e644d7
-        domain: cover
-        entity_id: 8749320a26b0fe2753d119e46c5cba27
-        type: is_opening
-      - condition: device
-        device_id: cfd18037256cb019fa29781e93e644d7
-        domain: cover
-        entity_id: 8749320a26b0fe2753d119e46c5cba27
-        type: is_closing
+    - condition: device
+      device_id: cfd18037256cb019fa29781e93e644d7
+      domain: cover
+      entity_id: 8749320a26b0fe2753d119e46c5cba27
+      type: is_opening
     then:
     - service: cover.stop_cover
       metadata: {}
@@ -1067,17 +1061,11 @@
   conditions: []
   action:
   - if:
-    - condition:
-      - condition: device
-        device_id: cfd18037256cb019fa29781e93e644d7
-        domain: cover
-        entity_id: 8749320a26b0fe2753d119e46c5cba27
-        type: is_opening
-      - condition: device
-        device_id: cfd18037256cb019fa29781e93e644d7
-        domain: cover
-        entity_id: 8749320a26b0fe2753d119e46c5cba27
-        type: is_closing
+    - condition: device
+      device_id: cfd18037256cb019fa29781e93e644d7
+      domain: cover
+      entity_id: 8749320a26b0fe2753d119e46c5cba27
+      type: is_closing
     then:
     - service: cover.stop_cover
       metadata: {}

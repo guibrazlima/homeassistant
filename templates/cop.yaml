@@ -32,7 +32,7 @@
         {% set compressor_status = states('binary_sensor.hpsu_can_compressor_status') %}
         {% set leavingtemp = states('sensor.hpsu_can_flow_temperature_tv') | float(0) %}                     
         {% set returntemp = states('sensor.hpsu_can_return_temperature_heating') | float(0) %}
-        {% set operating = states('sensor.hpsu_can_mode_of_operating') %}
+        {% set operating = states('sensor.hpsu_uart_mode_of_operating_uart') %}
         {% set temptv = states('sensor.hpsu_can_flow_temperature_tv') | float(0) %}
         
 
@@ -45,7 +45,8 @@
         {% endif %}
       attributes:
         formula: (leavingtemp - returntemp ) * (4.19 * flow(L/h) ) / 3600
-        Operating: "{{ states('sensor.hpsu_can_mode_of_operating') }}"
+        Operating CAN: "{{ states('sensor.hpsu_can_mode_of_operating') }}"
+        Operating UART: "{{ states('sensor.hpsu_uart_mode_of_operating_uart') }}"
         deltaT Heating: "{{ float(states('sensor.hpsu_can_deltat')) }} °C"
         deltaT DHW: "{{ float(states('sensor.hpsu_can_deltat_dhw')) }} °C"
         flowRate: "{{ float(states('sensor.hpsu_can_flow_rate')) }} L/h"
@@ -62,7 +63,7 @@
         {% set compressor_status = states('binary_sensor.hpsu_can_compressor_status') %}
         {% set leavingtemp = states('sensor.hpsu_can_flow_temperature_tv') | float(0) %}
         {% set returntemp = states('sensor.hpsu_can_return_temperature_heating') | float(0) %}
-        {% set operating = states('sensor.hpsu_can_mode_of_operating') %}
+        {% set operating = states('sensor.hpsu_uart_mode_of_operating_uart') %}
 
         {% if compressor_status == 'on' and power > 0 and operating != 'Standby' %}
             {{ (1.163 * flow * (leavingtemp - returntemp)) | round(0) }}

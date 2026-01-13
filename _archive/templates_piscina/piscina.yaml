@@ -1,0 +1,195 @@
+##### Conversão Piscina ####
+
+- sensor:
+    - name: "Duração Filtragem Piscina Diário"
+      unique_id: sensor.filtragem_piscina_horas
+      state: >
+        {% set duration_hours = float(states('sensor.bomba_piscina_horas_ligada_diario')) %}
+        {{ (duration_hours * 3600)|timestamp_custom("%H:%M:%S", False) }}
+
+- sensor:
+    - name: "pool_pump_remaining_time"
+      availability: "{{ (states('sensor.bomba_piscina_horas_ligada_diario') | float(-1)) >= 0 }}"
+      unique_id: "pool_pump_remaining_time"
+      state: >-
+        {% set time = (((states('input_number.pool_pump_duration_lower_threshold') | float(0))*60 - (states('sensor.bomba_piscina_horas_ligada_diario')|float(-1))*3600)| round | int, 0)|max %}
+        {% set minutes = ((time % 3600) / 60) | int %}
+        {% set hours = ((time % 86400) / 3600) | int %}
+        {%- if hours < 10 -%}
+          0{{ hours }}
+        {%- else -%}
+          {{ hours }}
+        {%- endif -%}
+        :
+        {%- if minutes < 10 -%}
+          0{{ minutes }}
+        {%- else -%}
+          {{ minutes }}
+        {%- endif -%}
+      attributes: 
+        seconds: "{{ (((states('input_number.pool_pump_duration_lower_threshold') | float(-1))*60 - (states('sensor.bomba_piscina_horas_ligada_diario')|float(-1))*3600)| round, 0)|max }}"
+
+- sensor:      
+    - name: "pool_pump_time"
+      availability: "{{ (states('sensor.bomba_piscina_horas_ligada_diario') | float(-1)) >= 0 }}"
+      unique_id: "pool_pump_time_today"
+      state: >-
+        {% set time = ((states('sensor.bomba_piscina_horas_ligada_diario') | float(-1))*3600) | round %}
+        {% set minutes = ((time % 3600) / 60) | int %}
+        {% set hours = ((time % 86400) / 3600) | int %}
+        {%- if hours < 10 -%}
+          0{{ hours }}
+        {%- else -%}
+          {{ hours}}
+        {%- endif -%}
+        :
+        {%- if minutes < 10 -%}
+          0{{ minutes }}
+        {%- else -%}
+          {{ minutes }}
+        {%- endif -%}
+      attributes:
+        minutes: "{{ ((states('sensor.bomba_piscina_horas_ligada_diario') | float(0))*60) | round }}"
+
+- sensor:
+    - name: "Duração Aquecimento Piscina Diário"
+      unique_id: sensor.aquecimento_piscina_horas
+      state: >
+        {% set duration_hours = float(states('sensor.aquecimento_piscina_horas_ligada_diario')) %}
+        {{ (duration_hours * 3600)|timestamp_custom("%H:%M:%S", False) }}
+
+- sensor:
+    - name: "Duração Filtragem Piscina Diário em segundos"
+      unique_id: sensor.filtragem_piscina_segundos
+      state: >
+        {% set duration_hours = float(states('sensor.bomba_piscina_horas_ligada_diario')) %}
+        {{ (duration_hours * 3600) | int }}
+
+#- trigger:
+#    -  platform: time
+#       at:
+#         - '19:00'
+#  sensor:
+#    - unique_id: f8853830-bf81-46d4-85a9-379c25c37344
+#      name: Bomba Piscina Noite Horario
+#      device_class: timestamp
+#      state: >
+#        {%- set sensor = 'sensor.energy_prices' -%}
+#        {% from 'cheapest_energy_hours.jinja' import cheapest_energy_hours %}
+#        {{ cheapest_energy_hours(sensor=sensor.pt_average_electricity_price_today, attr_today='prices_today', attr_tomorrow='prices_tomorrow', time_key='time', value_key='price', hours=3, include_tomorrow=true, look_ahead=true) }}
+
+- trigger:
+    -  platform: time_pattern
+       hours: /1
+  sensor:
+    - unique_id: f8853830-bf81-46d4-85a9-379c25c37344
+      name: Bomba Piscina Noite Horario
+      device_class: timestamp
+      state: >
+        {%- set tempo = states('sensor.pool_pump_remaining_time') -%}
+        {%- set partes = tempo.split(':') -%}
+        {%- set horas = partes[0] | int -%}
+        {%- set minutos = partes[1] | int -%}
+        {%- set total = horas + (minutos / 60) -%}
+        {%- set arredondado = [total | round(0, 'ceil') | int, 1] | max -%}
+        {% from 'cheapest_energy_hours.jinja' import cheapest_energy_hours %}
+        {{ cheapest_energy_hours(
+            sensor='sensor.pt_average_electricity_price_today', 
+            attr_today='prices_today', 
+            attr_tomorrow='prices_tomorrow', 
+            time_key='time', 
+            value_key='price', 
+            hours=arredondado, 
+            start='00:00', 
+            end='23:59',
+            include_tomorrow=true, 
+            look_ahead=false
+        ) }}
+
+
+- trigger:
+    -  platform: time_pattern
+       hours: /1
+  sensor:
+    - unique_id: f8853830-bf81-46d4-85a9-379c25c44c44c33
+      name: Bomba Piscina Noite Horario ES
+      device_class: timestamp
+      state: >
+        {%- set sensor = 'sensor.energy_prices' -%}
+        {% from 'cheapest_energy_hours.jinja' import cheapest_energy_hours %}
+        {{ cheapest_energy_hours(
+            sensor=sensor.espanha_average_electricity_price_today,
+            attr_today='prices_today', 
+            attr_tomorrow='prices_tomorrow', 
+            time_key='time', 
+            value_key='price', 
+            hours=3, 
+            start='22:00', 
+            end='08:00', 
+            include_tomorrow=true, 
+            look_ahead=false
+        ) }}
+
+# Sensor PH com compensação da temperatura da piscina. Usa a equação de Nernst ajustada para temperatura
+- sensor:
+    - name: "pH Corrigido"
+      unique_id: f8853830-bf81-46d4-85a9-37ddf334ee
+      state_class: measurement
+      device_class: ph
+      state: >
+        {% set voltage = states('sensor.phsensor_ph_voltage') | float(0) %}
+        {% set temp = states('sensor.bomba_piscina_temperature') | float(25) %}
+        {% set offset = 0.4043 %}  {# Ajusta com tua calibração para pH 7 #}
+        {% set pH_ref = 7 %}
+
+        {% set T = temp + 273.15 %}
+        {% set slope = ((2.303 * 8.314 * T) / 96485) * 1000 %}  {# mV/pH #}
+        {% set pH = pH_ref - ((voltage - offset) * 1000 / slope) | round(2) %}
+        {{ [0, [pH, 14] | min] | max | round(2) }}
+
+#Sensor PH com compensação da temperatura da piscina, que atualiza o valor se a bomba da piscina estiver a funcionar. 
+- trigger:
+    -  platform: state
+       entity_id:
+          - sensor.ph_corrigido
+  sensor:
+    - name: "pH Corrigido Filtrado"
+      unique_id: f8853830-bf81-46d4-85a9-37ddf334g4f
+      state_class: measurement
+      unit_of_measurement: "pH"
+      state: >
+        {% if is_state('switch.bomba_piscina', 'on') %}
+          {{ states('sensor.ph_corrigido') | float }}
+        {% else %}
+          {{ states('input_number.ph_filtrado') }}
+        {% endif %}
+      
+
+#Sensor PH , que atualiza o valor se a bomba da piscina estiver a funcionar. 
+- trigger:
+    -  platform: state
+       entity_id:
+          - sensor.ph_sensor
+  sensor:
+    - name: "pH Sensor Filtrado"
+      unique_id: f8853830-bf81-46d4-85a9-37ddfasd334d
+      state_class: measurement
+      unit_of_measurement: "pH"
+      state: >
+        {% if is_state('switch.bomba_piscina', 'on') %}
+          {{ states('sensor.ph_sensor') | float }}
+        {% else %}
+          {{ states('input_number.ph_sensor_filtrado') }}
+        {% endif %}
+
+- sensor:
+    - name: "Temperatura Piscina Filtrado"
+      unique_id: f8853830-bf81-46d4-85a9-37ddfasd4561d
+      state_class: measurement
+      unit_of_measurement: "°C"
+      state: >
+        {% if is_state('switch.bomba_piscina', 'on') %}
+          {{ states('sensor.bomba_piscina_temperature') | float(0) }}
+        {% else %}
+          {{ states('input_number.temperatura_piscina_filtrado') | float(states('sensor.bomba_piscina_temperature')) }}
+        {% endif %}
