@@ -122,7 +122,7 @@
       data:
         stop_actions: true
       target:
-        entity_id: automation.new_automation_3
+        entity_id: automation.bomba_piscina_dia
     - delay:
         hours: 0
         minutes: 0
@@ -148,7 +148,7 @@
     - service: automation.turn_on
       data: {}
       target:
-        entity_id: automation.new_automation_3
+        entity_id: automation.bomba_piscina_dia
     else:
     - type: turn_off
       device_id: 8be4eb1cd22d4bd03d7c70c99e84930b
@@ -157,7 +157,7 @@
     - service: automation.turn_on
       data: {}
       target:
-        entity_id: automation.new_automation_3
+        entity_id: automation.bomba_piscina_dia
   mode: restart
 - id: change_charge_completion_time
   alias: 🔋🚗⚡Change charge completion time

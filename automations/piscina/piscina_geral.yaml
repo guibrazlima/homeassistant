@@ -190,7 +190,7 @@
     - data:
         stop_actions: true
       target:
-        entity_id: automation.new_automation_3
+        entity_id: automation.bomba_piscina_dia
       action: automation.turn_off
     - metadata: {}
       data: {}
@@ -211,7 +211,7 @@
       then:
       - data: {}
         target:
-          entity_id: automation.new_automation_3
+          entity_id: automation.bomba_piscina_dia
         action: automation.turn_on
       - metadata: {}
         data: {}
@@ -223,13 +223,13 @@
         data:
           skip_condition: true
         target:
-          entity_id: automation.new_automation_3
+          entity_id: automation.bomba_piscina_dia
         action: automation.trigger
       else:
       - data:
           stop_actions: true
         target:
-          entity_id: automation.new_automation_3
+          entity_id: automation.bomba_piscina_dia
         action: automation.turn_off
       - target:
           entity_id:
@@ -273,7 +273,7 @@
   use_blueprint:
     path: PVExcessControl/pv_excess_control.yaml
     input:
-      automation_id: automation.new_automation_3
+      automation_id: automation.bomba_piscina_dia
       grid_voltage: 230
       pv_power: sensor.emoncms_solar
       export_power: sensor.emoncms_export_power_positive

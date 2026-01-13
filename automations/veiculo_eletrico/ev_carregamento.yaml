@@ -187,7 +187,7 @@
       - fri
       - sat
     - condition: state
-      entity_id: automation.new_automation_3
+      entity_id: automation.bomba_piscina_dia
       state: 'off'
     - condition: state
       entity_id: device_tracker.i4_edrive40
