@@ -1,0 +1,135 @@
+# ======================================================================
+# 🏊 SCRIPTS - PISCINA
+# ======================================================================
+# Ficheiro: scripts/piscina.yaml
+# Scripts: 3
+# Última atualização: 2026-01-13
+# Migrado de scripts.yaml (root)
+# ======================================================================
+
+alternar_modo_automacao_piscina:
+  alias: "Alternar Entre Modo Piscina Manual e Automático"
+  description: >
+    Alterna entre modo manual e automático da piscina.
+    Em modo manual: desativa automações e permite controlo direto.
+    Em modo automático: reativa automações (bomba_piscina_noite, etc).
+  sequence:
+    # Verifica o estado atual do input_boolean
+    - choose:
+        # Se estiver em modo automático (true), muda para manual
+        - conditions:
+            - condition: state
+              entity_id: input_boolean.modo_automatico
+              state: 'on'
+          sequence:
+            # Desativa o input_boolean (modo manual)
+            - service: input_boolean.turn_off
+              target:
+                entity_id: input_boolean.modo_automatico
+            # Desativa as duas automações
+            - service: automation.turn_off
+              target:
+                entity_id:
+                  - automation.automacao_bomba_piscina
+                  - automation.bomba_piscina_noite
+            # Notificação opcional
+            - service: persistent_notification.create
+              data:
+                message: "Modo Manual ativado. Automações desativadas."
+                title: "Alteração de Modo"
+
+        # Se estiver em modo manual (false), muda para automático
+        - conditions:
+            - condition: state
+              entity_id: input_boolean.modo_automatico
+              state: 'off'
+          sequence:
+            # Ativa o input_boolean (modo automático)
+            - service: input_boolean.turn_on
+              target:
+                entity_id: input_boolean.modo_automatico
+            # Ativa as duas automações
+            - service: automation.turn_on
+              target:
+                entity_id:
+                  - automation.automacao_bomba_piscina
+                  - automation.bomba_piscina_noite
+            # Notificação opcional
+            - service: persistent_notification.create
+              data:
+                message: "Modo Automático ativado. Automações ativadas."
+                title: "Alteração de Modo"
+
+piscina_manual_start:
+  alias: Piscina - Manual (arrancar com tempo)
+  description: >
+    Inicia a bomba da piscina em modo manual com duração definida.
+    Aceita parâmetro 'minutes' ou usa o helper input_number.piscina_manual_min.
+    Inicia timer para controlar a duração (1-600 minutos).
+  mode: restart
+  fields:
+    minutes:
+      description: Minutos em manual (opcional; se vazio usa o helper)
+      required: false
+      example: 45
+  variables:
+    # Usa o valor passado em "minutes"; se não vier, lê do helper
+    mins_raw: "{{ minutes | default(states('input_number.piscina_manual_min'), true) }}"
+    # Converte "1.0" -> 1 e aplica limites 1..600
+    mins_val: "{{ (mins_raw | float(30)) | round(0) | int }}"
+    mins: >
+      {% if mins_val < 1 %}1{% elif mins_val > 600 %}600{% else %}{{ mins_val }}{% endif %}
+  sequence:
+    - service: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.piscina_override_manual
+    - service: switch.turn_on
+      target:
+        entity_id: switch.bomba_piscina_switch_0   # ADAPTA
+    - service: timer.start
+      target:
+        entity_id: timer.piscina_manual
+      data:
+        duration: >
+          {% set h = (mins // 60) | int %}
+          {% set m = (mins % 60) | int %}
+          {{ '%02d:%02d:00' % (h, m) }}
+
+piscina_manual_stop:
+  alias: Piscina - Manual (parar)
+  description: >
+    Para a bomba da piscina em modo manual.
+    Cancela o timer, desliga a bomba e desativa o override manual.
+  mode: restart
+  sequence:
+    - service: timer.cancel
+      target: {entity_id: timer.piscina_manual}
+    - service: switch.turn_off
+      target: {entity_id: switch.bomba_piscina_switch_0}     # ADAPTA
+    - service: input_boolean.turn_off
+      target: {entity_id: input_boolean.piscina_override_manual}
+
+# ======================================================================
+# Script Comentado (backup de referência)
+# ======================================================================
+# piscina_forcar_on:
+#   alias: Piscina - Forçar ON (minutos)
+#   mode: restart
+#   fields:
+#     minutes:
+#       description: Minutos de funcionamento forçado
+#       example: 30
+#       required: false
+#       default: 30
+#   sequence:
+#     - service: input_boolean.turn_on
+#       target:
+#         entity_id: input_boolean.piscina_override_manual
+#     - service: switch.turn_on
+#       target:
+#         entity_id: switch.bomba_piscina_switch_0       # ADAPTA
+#     - delay:
+#         minutes: "{{ (minutes | int(30)) | max(1) | min(600) }}"  # 1 a 600 min
+#     - service: input_boolean.turn_off
+#       target:
+#         entity_id: input_boolean.piscina_override_manual
