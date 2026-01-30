@@ -1,3 +1,9 @@
+# ======================================================================
+# 🔌 SWITCHES - Command Line
+# ======================================================================
+# Switches que executam comandos shell
+# ======================================================================
+
 - platform: command_line
   switches:
     algo_server:
@@ -5,17 +11,19 @@
       command_off: /config/algo_poweroff.sh
       command_timeout : 120
 
-- platform: template
-  switches:
-    evse_admin_rules_inverted:
-      unique_id: evse_admin_rules
-      friendly_name: evse_admin_rules
-      value_template: "{{ is_state('switch.wallbox_charging_rules_enabled', 'off') }}"
-      turn_on:
-        service: switch.turn_off
-        data:
-          entity_id: switch.wallbox_charging_rules_enabled
-      turn_off:
-        service: switch.turn_on
-        data:
-          entity_id: switch.wallbox_charging_rules_enabled
+# ======================================================================
+# 🚗⚡ EVSE Admin Rules Switch
+# ======================================================================
+# MIGRADO para templates/evse_switch.yaml (modern template syntax)
+# Data: 30 Janeiro 2026
+# Razão: Legacy platform: template deprecated (remove in HA 2026.6)
+# 
+# Configuração antiga (REMOVIDA):
+# - platform: template
+#   switches:
+#     evse_admin_rules_inverted:
+#       unique_id: evse_admin_rules
+#       ...
+# 
+# Nova localização: templates/evse_switch.yaml
+# ======================================================================

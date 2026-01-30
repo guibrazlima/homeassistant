@@ -1,0 +1,23 @@
+# ======================================================================
+# 🚗⚡ EVSE Admin Rules Switch (Modern Template Syntax)
+# ======================================================================
+# Migrado de switches.yaml (legacy platform: template)
+# Data: 30 Janeiro 2026
+# 
+# Switch invertido para controlar as regras de carregamento do Wallbox
+# - ON → Desativa regras (switch.wallbox_charging_rules_enabled = OFF)
+# - OFF → Ativa regras (switch.wallbox_charging_rules_enabled = ON)
+# ======================================================================
+
+- switch:
+  - unique_id: evse_admin_rules
+    name: evse_admin_rules
+    state: "{{ is_state('switch.wallbox_charging_rules_enabled', 'off') }}"
+    turn_on:
+      - action: switch.turn_off
+        data:
+          entity_id: switch.wallbox_charging_rules_enabled
+    turn_off:
+      - action: switch.turn_on
+        data:
+          entity_id: switch.wallbox_charging_rules_enabled
