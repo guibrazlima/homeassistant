@@ -125,7 +125,6 @@ automation:
       # Leitura imediata
       - service: llmvision.data_analyzer
         continue_on_error: true  # ✨ NOVO: Continuar se houver erro
-        timeout: 30              # ✨ NOVO: Timeout de 30 segundos
         data:
           provider: "{{ provider }}"
           model: "{{ model }}"
@@ -202,7 +201,7 @@ automation:
                   v: "{{ states('input_number.ph_piscina') }}"
               - condition: template
                 value_template: "{{ v not in ['unknown','unavailable','none'] and (v|float(0)) != 0 }}"
-              - service: input_text.set_value
+              - action: input_text.set_value
                 target: { entity_id: input_text.ph_piscina_backup }
                 data:
                   value: "{{ '%.2f'|format(v|float) }}"
@@ -213,7 +212,7 @@ automation:
                   r: "{{ states('input_number.ph_piscina_raw') }}"
               - condition: template
                 value_template: "{{ r not in ['unknown','unavailable','none'] }}"
-              - service: input_text.set_value
+              - action: input_text.set_value
                 target: { entity_id: input_text.ph_piscina_raw_backup }
                 data:
                   value: "{{ r }}"

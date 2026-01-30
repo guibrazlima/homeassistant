@@ -144,7 +144,7 @@ template:
         unique_id: aqs_hp90_energy_today
         unit_of_measurement: "kWh"
         device_class: energy
-        state_class: measurement
+        state_class: total
         attributes:
           description: "Energia térmica prevista para hoje (kWh_th) com fator de calibração."
           formula: "E_today_th = (energy_today × Área × η) × fator"
@@ -160,7 +160,7 @@ template:
         unique_id: aqs_hp90_energy_tomorrow
         unit_of_measurement: "kWh"
         device_class: energy
-        state_class: measurement
+        state_class: total
         attributes:
           description: "Energia térmica prevista para amanhã (kWh_th) com fator de calibração."
           formula: "E_tomorrow_th = (energy_tomorrow × Área × η) × fator"
@@ -176,7 +176,7 @@ template:
         unique_id: aqs_hp90_energy_remaining_today
         unit_of_measurement: "kWh"
         device_class: energy
-        state_class: measurement
+        state_class: total
         attributes:
           description: "Energia térmica ainda prevista para o resto do dia (kWh_th) com fator."
           formula: "E_remaining_th = (energy_today_remaining × Área × η) × fator"

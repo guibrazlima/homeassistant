@@ -267,23 +267,7 @@
     action: variable.update_sensor
   mode: single
   max_exceeded: warning
-- id: bomba_piscina_dia
-  alias: 🏊🏻Bomba Piscina Dia
-  description: Automação do Home Assistant.
-  use_blueprint:
-    path: PVExcessControl/pv_excess_control.yaml
-    input:
-      automation_id: automation.bomba_piscina_dia
-      grid_voltage: 230
-      pv_power: sensor.emoncms_solar
-      export_power: sensor.emoncms_export_power_positive
-      load_power: sensor.emoncms_use
-      actual_power: sensor.bomba_piscina_switch_0_power
-      power_toggle_margin: 10
-      appliance_switch: switch.bomba_piscina_switch_0
-      inverter_limit: 0
-  mode: single
-  max_exceeded: warning
+
 - id: automacao_bomba_piscina
   alias: 🏊🏻 Automação Bomba Piscina
   description: Automação ativada por valor numérico de ['sensor.potencia_emonpi_import_export_media_5_minutos'], valor numérico de ['sensor.potencia_emonpi_import_export_media_5_minutos'].
