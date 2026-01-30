@@ -2,7 +2,7 @@
 
 **Data da análise**: 30 de Janeiro de 2026  
 **Branch**: `consolidacao-automations-gui`  
-**Commit atual**: `7847063`
+**Commit atual**: `702892c`
 
 ---
 
@@ -12,7 +12,8 @@
 |-----------|-----------|------------|--------|
 | **Automações quebradas** | 2 | 🔴 **CRÍTICA** | Requer ação |
 | **Templates com erros** | 3-4 | 🟠 **ALTA** | Requer correção |
-| **Switch template deprecated** | 1 | ✅ **RESOLVIDO** | Migrado |
+| **Switch template deprecated** | 1 | ✅ **RESOLVIDO** | Migrado - `7847063` |
+| **Solcast automation redundant** | 1 | ✅ **RESOLVIDO** | Removida - `702892c` |
 | **HACS deprecated** | 2 | 🟡 **MÉDIA** | Informativo |
 | **Dispositivos offline** | 8+ | 🟢 **BAIXA** | Normal |
 | **Custom integrations warnings** | 25 | 🟢 **BAIXA** | Informativo |
@@ -124,7 +125,55 @@ Location: switches.yaml
 
 ---
 
-### 3. Template Errors - Sensor OMIE
+### 3. ✅ Solcast Update Automation - RESOLVIDO
+
+**Status**: ✅ **REMOVIDA**  
+**Commit**: `702892c`
+
+**Problema original**:
+```
+Automation error: automation.solcast_update_2
+Error: "Auto-update is enabled, ignoring service event for forecast update"
+Action: solcast_solar.update_forecasts
+```
+
+**Causa raiz**:
+- Integração Solcast tem **auto_update = 1** (ativo)
+- Automação tentava fazer update manual
+- Conflito: "use Force Update instead"
+- Logs mostravam updates automáticos a funcionar perfeitamente:
+  - 14:47, 15:47, 16:47 (cada hora durante o dia)
+  - api_quota = 10 (10 updates por dia)
+
+**Solução implementada**:
+```yaml
+# ANTES (automation.solcast_update):
+- id: solcast_update
+  alias: Solcast update
+  trigger: [complex template based on sunrise/sunset]
+  action:
+    - service: solcast_solar.update_forecasts
+  # ❌ Causava erro com auto-update ativo
+
+# DEPOIS:
+# ✅ Automação REMOVIDA (redundante)
+# ✅ Auto-update da integração funciona perfeitamente
+# ✅ Documentação adicionada no código
+```
+
+**Benefícios**:
+- ✅ Eliminou erros recorrentes no log
+- ✅ Reduziu complexidade (65 automações vs 66)
+- ✅ Auto-update mais confiável (nativo da integração)
+- ✅ Melhor gestão de API quota
+
+**Alternativa manual** (se necessário):
+- Usar: `solcast_solar.force_update_forecasts`
+- Ou desativar auto_update na config da integração
+
+---
+
+### 4. Template Errors - Sensor OMIE
 
 **Status**: ⚠️ **Erro recorrente**  
 **Impacto**: Sensores de energia com valores incorretos  
@@ -160,7 +209,7 @@ when rendering state_attr('sensor.omie_spot_price_pt', 'today_hours').items()
 - `sensors/` ou `templates/` com referência a `omie_spot_price_pt`
 - Procurar por: `state_attr.*today_hours.*items()`
 
-### 3. Template Error - Float Conversion
+### 4. Template Error - Float Conversion
 
 **Status**: ⚠️ **Erro recorrente**  
 **Erro**:
@@ -246,6 +295,7 @@ Template: {{ states('sensor.template_coopernico_spot_price_bihorario') | float /
 - [x] **Corrigir timeout errors** (2 automações) - Commit `b545d56`
 - [x] **Corrigir Automatic Backups** (auto_backup → backup.create) - Commit `e68a3bb`
 - [x] **Migrar switch template** (evse_admin_rules) - Commit `7847063`
+- [x] **Remover Solcast automation** (redundante) - Commit `702892c`
 
 ### Imediato (Esta Sessão)
 - [ ] **Ativar Pyscript** via GUI ou CLI
@@ -306,11 +356,12 @@ docker logs homeassistant 2>&1 | grep "omie_spot_price" | tail -20
 
 ## 📊 Progresso Total
 
-**Repairs corrigidos** (todas as sessões): 4
+**Repairs corrigidos** (todas as sessões): 5
 - ✅ Telegram Bot YAML deprecated
 - ✅ Automation timeout errors (2 automações) - `b545d56`
 - ✅ Automatic Backups unknown action - `e68a3bb`
 - ✅ Switch template deprecated (evse_admin_rules) - `7847063`
+- ✅ Solcast automation redundant (removed) - `702892c`
 
 **Repairs pendentes** (esta análise): 6
 - 🔴 Pyscript desativado (CRÍTICO)
