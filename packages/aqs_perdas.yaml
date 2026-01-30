@@ -44,49 +44,47 @@ sensor:
     method: left
 
 # --- 3) Estados úteis (noite / HP / solar / standby OK) ---
-binary_sensor:
-  - platform: template
-    sensors:
-      aqs_noite_22_06:
-        friendly_name: "AQS - Janela Noturna (22-06)"
-        value_template: >
+# ======================================================================
+# MIGRADO para sintaxe moderna (30 Janeiro 2026)
+# Razão: Legacy platform: template deprecated (remove in HA 2026.6)
+# ======================================================================
+
+# --- 4) Cálculos principais (perda instantânea, potência, UA, etc.) ---
+template:
+  # --- Binary Sensors (migrados de legacy syntax) ---
+  - binary_sensor:
+      - unique_id: aqs_noite_22_06
+        name: "AQS - Janela Noturna (22-06)"
+        state: >
           {% set h = now().hour %}
           {{ h >= 22 or h < 6 }}
 
-      aqs_hp_a_aquecer:
-        friendly_name: "AQS - A aquecer (HP)"
-        value_template: >
+      - unique_id: aqs_hp_a_aquecer
+        name: "AQS - A aquecer (HP)"
+        state: >
           {{ states('sensor.hpsu_can_mode_of_operating') == 'Hot Water Production' }}
 
-      aqs_solar_a_aquecer:
-        friendly_name: "AQS - A aquecer (Solar)"
-        value_template: >
+      - unique_id: aqs_solar_a_aquecer
+        name: "AQS - A aquecer (Solar)"
+        state: >
           {% set rising = states('sensor.aqs_dt_dt')|float(0) > 0.10 %}
           {% set hp     = is_state('binary_sensor.aqs_hp_a_aquecer','on') %}
           {% set is_day = is_state('sun.sun','above_horizon') %}
           {{ rising and (not hp) and is_day }}
 
-      aqs_ok_para_medicao_standby:
-        friendly_name: "AQS - Ok para medir standby"
+      - unique_id: aqs_ok_para_medicao_standby
+        name: "AQS - Ok para medir standby"
         # Standby válido quando:
-        # - É noite (ou sol abaixo do horizonte)
         # - NÃO está a aquecer por HP
         # - NÃO está a aquecer por solar
         # - Derivada negativa (descida suave): -5.0 < dT/dt < -0.02 °C/h
-        #value_template: >
-        #  {% set night = is_state('binary_sensor.aqs_noite_22_06','on') or is_state('sun.sun','below_horizon') %}
-        #  {% set hp    = is_state('binary_sensor.aqs_hp_a_aquecer','on') %}
-        #  {% set solar = is_state('binary_sensor.aqs_solar_a_aquecer','on') %}
-        #  {% set dt    = states('sensor.aqs_dt_dt')|float(0) %}
-        #  {{ night and (not hp) and (not solar) and (dt < -0.02) and (dt > -5.0) }}
-        value_template: >
+        state: >
           {% set hp    = is_state('binary_sensor.aqs_hp_a_aquecer','on') %}
           {% set solar = is_state('binary_sensor.aqs_solar_a_aquecer','on') %}
           {% set dt    = states('sensor.aqs_dT_dt')|float(0) %}
           {{ (not hp) and (not solar) and (dt < -0.02) and (dt > -5.0) }}
 
-# --- 4) Cálculos principais (perda instantânea, potência, UA, etc.) ---
-template:
+  # --- Sensors (existentes) ---
   - sensor:
       # Fonte limpa para integrações/automação
       - name: aqs_perda_c_h               # entity_id: sensor.aqs_perda_c_h

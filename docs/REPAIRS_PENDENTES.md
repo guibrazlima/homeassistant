@@ -12,6 +12,7 @@
 |-----------|-----------|------------|--------|
 | **Automações quebradas** | 2 | 🔴 **CRÍTICA** | Requer ação |
 | **Templates com erros** | 3-4 | 🟠 **ALTA** | Requer correção |
+| **Shelly CoIoT push update** | 1 | 🟢 **BAIXA/INFO** | Dismiss recomendado |
 | **Switch template deprecated** | 1 | ✅ **RESOLVIDO** | Migrado - `7847063` |
 | **Solcast automation redundant** | 1 | ✅ **RESOLVIDO** | Removida - `702892c` |
 | **HACS deprecated** | 2 | 🟡 **MÉDIA** | Informativo |
@@ -368,20 +369,71 @@ docker logs homeassistant 2>&1 | grep "omie_spot_price" | tail -20
 - 🟠 Template OMIE errors (3-4 sensores)
 - 🟡 HACS deprecated (2 cards)
 - 🟡 MQTT object_id (40 sensores, deadline Abril 2026)
+- 🟢 Shelly CoIoT push update (informativo - dismiss recomendado)
 - 🟢 Dispositivos offline (normal)
 - 🟢 Custom integration warnings (informativo)
 
 ---
 
-## 📝 Notas Finais
+## � PRIORIDADE BAIXA / INFORMATIVO
 
-1. **Pyscript é a prioridade #1** - Está a causar erros constantes (cada 5 minutos)
-2. **Templates OMIE** devem ser corrigidos logo após Pyscript
-3. **MQTT migration** pode aguardar (ainda faltam 2 meses até deadline)
-4. **HACS cards** são informativas - podem continuar a funcionar por enquanto
+### 7. Shelly CoIoT Push Update Failure
+
+**Status**: ℹ️ **INFORMATIVO - NÃO CRÍTICO**  
+**Device**: Luzes Sala Superior (192.168.1.112)  
+**Model**: Shelly 2.5 (SHSW-25)  
+**Erro**:
+```
+Home Assistant is not receiving push updates from the Shelly device
+```
+
+**Análise**:
+- ✅ **Dispositivo online**: Ping OK (0% packet loss, 7ms avg)
+- ✅ **Integração configurada**: Entry ID `595fa57e051db22dcd8fdd1a2d43bbcc`
+- ⚠️ **CoIoT não configurado**: Dispositivo usa polling HTTP (funciona perfeitamente)
+
+**O que é CoIoT?**
+- Protocolo UDP multicast usado por Shelly Gen1
+- Permite push updates instantâneos (porta 5683)
+- **Opcional** - Polling HTTP funciona igualmente bem
+
+**Impacto**:
+- ⚠️ **NENHUM**: Dispositivo funciona perfeitamente em modo polling
+- Latência ligeiramente maior (~1-3 segundos vs instantâneo)
+- Para controlo de luzes, a diferença é imperceptível
+
+**Opções**:
+
+1. **Ignorar/Dismiss o repair** (✅ **RECOMENDADO**):
+   - Settings → System → Repairs
+   - Clicar no repair "Shelly device Luzes Sala Superior"
+   - Clicar "Dismiss"
+   - **Razão**: Polling funciona perfeitamente, CoIoT pode ter problemas em redes complexas
+
+2. **Configurar CoIoT** (opcional - apenas se latência crítica):
+   - Aceder: `http://192.168.1.112`
+   - Settings → Advanced → CoIoT
+   - Set CoIoT Peer: `<IP_HOME_ASSISTANT>:5683`
+   - Enable CoIoT: ON
+   - ⚠️ Pode requerer configuração de firewall (UDP 5683)
+   - ⚠️ Pode não funcionar em redes com VLANs/multicast bloqueado
+
+**Recomendação**: ✅ **Dismiss** - O dispositivo funciona perfeitamente em modo polling.
+
+**Documentação completa**: Ver `/tmp/shelly_coiot_repair.md` para análise detalhada.
 
 ---
 
-**Última atualização**: 30 Janeiro 2026, 17:35 UTC  
+## �📝 Notas Finais
+
+1. **Pyscript é a prioridade #1** - Está a causar erros constantes (cada 5 minutos)
+2. **Templates OMIE** devem ser corrigidos logo após Pyscript
+3. **Shelly CoIoT** é informativo - dismiss recomendado
+4. **MQTT migration** pode aguardar (ainda faltam 2 meses até deadline)
+5. **HACS cards** são informativas - podem continuar a funcionar por enquanto
+
+---
+
+**Última atualização**: 30 Janeiro 2026, 19:45 UTC  
 **Analisado por**: GitHub Copilot Agent  
-**Comandos executados**: 15+ (grep, docker logs, config_entries analysis)
+**Comandos executados**: 20+ (grep, docker logs, config_entries, ping, curl)

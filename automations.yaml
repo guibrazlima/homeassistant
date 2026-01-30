@@ -1,3 +1,10 @@
+# ============================================================================
+# 🏊 PISCINA - Automações de Gestão da Piscina
+# ============================================================================
+# Inclui: Cloro, pH, sal, cobertura, bomba (dia/noite/solar), monitorização
+# (LLM Vision, OCR), temperatura, timer, variáveis, excedente FV
+# ============================================================================
+
 - id: piscina_llmvision_sal_baixo
   alias: Piscina — Sal baixo (LLM Vision, amostragem+debounce)
   description: Recolhe até 3 amostras rápidas (1.2s) do painel do clorador CTX com
@@ -928,6 +935,14 @@
       include_filename: false
     action: llmvision.data_analyzer
   mode: restart
+
+# ============================================================================
+# 🚪 PORTÕES E PORTARIAS - Automações de Controlo de Acessos
+# ============================================================================
+# Inclui: Abrir portão (botões, callbacks, notificações), status, luzes garagem,
+# automações de chegada/proximidade
+# ============================================================================
+
 - id: callback_to_open_gate_from_action
   alias: "[\U0001F3E1] Callback to open gate from action"
   description: Automação ativada por evento mobile_app_notification_action.
@@ -1322,6 +1337,13 @@
           title: '------------'
   mode: single
   max_exceeded: warning
+
+# ============================================================================
+# 🔔 SISTEMA E NOTIFICAÇÕES - Backups, UPS, Notificações Gerais
+# ============================================================================
+# Inclui: Backups automáticos, notificações UPS, notificações ambientais OpenAI
+# ============================================================================
+
 - id: automatic_backups
   alias: Automatic Backups
   description: Automação ativada por horário (01:00:00). Usa serviço nativo backup.create
@@ -1502,6 +1524,14 @@
     enable_yearly: false
     use_action_hourly: true
   max_exceeded: warning
+
+# ============================================================================
+# 💡 ILUMINAÇÃO - Automações de Controlo de Luzes
+# ============================================================================
+# Inclui: Luzes automáticas (exterior, corredor, escadas), candeeiros sala,
+# desligar tudo sala
+# ============================================================================
+
 - id: luz_exterior_auto
   alias: "\U0001F4A1Luz Exterior Auto"
   description: Automação do Home Assistant.
@@ -1515,95 +1545,6 @@
       time_delay: 10
       include_sun: sun_enabled
       night_lights_conditions: []
-  mode: single
-  max_exceeded: warning
-- id: pool_pump_solar_optimizationsdsdsd
-  alias: Pool Pump Solar Optimizationsdsdsd
-  description: Gerencia a bomba da piscina priorizando energia solar e garantindo
-    filtragem diária
-  trigger:
-  - minutes: /15
-    trigger: time_pattern
-  - entity_id: sensor.solar_power
-    trigger: state
-  - at: 08:00:00
-    trigger: time
-  - at: '22:00:00'
-    trigger: time
-  condition:
-  - condition: template
-    value_template: '{{ not is_state(''binary_sensor.pool_pump_malfunction'', ''on'')
-      }}
-
-      '
-  action:
-  - target:
-      entity_id: sensor.pool_pump_daily_runtime
-    action: homeassistant.update_entity
-  - choose:
-    - conditions:
-      - condition: time
-        after: 08:00:00
-        before: '22:00:00'
-      - condition: template
-        value_template: '{{ states(''sensor.solar_power'')|float > min_solar_power
-          }}
-
-          '
-      sequence:
-      - target:
-          entity_id: switch.pool_pump
-        action: switch.turn_on
-      - target:
-          entity_id: input_number.pool_pump_priority
-        data:
-          value: 1
-        action: input_number.set
-    - conditions:
-      - condition: time
-        after: '22:00:00'
-        before: 08:00:00
-      - condition: template
-        value_template: '{% set daily_runtime = states(''sensor.pool_pump_daily_runtime'')|float
-          %} {% set tomorrow_forecast = states(''sensor.tomorrow_solar_forecast'')|float
-          %} {{ daily_runtime < min_daily_hours and tomorrow_forecast < 0.7 }}
-
-          '
-      sequence:
-      - target:
-          entity_id: switch.pool_pump
-        action: switch.turn_on
-      - target:
-          entity_id: input_number.pool_pump_priority
-        data:
-          value: 2
-        action: input_number.set
-    default:
-    - target:
-        entity_id: switch.pool_pump
-      action: switch.turn_off
-  variables:
-    min_daily_hours: 5
-    min_solar_power: 1000
-    pump_power: 800
-  mode: restart
-- id: speedtests
-  alias: SpeedTests
-  description: Automação ativada por horário (06:30:00), horário (18:30:00).
-  trigger:
-  - platform: time
-    at: 06:30:00
-  - platform: time
-    at: '18:30:00'
-  - event: sunrise
-    offset: -00:35:00
-    platform: sun
-  condition: []
-  action:
-  - service: homeassistant.update_entity
-    data: {}
-    target:
-      entity_id: sensor.speedtest_download
   mode: single
   max_exceeded: warning
 - id: notify_when_garage_door_was_left_open_for_too_long
@@ -1676,6 +1617,13 @@
     enabled: true
   mode: single
   max_exceeded: warning
+
+# ============================================================================
+# 🌊 SPA E CASCATA - Automações de Equipamentos de Água
+# ============================================================================
+# Inclui: Cascata, hidrojet
+# ============================================================================
+
 - id: cascata
   alias: "\U0001F3CA\U0001F3FB Cascata"
   description: Inicia ou para a Cascata na piscina com 1 click no botão shelly
@@ -1757,6 +1705,13 @@
       target:
         entity_id: automation.bomba_piscina_dia
   mode: restart
+
+# ============================================================================
+# 🚗 VEÍCULO ELÉTRICO - Automações de Carregamento
+# ============================================================================
+# Inclui: Gestão de carregamento, horários, smart charging
+# ============================================================================
+
 - id: change_charge_completion_time
   alias: "\U0001F50B\U0001F697⚡Change charge completion time"
   description: Automação ativada por mudança de estado em ['sensor.ev_smart_charging_charging'].
@@ -1800,6 +1755,13 @@
         entity_id: switch.ev_smart_charging_continuous_charging_preferred
   mode: single
   max_exceeded: warning
+
+# ============================================================================
+# 🪟 ESTORES - Automações de Controlo de Estores
+# ============================================================================
+# Inclui: Abrir/fechar estores (automático e manual), botões de controlo
+# ============================================================================
+
 - id: sala_baixar_estores_sunset
   alias: "\U0001F6CB️ Sala: Baixar Estores Sunset"
   description: Baixar os estores quando o sol se põe
@@ -1886,6 +1848,14 @@
       include_ambient: ambient_enabled
   mode: single
   max_exceeded: warning
+
+# ============================================================================
+# 🔋 ENERGIA E CLIMA - Gestão de Energia, Solar, Bomba de Calor
+# ============================================================================
+# Inclui: Preços energia (Coopernico), MQTT publish, bomba de calor (erros,
+# água quente), nuvens/previsão solar, UPS
+# ============================================================================
+
 - id: update_coopernico_prices
   alias: Update Coopernico Prices
   description: Automação do Home Assistant.
@@ -2103,15 +2073,6 @@
         qos: '2'
         topic: homeassistant/sensor/ev/bmwi4_charging_w
         payload: '"{{ states(''sensor.bmw_i4_charging_w'') | float(0) | round(0) }}"'
-  mode: single
-  max_exceeded: warning
-- id: telegram_bot_conversation_with_assist
-  alias: 'Telegram Bot: Conversation with Assist'
-  description: Automação do Home Assistant.
-  use_blueprint:
-    path: marc-romu/telegram-bot--conversation.yaml
-    input:
-      conversation_agent: conversation.chatgpt
   mode: single
   max_exceeded: warning
 - id: openai_daily_environmental_notification
@@ -2450,6 +2411,13 @@
       action: input_number.set_value
   mode: single
   max_exceeded: warning
+
+# ============================================================================
+# 🔧 OUTROS - Automações Diversas e Não Categorizadas
+# ============================================================================
+# Inclui: Bomba peristáltica, automações de teste, estores individuais
+# ============================================================================
+
 - id: bomba_peristaltica
   alias: "\U0001F3CA\U0001F3FBBomba Peristaltica"
   description: Automação ativada por mudança de estado em ['switch.bomba_piscina_switch_0'].
@@ -2551,19 +2519,6 @@
       data: {}
       target:
         entity_id: cover.estore1_cover_0
-  mode: single
-  max_exceeded: warning
-- id: teste2
-  alias: teste2
-  description: Automação do Home Assistant.
-  triggers:
-  - device_id: 2f9c9ea7fbfd91205bab02216a817afb
-    domain: button
-    entity_id: 526ce22089765dd42cdffef922d73e4f
-    type: pressed
-    trigger: device
-  conditions: []
-  actions: []
   mode: single
   max_exceeded: warning
 - id: new_automation

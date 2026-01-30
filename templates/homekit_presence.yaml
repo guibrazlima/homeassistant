@@ -1,0 +1,30 @@
+# ======================================================================
+# 👤 HomeKit Presence Binary Sensors (Modern Template Syntax)
+# ======================================================================
+# Migrado de binary_sensor.yaml (legacy platform: template)
+# Data: 30 Janeiro 2026
+# 
+# Binary sensors que refletem o estado dos input_boolean de presença
+# Usados para integração com HomeKit
+# ======================================================================
+
+- binary_sensor:
+  - unique_id: hk_presence_gblima
+    name: "gblima(HK)"
+    device_class: presence
+    state: "{{ is_state('input_boolean.gblima_present', 'on') }}"
+
+  - unique_id: hk_presence_cmouta
+    name: "cmouta(HK)"
+    device_class: presence
+    state: "{{ is_state('input_boolean.cmouta_present', 'on') }}"
+
+  - unique_id: hk_presence_emouta
+    name: "emouta(HK)"
+    device_class: presence
+    state: "{{ is_state('input_boolean.emouta_present', 'on') }}"
+
+  - unique_id: hk_presence_gvasconcelos
+    name: "gvasconcelos(HK)"
+    device_class: presence
+    state: "{{ is_state('input_boolean.gvasconcelos_present', 'on') }}"

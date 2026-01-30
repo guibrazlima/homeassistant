@@ -1,27 +1,32 @@
+# ======================================================================
+# ⏰ Time of Day Binary Sensor
+# ======================================================================
+# Binary sensor nativo (non-template) - mantém sintaxe original
+# ======================================================================
+
 - platform: tod
   name: Night
   after: sunset
   before: sunrise
 
-- platform: template
-  sensors:
-    hk_presence_gblima:
-       friendly_name: "gblima(HK)"
-       device_class: presence
-       value_template: >-
-         {{ is_state('input_boolean.gblima_present', 'on') }}      
-    hk_presence_cmouta:
-       friendly_name: "cmouta(HK)"
-       device_class: presence
-       value_template: >-
-         {{ is_state('input_boolean.cmouta_present', 'on') }}
-    hk_presence_emouta:
-        friendly_name: "emouta(HK)"
-        device_class: presence
-        value_template: >-
-          {{ is_state('input_boolean.emouta_present', 'on') }}
-    hk_presence_gvasconcelos:
-        friendly_name: "gvasconvelos(HK)"
-        device_class: presence
-        value_template: >-
-          {{ is_state('input_boolean.gvasconcelos_present', 'on') }}
+# ======================================================================
+# 👤 HomeKit Presence Binary Sensors
+# ======================================================================
+# MIGRADO para templates/homekit_presence.yaml (modern template syntax)
+# Data: 30 Janeiro 2026
+# Razão: Legacy platform: template deprecated (remove in HA 2026.6)
+# 
+# Configuração antiga (REMOVIDA):
+# - platform: template
+#   sensors:
+#     hk_presence_gblima:
+#       friendly_name: "gblima(HK)"
+#       device_class: presence
+#       value_template: >-
+#         {{ is_state('input_boolean.gblima_present', 'on') }}
+#     hk_presence_cmouta: [...]
+#     hk_presence_emouta: [...]
+#     hk_presence_gvasconcelos: [...]
+# 
+# Nova localização: templates/homekit_presence.yaml
+# ======================================================================
