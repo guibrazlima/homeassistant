@@ -89,7 +89,6 @@
             acesa OU a piscar em qualquer intensidade, responde: on Caso contrário,
             responde: off Responde apenas com ''on'' ou ''off'' — sem mais texto.'
         response_variable: response
-        timeout: 30
       - delay: '00:00:01.2'
       until:
       - or:
@@ -368,7 +367,6 @@
         state: 'on'
       - service: llmvision.data_analyzer
         continue_on_error: true
-        timeout: 30
         data:
           provider: '{{ provider }}'
           model: '{{ model }}'
