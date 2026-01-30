@@ -101,12 +101,11 @@ http:
     - 172.0.0.0/8
     - 192.168.1.0/24
 
-# Telegram Bot
-telegram_bot:
-  - platform: polling
-    api_key: !secret telegram_bot_api_key
-    allowed_chat_ids:
-      - 5258104860
+# Telegram Bot - Migrado para UI (integrations)
+# NOTA: Adicionar integração "Telegram Bot" via:
+# Configurações → Dispositivos e Serviços → Adicionar Integração → Telegram Bot
+# API Key: (usar telegram_bot_api_key do secrets.yaml)
+# Allowed Chat IDs: 5258104860
 
 # Notifier
 notify:
