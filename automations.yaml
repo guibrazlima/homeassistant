@@ -1,55 +1,3 @@
-# ======================================================================
-# 🤖 AUTOMAÇÕES DO HOME ASSISTANT (CONSOLIDADAS)
-# ======================================================================
-# Ficheiro único para permitir edição via GUI
-# Migrado de: automations/ (57) + packages/ (8)
-# Data: 2026-01-30
-# Total: 65 automações
-#
-# 📝 ORGANIZAÇÃO:
-#   🏊 Piscina - Packages (8) ← Extraídas de packages/piscina_*.yaml
-#   🏊 Piscina - Geral (12)
-#   🏊 Piscina - Filtragem (1)
-#   🏊 Piscina - Cobertura (1)
-#   🚪 Portões e Portarias (8)
-#   🌡️ Clima (3)
-#   💡 Iluminação (1)
-#   ☀️ Energia Solar (1)
-#   ⚙️ Sistema (31)
-#
-# ⚠️ AUTOMAÇÕES DE PACKAGES:
-#   As 8 automações extraídas de packages/ mantêm dependências:
-#   - input_boolean.piscina_*
-#   - input_number.piscina_*
-#   - binary_sensor.piscina_*
-#   
-#   📦 Packages mantidos (sem automation:):
-#   - piscina_clorador_sal.yaml (input_boolean × 2, input_number × 2)
-#   - piscina_cloro_tpo.yaml (input_boolean × 1, input_number × 3)
-#   - piscina_cobertura.yaml
-#   - piscina_ph.yaml (input_number × 2, template × 1)
-#
-# 🔄 ROLLBACK:
-#   Git tag: pre-consolidacao-total
-#   Backup: automations_modular_backup_20260130_164031/
-#   Backup: packages_backup_20260130_164031/
-#   Ver: docs/ROLLBACK_AUTOMATIONS_COMPLETO.md
-# ======================================================================
-
-# ======================================================================
-# 🏊 PISCINA - AUTOMAÇÕES DOS PACKAGES (8 automações)
-# ======================================================================
-# Extraídas de: packages/piscina_*.yaml
-# Data: 2026-01-30
-# ======================================================================
-
-
-# ----------------------------------------------------------------------
-# Package: piscina_clorador_sal.yaml
-# Descrição: Clorador Sal (LLM Vision)
-# Automações: 1
-# ----------------------------------------------------------------------
-
 - id: piscina_llmvision_sal_baixo
   alias: Piscina — Sal baixo (LLM Vision, amostragem+debounce)
   description: Recolhe até 3 amostras rápidas (1.2s) do painel do clorador CTX com
@@ -120,8 +68,8 @@
         target:
           entity_id: input_number.piscina_sal_baixo_off_streak
       - condition: template
-        value_template: "{{ states('input_number.piscina_sal_baixo_off_streak')|int(0)\n\
-          \   >= states('input_number.piscina_sal_baixo_off_debounce')|int(3) }}"
+        value_template: "{{ states('input_number.piscina_sal_baixo_off_streak')|int(0)\n
+          \  >= states('input_number.piscina_sal_baixo_off_debounce')|int(3) }}"
       - service: input_boolean.turn_off
         target:
           entity_id: input_boolean.piscina_sal_baixo
@@ -130,16 +78,8 @@
           entity_id: input_number.piscina_sal_baixo_off_streak
         data:
           value: 0
-
-
-# ----------------------------------------------------------------------
-# Package: piscina_cloro_tpo.yaml
-# Descrição: Cloro TPO por Cobertura
-# Automações: 2
-# ----------------------------------------------------------------------
-
 - id: piscina_cloro_tpo_seconds
-  alias: 🏊🏻 Piscina - Cloração TPO por Cobertura (segundos)
+  alias: "\U0001F3CA\U0001F3FB Piscina - Cloração TPO por Cobertura (segundos)"
   trigger:
   - platform: time_pattern
     seconds: /30
@@ -150,8 +90,8 @@
       }}'
     pct_fechada: '{{ states(''input_number.piscina_pct_cobertura_fechada'') | float(30)
       }}'
-    pct: "{{ pct_fechada if is_state('input_boolean.piscina_cobertura_fechada','on')\n\
-      \   else pct_aberta }}"
+    pct: "{{ pct_fechada if is_state('input_boolean.piscina_cobertura_fechada','on')\n
+      \  else pct_aberta }}"
     on_s: '{{ (pct/100 * janela_s) | int }}'
     ciclo_s: '{{ (now().timestamp() | int) % janela_s }}'
   condition:
@@ -184,9 +124,8 @@
         target:
           entity_id: switch.piscina_cloro_permitir_producao
   mode: single
-
 - id: piscina_cloro_tpo_failsafe
-  alias: 🏊🏻 Piscina - Cloração TPO (failsafe OFF)
+  alias: "\U0001F3CA\U0001F3FB Piscina - Cloração TPO (failsafe OFF)"
   trigger:
   - platform: state
     entity_id: switch.bomba_piscina_switch_0
@@ -210,14 +149,6 @@
         target:
           entity_id: switch.piscina_cloro_permitir_producao
   mode: restart
-
-
-# ----------------------------------------------------------------------
-# Package: piscina_cobertura.yaml
-# Descrição: Estado da Cobertura (LLM Vision)
-# Automações: 2
-# ----------------------------------------------------------------------
-
 - id: piscina_llmvision_cobertura
   alias: Piscina — Estado da cobertura (LLM Vision)
   mode: restart
@@ -257,7 +188,6 @@
       max_tokens: 1
       target_width: 960
       include_filename: false
-
 - id: piscina_cobertura_quando_bomba_para
   alias: Piscina — Verificar cobertura ao parar da bomba
   mode: restart
@@ -303,17 +233,7 @@
       sequence:
       - service: telegram_bot.send_message
         data:
-          message: '🚨 A cobertura da piscina está ABERTA!
-
-            '
-
-
-# ----------------------------------------------------------------------
-# Package: piscina_ph.yaml
-# Descrição: pH (OCR via LLM Vision)
-# Automações: 3
-# ----------------------------------------------------------------------
-
+          message: "\U0001F6A8 A cobertura da piscina está ABERTA!\n"
 - id: piscina_ph_ocr
   alias: Piscina — pH (bomba ON; hora a hora)
   mode: restart
@@ -346,8 +266,8 @@
       temperature: 0
     response_variable: resp_ph_now
   - choose:
-    - conditions: "{{ (states('input_number.ph_piscina_raw')|float(-1)) >= 6\n   and\
-        \ (states('input_number.ph_piscina_raw')|float(-1)) <= 9 }}\n"
+    - conditions: "{{ (states('input_number.ph_piscina_raw')|float(-1)) >= 6\n   and
+        (states('input_number.ph_piscina_raw')|float(-1)) <= 9 }}\n"
       sequence:
       - service: input_number.set_value
         target:
@@ -380,15 +300,14 @@
           temperature: 0
         response_variable: resp_ph_loop
       - choose:
-        - conditions: "{{ (states('input_number.ph_piscina_raw')|float(-1)) >= 6\n\
-            \   and (states('input_number.ph_piscina_raw')|float(-1)) <= 9 }}\n"
+        - conditions: "{{ (states('input_number.ph_piscina_raw')|float(-1)) >= 6\n
+            \  and (states('input_number.ph_piscina_raw')|float(-1)) <= 9 }}\n"
           sequence:
           - service: input_number.set_value
             target:
               entity_id: input_number.ph_piscina
             data:
               value: '{{ states(''input_number.ph_piscina_raw'')|float }}'
-
 - id: piscina_ph_backup_on_change
   alias: Piscina — pH (guardar backups ao mudar)
   mode: queued
@@ -422,7 +341,6 @@
           entity_id: input_text.ph_piscina_raw_backup
         data:
           value: '{{ r }}'
-
 - id: piscina_ph_restore_on_start
   alias: Piscina — pH (restaurar no arranque)
   mode: single
@@ -465,176 +383,157 @@
           entity_id: input_number.ph_piscina_raw
         data:
           value: '{{ ph_raw_backup|float }}'
-
-# ======================================================================
-# 🏊 PISCINA - GERAL (12 automações)
-# ======================================================================
-
-# ======================================================================
-# 🏊 PISCINA
-# ======================================================================
-# Ficheiro: piscina_geral.yaml
-# Automações: 12
-# Última atualização: 2026-01-13
-# Migrado automaticamente - Fase 2
-# ======================================================================
-
-
 - id: bomba_piscina_noite
-  alias: 🏊🏻 Bomba Piscina Noite
-  description: >
-    Liga a bomba da piscina à noite para compensar filtragem insuficiente
-    durante o dia (prioridade solar). Ajusta duração por estação.
-    Só liga se faltar mais de 1 hora de filtragem.
-  
+  alias: "\U0001F3CA\U0001F3FB Bomba Piscina Noite"
+  description: 'Liga a bomba da piscina à noite para compensar filtragem insuficiente
+    durante o dia (prioridade solar). Ajusta duração por estação. Só liga se faltar
+    mais de 1 hora de filtragem.
+
+    '
   trigger:
-    - trigger: time
-      at: "00:00:00"
-      id: meia_noite
-    - trigger: time
-      at: input_datetime.horario_piscina_noite
-      id: horario_dinamico
-
+  - trigger: time
+    at: 00:00:00
+    id: meia_noite
+  - trigger: time
+    at: input_datetime.horario_piscina_noite
+    id: horario_dinamico
   variables:
-    # Centralizar todas as variáveis no início
-    filtragem_ontem: >
-      {{ state_attr('sensor.filtragem_piscina_historico_s', 'today-1') | int(0) }}
-    filtragem_hoje: >
-      {{ states('sensor.filtragem_piscina_historico_s') | int(0) }}
-    threshold_verao: >
-      {{ states('input_number.pool_pump_duration_lower_threshold') | int(240) }}
-    threshold_inverno: >
-      {{ states('input_number.pool_pump_duration_inverno') | int(120) }}
-    cobertura_nuvens: >
-      {{ states('sensor.media_de_cobertura_de_nuvens_10_00_18_00') | float(100) }}
-    e_verao_primavera: >
-      {{ states('sensor.season') in ['summer', 'spring'] }}
-    threshold_ativo: >
-      {{ threshold_verao if e_verao_primavera else threshold_inverno }}
-    threshold_segundos: >
-      {{ threshold_ativo * 60 }}
-    tempo_compensar: >
-      {{ [threshold_segundos - filtragem_ontem, 0] | max }}
-    ultima_execucao: >
-      {{ state_attr('automation.bomba_piscina_noite', 'last_triggered') }}
-    ja_correu_hoje: >
-      {{ ultima_execucao is not none and ultima_execucao.date() == now().date() }}
+    filtragem_ontem: '{{ state_attr(''sensor.filtragem_piscina_historico_s'', ''today-1'')
+      | int(0) }}
 
+      '
+    filtragem_hoje: '{{ states(''sensor.filtragem_piscina_historico_s'') | int(0)
+      }}
+
+      '
+    threshold_verao: '{{ states(''input_number.pool_pump_duration_lower_threshold'')
+      | int(240) }}
+
+      '
+    threshold_inverno: '{{ states(''input_number.pool_pump_duration_inverno'') | int(120)
+      }}
+
+      '
+    cobertura_nuvens: '{{ states(''sensor.media_de_cobertura_de_nuvens_10_00_18_00'')
+      | float(100) }}
+
+      '
+    e_verao_primavera: '{{ states(''sensor.season'') in [''summer'', ''spring''] }}
+
+      '
+    threshold_ativo: '{{ threshold_verao if e_verao_primavera else threshold_inverno
+      }}
+
+      '
+    threshold_segundos: '{{ threshold_ativo * 60 }}
+
+      '
+    tempo_compensar: '{{ [threshold_segundos - filtragem_ontem, 0] | max }}
+
+      '
+    ultima_execucao: '{{ state_attr(''automation.bomba_piscina_noite'', ''last_triggered'')
+      }}
+
+      '
+    ja_correu_hoje: '{{ ultima_execucao is not none and ultima_execucao.date() ==
+      now().date() }}
+
+      '
   conditions:
-    # Condição 1: Não repetir no mesmo dia
-    - alias: "Ainda não correu hoje"
-      condition: template
-      value_template: "{{ not ja_correu_hoje }}"
-    
-    # Condição 2: Falta mais de 1 hora de filtragem
-    - alias: "Falta mais de 1 hora de filtragem"
-      condition: template
-      value_template: "{{ tempo_compensar > 3600 }}"
-    
-    # Condição 3: Confirmar que foi dia problemático
-    - alias: "Dia nublado OU filtragem hoje muito baixa"
-      condition: or
-      conditions:
-        - condition: template
-          value_template: "{{ cobertura_nuvens > 35 }}"
-        - condition: template
-          value_template: "{{ filtragem_hoje <= 3600 }}"
-
+  - alias: Ainda não correu hoje
+    condition: template
+    value_template: '{{ not ja_correu_hoje }}'
+  - alias: Falta mais de 1 hora de filtragem
+    condition: template
+    value_template: '{{ tempo_compensar > 3600 }}'
+  - alias: Dia nublado OU filtragem hoje muito baixa
+    condition: or
+    conditions:
+    - condition: template
+      value_template: '{{ cobertura_nuvens > 35 }}'
+    - condition: template
+      value_template: '{{ filtragem_hoje <= 3600 }}'
   action:
-    # Log inicial para debugging
-    - alias: "Registar início da filtragem noturna"
-      action: system_log.write
-      data:
-        message: >
-          Bomba Piscina Noite iniciada:
-          Trigger={{ trigger.id }},
-          Filtragem ontem={{ (filtragem_ontem / 3600) | round(2) }}h,
-          Threshold={{ threshold_ativo }}min ({{ 'verão/primavera' if e_verao_primavera else 'outono/inverno' }}),
-          Tempo a compensar={{ (tempo_compensar / 60) | round(0) }}min,
-          Nuvens={{ cobertura_nuvens }}%
-        level: info
-        logger: automations.piscina
-    
-    # Notificação opcional
-    - alias: "Notificar início"
-      action: persistent_notification.create
-      data:
-        title: "🏊 Bomba Piscina Noite"
-        message: >
-          A iniciar filtragem noturna.
-          Duração prevista: {{ (tempo_compensar / 60) | round(0) }} minutos.
-          Motivo: Filtragem ontem ({{ (filtragem_ontem / 3600) | round(1) }}h) < mínimo ({{ threshold_ativo / 60 }}h)
-        notification_id: bomba_piscina_noite
+  - alias: Registar início da filtragem noturna
+    action: system_log.write
+    data:
+      message: 'Bomba Piscina Noite iniciada: Trigger={{ trigger.id }}, Filtragem
+        ontem={{ (filtragem_ontem / 3600) | round(2) }}h, Threshold={{ threshold_ativo
+        }}min ({{ ''verão/primavera'' if e_verao_primavera else ''outono/inverno''
+        }}), Tempo a compensar={{ (tempo_compensar / 60) | round(0) }}min, Nuvens={{
+        cobertura_nuvens }}%
 
-    # Ligar bomba com retry robusto
-    - alias: "Ligar bomba com retry"
-      repeat:
-        while:
-          - condition: state
-            entity_id: switch.bomba_piscina_switch_0
-            state: "off"
-          - condition: template
-            value_template: "{{ repeat.index <= 20 }}"
-        sequence:
-          - action: switch.turn_on
-            target:
-              entity_id: switch.bomba_piscina_switch_0
-          - delay:
-              seconds: 10
-          - if:
-              - condition: state
-                entity_id: switch.bomba_piscina_switch_0
-                state: "off"
-            then:
-              - action: system_log.write
-                data:
-                  message: "Bomba Piscina: Tentativa {{ repeat.index }} falhou, a tentar novamente..."
-                  level: warning
-                  logger: automations.piscina
+        '
+      level: info
+      logger: automations.piscina
+  - alias: Notificar início
+    action: persistent_notification.create
+    data:
+      title: "\U0001F3CA Bomba Piscina Noite"
+      message: 'A iniciar filtragem noturna. Duração prevista: {{ (tempo_compensar
+        / 60) | round(0) }} minutos. Motivo: Filtragem ontem ({{ (filtragem_ontem
+        / 3600) | round(1) }}h) < mínimo ({{ threshold_ativo / 60 }}h)
 
-    # Verificar se conseguiu ligar
-    - alias: "Verificar se bomba ligou"
-      if:
+        '
+      notification_id: bomba_piscina_noite
+  - alias: Ligar bomba com retry
+    repeat:
+      while:
+      - condition: state
+        entity_id: switch.bomba_piscina_switch_0
+        state: 'off'
+      - condition: template
+        value_template: '{{ repeat.index <= 20 }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.bomba_piscina_switch_0
+      - delay:
+          seconds: 10
+      - if:
         - condition: state
           entity_id: switch.bomba_piscina_switch_0
-          state: "off"
-      then:
-        - action: persistent_notification.create
+          state: 'off'
+        then:
+        - action: system_log.write
           data:
-            title: "⚠️ Bomba Piscina - ERRO"
-            message: "Não foi possível ligar a bomba após 10 tentativas!"
-            notification_id: bomba_piscina_erro
-        - stop: "Bomba não ligou após 10 tentativas"
-
-    # Aguardar tempo necessário
-    - alias: "Aguardar tempo de filtragem"
-      delay:
-        seconds: "{{ tempo_compensar }}"
-
-    # Desligar bomba
-    - alias: "Desligar bomba"
-      action: switch.turn_off
-      target:
-        entity_id: switch.bomba_piscina_switch_0
-
-    # Log final
-    - alias: "Registar fim da filtragem noturna"
-      action: system_log.write
+            message: 'Bomba Piscina: Tentativa {{ repeat.index }} falhou, a tentar
+              novamente...'
+            level: warning
+            logger: automations.piscina
+  - alias: Verificar se bomba ligou
+    if:
+    - condition: state
+      entity_id: switch.bomba_piscina_switch_0
+      state: 'off'
+    then:
+    - action: persistent_notification.create
       data:
-        message: "Bomba Piscina Noite concluída: {{ (tempo_compensar / 60) | round(0) }} minutos de filtragem"
-        level: info
-        logger: automations.piscina
-
-    # Limpar notificação
-    - action: persistent_notification.dismiss
-      data:
-        notification_id: bomba_piscina_noite
-
+        title: ⚠️ Bomba Piscina - ERRO
+        message: Não foi possível ligar a bomba após 10 tentativas!
+        notification_id: bomba_piscina_erro
+    - stop: Bomba não ligou após 10 tentativas
+  - alias: Aguardar tempo de filtragem
+    delay:
+      seconds: '{{ tempo_compensar }}'
+  - alias: Desligar bomba
+    action: switch.turn_off
+    target:
+      entity_id: switch.bomba_piscina_switch_0
+  - alias: Registar fim da filtragem noturna
+    action: system_log.write
+    data:
+      message: 'Bomba Piscina Noite concluída: {{ (tempo_compensar / 60) | round(0)
+        }} minutos de filtragem'
+      level: info
+      logger: automations.piscina
+  - action: persistent_notification.dismiss
+    data:
+      notification_id: bomba_piscina_noite
   mode: single
   max_exceeded: warning
-
 - id: ligardesligar_automacao_piscina
-  alias: 🏊🏻 Ligar/Desligar Automação Piscina
+  alias: "\U0001F3CA\U0001F3FB Ligar/Desligar Automação Piscina"
   description: Liga e desliga a Wallbox
   trigger:
   - minutes: /5
@@ -712,7 +611,7 @@
   mode: single
   max_exceeded: warning
 - id: variable_piscina_timer
-  alias: 🏊🏻 Variable Piscina timer
+  alias: "\U0001F3CA\U0001F3FB Variable Piscina timer"
   description: Automação do Home Assistant.
   trigger:
   - at: 00:00:00
@@ -722,27 +621,37 @@
   - metadata: {}
     data:
       replace_attributes: false
-      value: '{{ states(''sensor.duracao_filtragem_piscina_diario_em_segundos'') | int(0) }}'
+      value: '{{ states(''sensor.duracao_filtragem_piscina_diario_em_segundos'') |
+        int(0) }}'
       attributes:
         today-1: '{{ states(''sensor.filtragem_piscina_historico_s'') | int(0) }}'
-        today-2: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-1'') | int(0) }}'
-        today-3: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-2'') | int(0) }}'
-        today-4: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-3'') | int(0) }}'
-        today-5: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-4'') | int(0) }}'
-        today-6: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-5'') | int(0) }}'
-        today-7: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-6'') | int(0) }}'
-        today-8: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-7'') | int(0) }}'
-        today-9: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-8'') | int(0) }}'
-        today-10: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-9'') | int(0) }}'
+        today-2: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-1'')
+          | int(0) }}'
+        today-3: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-2'')
+          | int(0) }}'
+        today-4: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-3'')
+          | int(0) }}'
+        today-5: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-4'')
+          | int(0) }}'
+        today-6: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-5'')
+          | int(0) }}'
+        today-7: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-6'')
+          | int(0) }}'
+        today-8: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-7'')
+          | int(0) }}'
+        today-9: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-8'')
+          | int(0) }}'
+        today-10: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-9'')
+          | int(0) }}'
     target:
       entity_id: sensor.filtragem_piscina_historico_s
     action: variable.update_sensor
   mode: single
   max_exceeded: warning
-
 - id: automacao_bomba_piscina
-  alias: 🏊🏻 Automação Bomba Piscina
-  description: Automação ativada por valor numérico de ['sensor.potencia_emonpi_import_export_media_5_minutos'], valor numérico de ['sensor.potencia_emonpi_import_export_media_5_minutos'].
+  alias: "\U0001F3CA\U0001F3FB Automação Bomba Piscina"
+  description: Automação ativada por valor numérico de ['sensor.potencia_emonpi_import_export_media_5_minutos'],
+    valor numérico de ['sensor.potencia_emonpi_import_export_media_5_minutos'].
   trigger:
   - platform: numeric_state
     entity_id:
@@ -788,7 +697,7 @@
   mode: single
   max_exceeded: warning
 - id: bomba_piscina_botao
-  alias: 🏊🏻 Bomba piscina botão
+  alias: "\U0001F3CA\U0001F3FB Bomba piscina botão"
   description: Automação do Home Assistant.
   trigger:
   - device_id: e6ae30b2d7855ae2d2b83b4497674bfb
@@ -814,7 +723,20 @@
   action:
   - data:
       agent_id: conversation.chatgpt
-      text: Para esta tarefa, es um consultor de piscinas e queres garantir sempre que a piscina está limpa e pronta a usar. Mostra quando vai ser iniciada a filtragem da noite. Calcula se a horas de filtragem são suficientes, usa os dados que são enviados.  Podes e deves usar um tom humorista. Podes usar emojis. Responde em portugues de portugal sem gerúndio.  \_ Current time {{now()}} tempo que a bomba da piscina esteve a trabalhar em {{states('sensor.duracao_filtragem_piscina_diario')}} tempo que o aquecimento da piscina esteve a funcionar {{states('sensor.duracao_aquecimento_piscina_diario')}}  temperatura da piscina {{states('sensor.bomba_piscina_temperature')}}  tempo que falta filtrar a piscina {{states('sensor.pool_pump_remaining_time')}}  horario que vai ser iniciada a filtragem de noite {{states('sensor.bomba_piscina_noite_horario')}}   Quantidade maxima em minutos que a piscina filtra por dia, tranforma em horas {{states('input_number.pool_pump_duration_lower_threshold')}}  Energia gasta pela bomba da piscina {{states('sensor.energia_emonpi_piscina_use_total_kwhd')}} A bomba da piscina tem uma potencia de 1,5 CV. o volume da piscina é de 66 metros cubicos.  calcula se a tempo de filtragem foi suficiente.
+      text: Para esta tarefa, es um consultor de piscinas e queres garantir sempre
+        que a piscina está limpa e pronta a usar. Mostra quando vai ser iniciada a
+        filtragem da noite. Calcula se a horas de filtragem são suficientes, usa os
+        dados que são enviados.  Podes e deves usar um tom humorista. Podes usar emojis.
+        Responde em portugues de portugal sem gerúndio.  \_ Current time {{now()}}
+        tempo que a bomba da piscina esteve a trabalhar em {{states('sensor.duracao_filtragem_piscina_diario')}}
+        tempo que o aquecimento da piscina esteve a funcionar {{states('sensor.duracao_aquecimento_piscina_diario')}}  temperatura
+        da piscina {{states('sensor.bomba_piscina_temperature')}}  tempo que falta
+        filtrar a piscina {{states('sensor.pool_pump_remaining_time')}}  horario que
+        vai ser iniciada a filtragem de noite {{states('sensor.bomba_piscina_noite_horario')}}   Quantidade
+        maxima em minutos que a piscina filtra por dia, tranforma em horas {{states('input_number.pool_pump_duration_lower_threshold')}}  Energia
+        gasta pela bomba da piscina {{states('sensor.energia_emonpi_piscina_use_total_kwhd')}}
+        A bomba da piscina tem uma potencia de 1,5 CV. o volume da piscina é de 66
+        metros cubicos.  calcula se a tempo de filtragem foi suficiente.
       language: pt-pt
     enabled: true
     response_variable: agent
@@ -827,7 +749,7 @@
   mode: single
   max_exceeded: warning
 - id: piscina_-_arranque_com_excedente_fv
-  alias: 🏊🏻 Piscina - Arranque com excedente FV
+  alias: "\U0001F3CA\U0001F3FB Piscina - Arranque com excedente FV"
   description: Automação do Home Assistant.
   triggers:
   - entity_id: binary_sensor.piscina_excedente_fv_bomba
@@ -874,7 +796,7 @@
   mode: single
   max_exceeded: warning
 - id: piscina_-_watchdog_arranque_fv_2min_v2
-  alias: 🏊🏻 Piscina - Watchdog arranque FV (*/2min) v2
+  alias: "\U0001F3CA\U0001F3FB Piscina - Watchdog arranque FV (*/2min) v2"
   description: Automação do Home Assistant.
   triggers:
   - minutes: /2
@@ -921,7 +843,7 @@
   mode: single
   max_exceeded: warning
 - id: actualizar_horario_bomba_piscina_noite
-  alias: 🏊🏻 Actualizar Horario Bomba Piscina Noite
+  alias: "\U0001F3CA\U0001F3FB Actualizar Horario Bomba Piscina Noite"
   description: Automação do Home Assistant.
   triggers:
   - trigger: time_pattern
@@ -938,28 +860,17 @@
   - action: input_datetime.set_datetime
     metadata: {}
     data:
-      datetime: "{% set horario = states('sensor.bomba_piscina_noite_horario') %}\n{% if horario not in ['unknown', 'unavailable', '', None] %}\n  {{ as_datetime(horario).astimezone().isoformat() }}\n{% else %}\n  {{ (now() + timedelta(days=1)).replace(hour=2, minute=0, second=0, microsecond=0).isoformat() }}\n{% endif %}"
+      datetime: "{% set horario = states('sensor.bomba_piscina_noite_horario') %}\n{%
+        if horario not in ['unknown', 'unavailable', '', None] %}\n  {{ as_datetime(horario).astimezone().isoformat()
+        }}\n{% else %}\n  {{ (now() + timedelta(days=1)).replace(hour=2, minute=0,
+        second=0, microsecond=0).isoformat() }}\n{% endif %}"
     target:
       entity_id: input_datetime.horario_piscina_noite
   mode: single
   max_exceeded: warning
-
-# ======================================================================
-# 🏊 PISCINA - FILTRAGEM (1 automação)
-# ======================================================================
-
-# ======================================================================
-# 🏊 PISCINA
-# ======================================================================
-# Ficheiro: piscina_filtragem.yaml
-# Automações: 1
-# Última atualização: 2025-11-11
-# Migrado automaticamente - Fase 2
-# ======================================================================
-
-
 - id: atualizar_temperatura_piscina_filtrado_com_bomba_d
-  alias: 🏊🏻Atualizar Temperatura Piscina filtrado com bomba de aquecimento ligada
+  alias: "\U0001F3CA\U0001F3FBAtualizar Temperatura Piscina filtrado com bomba de
+    aquecimento ligada"
   description: Automação do Home Assistant.
   trigger:
   - platform: time_pattern
@@ -973,7 +884,8 @@
       minutes: 10
       seconds: 0
   - condition: template
-    value_template: '{{ states(''sensor.bomba_piscina_temperature'') not in [''unavailable'', ''unknown''] }}'
+    value_template: '{{ states(''sensor.bomba_piscina_temperature'') not in [''unavailable'',
+      ''unknown''] }}'
   action:
   - target:
       entity_id:
@@ -983,21 +895,6 @@
     action: input_number.set_value
   mode: single
   max_exceeded: warning
-
-# ======================================================================
-# 🏊 PISCINA - COBERTURA (1 automação - automations/)
-# ======================================================================
-
-# ======================================================================
-# 🏊 PISCINA
-# ======================================================================
-# Ficheiro: piscina_cobertura.yaml
-# Automações: 1
-# Última atualização: 2025-11-11
-# Migrado automaticamente - Fase 2
-# ======================================================================
-
-
 - id: piscina_estado_da_cobertura_llm_vision
   alias: Piscina — Estado da cobertura (LLM Vision)
   description: Automação do Home Assistant.
@@ -1017,7 +914,12 @@
     data:
       provider: 01K5S60RJSW6MFMB543KEDHE23
       model: gpt-4o-mini
-      message: 'Observa esta imagem da piscina e responde apenas com um valor booleano para atualizar o sensor alvo: "true" se a COBERTURA estiver FECHADA. "false" se a COBERTURA estiver ABERTA. Regras: - Considera fechada apenas se a cobertura visivelmente cobre totalmente a lâmina de água. - Se a cobertura estiver a meio (a mover) ou houver dúvida, responde "false" (trata como aberta). - Não expliques. Não uses outras palavras.'
+      message: 'Observa esta imagem da piscina e responde apenas com um valor booleano
+        para atualizar o sensor alvo: "true" se a COBERTURA estiver FECHADA. "false"
+        se a COBERTURA estiver ABERTA. Regras: - Considera fechada apenas se a cobertura
+        visivelmente cobre totalmente a lâmina de água. - Se a cobertura estiver a
+        meio (a mover) ou houver dúvida, responde "false" (trata como aberta). - Não
+        expliques. Não uses outras palavras.'
       sensor_entity: input_boolean.piscina_cobertura_fechada
       image_entity:
       - camera.eira_piscina_hd_stream
@@ -1026,23 +928,8 @@
       include_filename: false
     action: llmvision.data_analyzer
   mode: restart
-
-# ======================================================================
-# 🚪 PORTÕES E PORTARIAS (8 automações)
-# ======================================================================
-
-# ======================================================================
-# 🚪 PORTÕES E PORTARIAS
-# ======================================================================
-# Ficheiro: portao_principal.yaml
-# Automações: 6
-# Última atualização: 2025-11-11
-# Migrado automaticamente - Fase 2
-# ======================================================================
-
-
 - id: callback_to_open_gate_from_action
-  alias: '[🏡] Callback to open gate from action'
+  alias: "[\U0001F3E1] Callback to open gate from action"
   description: Automação ativada por evento mobile_app_notification_action.
   trigger:
   - platform: event
@@ -1058,8 +945,9 @@
       - cover.gate
   mode: restart
 - id: garage_light_on_when_gate_openscloses
-  alias: '[💡🏡] Garage light on when gate opens/closes'
-  description: Automação ativada por mudança de estado em ['cover.gate'], mudança de estado em ['cover.gate'].
+  alias: "[\U0001F4A1\U0001F3E1] Garage light on when gate opens/closes"
+  description: Automação ativada por mudança de estado em ['cover.gate'], mudança
+    de estado em ['cover.gate'].
   trigger:
   - platform: state
     entity_id:
@@ -1111,8 +999,10 @@
   mode: single
   max_exceeded: warning
 - id: envia_notificacao_para_abrir_o_portao_quando_chega
-  alias: '[📣🏡] Envia notificação para abrir o portão quando chega a casa'
-  description: Automação ativada por valor numérico de ['sensor.home_glima_distance'], valor numérico de ['sensor.home_cmouta_distance'].
+  alias: "[\U0001F4E3\U0001F3E1] Envia notificação para abrir o portão quando chega
+    a casa"
+  description: Automação ativada por valor numérico de ['sensor.home_glima_distance'],
+    valor numérico de ['sensor.home_cmouta_distance'].
   trigger:
   - platform: numeric_state
     entity_id:
@@ -1135,7 +1025,7 @@
       metadata: {}
       data:
         message: Queres abrir o portão de casa?
-        title: 🏡 🔑 Bem-Vindo a casa Guilherme!
+        title: "\U0001F3E1 \U0001F511 Bem-Vindo a casa Guilherme!"
         data:
           tag: open-home-gate
           action:
@@ -1164,7 +1054,7 @@
       metadata: {}
       data:
         message: Queres abrir o portão de casa?
-        title: 🏡 🔑 Bem-Vinda a casa Cristina!
+        title: "\U0001F3E1 \U0001F511 Bem-Vinda a casa Cristina!"
         data:
           tag: open-home-gate
           action:
@@ -1188,7 +1078,8 @@
   max_exceeded: warning
 - id: status_portao
   alias: Status Portão
-  description: Status do portão de casa, para resolver o flapping do sensor e o switch do shelly ter temporizador de 1 segundo.
+  description: Status do portão de casa, para resolver o flapping do sensor e o switch
+    do shelly ter temporizador de 1 segundo.
   trigger:
   - platform: state
     entity_id:
@@ -1213,7 +1104,7 @@
   mode: single
   max_exceeded: warning
 - id: botao_sala_portao
-  alias: 🏡Botão Sala Portão
+  alias: "\U0001F3E1Botão Sala Portão"
   description: Automação do Home Assistant.
   triggers:
   - device_id: e8a6c706997d87b98183e26e7598ae8b
@@ -1235,7 +1126,7 @@
   mode: single
   max_exceeded: warning
 - id: botao_shelly_abrir_portao
-  alias: '[🏡] Botão shelly Abrir Portão'
+  alias: "[\U0001F3E1] Botão shelly Abrir Portão"
   description: Automação do Home Assistant.
   triggers:
   - device_id: f3ec058f8ec36d128a8eaf0dd7286320
@@ -1252,79 +1143,55 @@
       entity_id: switch.portao
   mode: single
   max_exceeded: warning
-# ================================================================
-# PORTÕES - BOTÕES DE CONTROLO
-# ================================================================
-# Automações para controlar o portão através de botões
-# Categoria: Portões e Portarias
-# Última atualização: 2025-11-11
-# ================================================================
-
-# Botão Shelly - Abrir Portão
 - id: portao_botao_shelly_abrir
-  alias: 🚪 Portão - Botão Shelly Abrir
-  description: |
-    Abre o portão principal quando o botão Shelly é pressionado.
+  alias: "\U0001F6AA Portão - Botão Shelly Abrir"
+  description: 'Abre o portão principal quando o botão Shelly é pressionado.
+
     Dispositivos: binary_sensor.botao_shelly_portao → switch.portao_motor
+
+    '
   mode: single
   max_exceeded: warning
   trigger:
-    - platform: state
-      entity_id: binary_sensor.botao_shelly_portao
-      to: 'on'
-      from: 'off'
+  - platform: state
+    entity_id: binary_sensor.botao_shelly_portao
+    to: 'on'
+    from: 'off'
   condition:
-    - condition: time
-      after: '06:00:00'
-      before: '23:00:00'
+  - condition: time
+    after: 06:00:00
+    before: '23:00:00'
   action:
-    - service: cover.open_cover
-      target:
-        entity_id: cover.gate
-    - service: notify.mobile_app
-      data:
-        title: "🚪 Portão"
-        message: "Portão a abrir (Botão Shelly)"
-
-# Botão Sala - Abrir Portão
+  - service: cover.open_cover
+    target:
+      entity_id: cover.gate
+  - service: notify.mobile_app
+    data:
+      title: "\U0001F6AA Portão"
+      message: Portão a abrir (Botão Shelly)
 - id: portao_botao_sala_abrir
-  alias: 🚪 Portão - Botão Sala Abrir
+  alias: "\U0001F6AA Portão - Botão Sala Abrir"
   description: Abre o portão através do botão da sala
   mode: single
   max_exceeded: warning
   trigger:
-    - platform: state
-      entity_id: binary_sensor.botao_sala_portao
-      to: 'on'
+  - platform: state
+    entity_id: binary_sensor.botao_sala_portao
+    to: 'on'
   condition:
-    - condition: time
-      after: '06:00:00'
-      before: '23:00:00'
+  - condition: time
+    after: 06:00:00
+    before: '23:00:00'
   action:
-    - service: cover.open_cover
-      target:
-        entity_id: cover.gate
-    - service: notify.mobile_app
-      data:
-        title: "🚪 Portão"
-        message: "Portão a abrir (Sala)"
-
-# ======================================================================
-# 🌡️ CLIMA (3 automações)
-# ======================================================================
-
-# ======================================================================
-# 🌡️ CLIMA
-# ======================================================================
-# Ficheiro: aquecimento_arrefecimento.yaml
-# Automações: 2
-# Última atualização: 2025-11-11
-# Migrado automaticamente - Fase 2
-# ======================================================================
-
-
+  - service: cover.open_cover
+    target:
+      entity_id: cover.gate
+  - service: notify.mobile_app
+    data:
+      title: "\U0001F6AA Portão"
+      message: Portão a abrir (Sala)
 - id: callback_notification_to_open_garage
-  alias: '[📣📲] Callback notification to open garage'
+  alias: "[\U0001F4E3\U0001F4F2] Callback notification to open garage"
   description: Automação ativada por evento ios.action_fired, evento ios.action_fired.
   trigger:
   - platform: event
@@ -1373,8 +1240,8 @@
     - service: notify.mobile_app_glphone
       metadata: {}
       data:
-        message: O portão está fechado.✅🔒
-        title: 🚗 Ate Logo! 🙂
+        message: "O portão está fechado.✅\U0001F512"
+        title: "\U0001F697 Ate Logo! \U0001F642"
         data:
           tag: open-home-gate
     - delay:
@@ -1401,7 +1268,7 @@
       - service: notify.mobile_app_glphone
         metadata: {}
         data:
-          message: ⚠️O portão não fechou!!!⚠️🔓
+          message: "⚠️O portão não fechou!!!⚠️\U0001F513"
           data:
             push:
               interruption-level: critical
@@ -1423,8 +1290,8 @@
       data:
         data:
           tag: open-home-gate
-        message: O portão está fechado.✅🔒
-        title: 🚗 Ate Logo! 🙂
+        message: "O portão está fechado.✅\U0001F512"
+        title: "\U0001F697 Ate Logo! \U0001F642"
     - delay:
         hours: 0
         minutes: 5
@@ -1451,7 +1318,7 @@
           data:
             push:
               interruption-level: critical
-          message: ⚠️O portão não fechou!!!⚠️🔓
+          message: "⚠️O portão não fechou!!!⚠️\U0001F513"
           title: '------------'
   mode: single
   max_exceeded: warning
@@ -1484,7 +1351,10 @@
             backup_type: yearly
             keep_days: 365
         - variables:
-            name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A, \"\n    ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~ \"%B %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2, 2006 #}\n{# DailyBackup: Monday, January 2, 2006 #}\n"
+            name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A,
+              \"\n    ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~
+              \"%B %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2,
+              2006 #}\n{# DailyBackup: Monday, January 2, 2006 #}\n"
             backup_action:
             - service: backup.create
               data:
@@ -1513,7 +1383,10 @@
             backup_type: monthly
             keep_days: 90
         - variables:
-            name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A, \"\n    ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~ \"%B %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2, 2006 #}\n{# DailyBackup: Monday, January 2, 2006 #}\n"
+            name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A,
+              \"\n    ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~
+              \"%B %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2,
+              2006 #}\n{# DailyBackup: Monday, January 2, 2006 #}\n"
             backup_action:
             - service: backup.create
               data:
@@ -1542,7 +1415,10 @@
             backup_type: weekly
             keep_days: 30
         - variables:
-            name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A, \"\n    ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~ \"%B %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2, 2006 #}\n{# DailyBackup: Monday, January 2, 2006 #}\n"
+            name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A,
+              \"\n    ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~
+              \"%B %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2,
+              2006 #}\n{# DailyBackup: Monday, January 2, 2006 #}\n"
             backup_action:
             - service: backup.create
               data:
@@ -1569,7 +1445,10 @@
             backup_type: daily
             keep_days: 7
         - variables:
-            name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A, \"\n    ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~ \"%B %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2, 2006 #}\n{# DailyBackup: Monday, January 2, 2006 #}\n"
+            name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A,
+              \"\n    ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~
+              \"%B %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2,
+              2006 #}\n{# DailyBackup: Monday, January 2, 2006 #}\n"
             backup_action:
             - service: backup.create
               data:
@@ -1593,7 +1472,10 @@
         backup_type: hourly
         keep_days: 1
     - variables:
-        name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A, \"\n    ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~ \"%B %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2, 2006 #}\n{# DailyBackup: Monday, January 2, 2006 #}\n"
+        name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A, \"\n
+          \   ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~ \"%B
+          %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2, 2006 #}\n{#
+          DailyBackup: Monday, January 2, 2006 #}\n"
         backup_action:
         - service: backup.create
           data:
@@ -1620,50 +1502,8 @@
     enable_yearly: false
     use_action_hourly: true
   max_exceeded: warning
-# ======================================================================
-# 🌡️ CLIMA
-# ======================================================================
-# Ficheiro: ventilacao.yaml
-# Automações: 1
-# Última atualização: 2025-11-11
-# Migrado automaticamente - Fase 2
-# ======================================================================
-
-
-- id: ventilador_cave_solar
-  alias: Ventilador Cave Solar
-  description: Automação do Home Assistant.
-  use_blueprint:
-    path: PVExcessControl/pv_excess_control.yaml
-    input:
-      automation_id: automation.ventilador_cave
-      appliance_priority: 2
-      pv_power: sensor.emoncms_solar
-      export_power: sensor.emoncms_export_power_positive
-      load_power: sensor.emoncms_use
-      appliance_switch: switch.ventilador_cave_switch
-      appliance_switch_interval: 2
-      actual_power: sensor.ventilador_cave_switch_0_power
-      defined_current: 0.2
-  mode: single
-  max_exceeded: warning
-
-# ======================================================================
-# 💡 ILUMINAÇÃO (1 automação)
-# ======================================================================
-
-# ======================================================================
-# 💡 ILUMINAÇÃO
-# ======================================================================
-# Ficheiro: luzes_exterior.yaml
-# Automações: 1
-# Última atualização: 2025-11-11
-# Migrado automaticamente - Fase 2
-# ======================================================================
-
-
 - id: luz_exterior_auto
-  alias: 💡Luz Exterior Auto
+  alias: "\U0001F4A1Luz Exterior Auto"
   description: Automação do Home Assistant.
   use_blueprint:
     path: Blackshome/sensor-light.yaml
@@ -1677,24 +1517,10 @@
       night_lights_conditions: []
   mode: single
   max_exceeded: warning
-
-# ======================================================================
-# ☀️ ENERGIA SOLAR (1 automação)
-# ======================================================================
-
-# ======================================================================
-# ☀️ ENERGIA SOLAR
-# ======================================================================
-# Ficheiro: paineis_solares.yaml
-# Automações: 1
-# Última atualização: 2025-11-11
-# Migrado automaticamente - Fase 2
-# ======================================================================
-
-
 - id: pool_pump_solar_optimizationsdsdsd
   alias: Pool Pump Solar Optimizationsdsdsd
-  description: Gerencia a bomba da piscina priorizando energia solar e garantindo filtragem diária
+  description: Gerencia a bomba da piscina priorizando energia solar e garantindo
+    filtragem diária
   trigger:
   - minutes: /15
     trigger: time_pattern
@@ -1706,7 +1532,8 @@
     trigger: time
   condition:
   - condition: template
-    value_template: '{{ not is_state(''binary_sensor.pool_pump_malfunction'', ''on'') }}
+    value_template: '{{ not is_state(''binary_sensor.pool_pump_malfunction'', ''on'')
+      }}
 
       '
   action:
@@ -1719,7 +1546,8 @@
         after: 08:00:00
         before: '22:00:00'
       - condition: template
-        value_template: '{{ states(''sensor.solar_power'')|float > min_solar_power }}
+        value_template: '{{ states(''sensor.solar_power'')|float > min_solar_power
+          }}
 
           '
       sequence:
@@ -1736,7 +1564,9 @@
         after: '22:00:00'
         before: 08:00:00
       - condition: template
-        value_template: '{% set daily_runtime = states(''sensor.pool_pump_daily_runtime'')|float %} {% set tomorrow_forecast = states(''sensor.tomorrow_solar_forecast'')|float %} {{ daily_runtime < min_daily_hours and tomorrow_forecast < 0.7 }}
+        value_template: '{% set daily_runtime = states(''sensor.pool_pump_daily_runtime'')|float
+          %} {% set tomorrow_forecast = states(''sensor.tomorrow_solar_forecast'')|float
+          %} {{ daily_runtime < min_daily_hours and tomorrow_forecast < 0.7 }}
 
           '
       sequence:
@@ -1757,21 +1587,6 @@
     min_solar_power: 1000
     pump_power: 800
   mode: restart
-
-# ======================================================================
-# ⚙️ SISTEMA (31 automações)
-# ======================================================================
-
-# ======================================================================
-# ⚙️ SISTEMA
-# ======================================================================
-# Ficheiro: monitorizacao.yaml
-# Automações: 1
-# Última atualização: 2025-11-11
-# Migrado automaticamente - Fase 2
-# ======================================================================
-
-
 - id: speedtests
   alias: SpeedTests
   description: Automação ativada por horário (06:30:00), horário (18:30:00).
@@ -1791,18 +1606,8 @@
       entity_id: sensor.speedtest_download
   mode: single
   max_exceeded: warning
-# ======================================================================
-# ⚙️ SISTEMA
-# ======================================================================
-# Ficheiro: outros.yaml
-# Automações: 30
-# Última atualização: 2025-11-11
-# Migrado automaticamente - Fase 2
-# ======================================================================
-
-
 - id: notify_when_garage_door_was_left_open_for_too_long
-  alias: '[📣🏡] Notify when garage door was left open for too long'
+  alias: "[\U0001F4E3\U0001F3E1] Notify when garage door was left open for too long"
   description: Automação do Home Assistant.
   trigger:
   - entity_id:
@@ -1828,14 +1633,14 @@
         metadata: {}
         data:
           message: Está aberto a mais de 5 minutos. Fechar?
-          title: 🚙🚨 Portão de casa aberto!🚨
+          title: "\U0001F699\U0001F6A8 Portão de casa aberto!\U0001F6A8"
       - service: telegram_bot.send_photo
         metadata: {}
         data:
           authentication: digest
           file: /config/www/camera_snapshots/mysnap_portao.jpg
       - data:
-          title: 🚙 Portão de casa aberto!
+          title: "\U0001F699 Portão de casa aberto!"
           message: Está aberto a mais de 5 minutos. Fechar?
         action: notify.notify
         enabled: true
@@ -1858,21 +1663,21 @@
     metadata: {}
     data:
       message: O portão está fechado.
-      title: 🚙✅Portão de casa fechado.✅
+      title: "\U0001F699✅Portão de casa fechado.✅"
   - service: telegram_bot.send_photo
     metadata: {}
     data:
       authentication: digest
       file: /config/www/camera_snapshots/mysnap_portao.jpg
   - data:
-      title: 🚙✅Portão de casa fechado.✅
+      title: "\U0001F699✅Portão de casa fechado.✅"
       message: O portão está fechado.
     action: notify.notify
     enabled: true
   mode: single
   max_exceeded: warning
 - id: cascata
-  alias: 🏊🏻 Cascata
+  alias: "\U0001F3CA\U0001F3FB Cascata"
   description: Inicia ou para a Cascata na piscina com 1 click no botão shelly
   trigger:
   - device_id: 50eb20ac53472c3cc1b1da733634d1c8
@@ -1890,7 +1695,7 @@
   mode: single
   max_exceeded: warning
 - id: hidrojet
-  alias: 🏊🏻 Hidrojet
+  alias: "\U0001F3CA\U0001F3FB Hidrojet"
   description: Automação do Home Assistant.
   trigger:
   - platform: device
@@ -1953,7 +1758,7 @@
         entity_id: automation.bomba_piscina_dia
   mode: restart
 - id: change_charge_completion_time
-  alias: 🔋🚗⚡Change charge completion time
+  alias: "\U0001F50B\U0001F697⚡Change charge completion time"
   description: Automação ativada por mudança de estado em ['sensor.ev_smart_charging_charging'].
   trigger:
   - platform: state
@@ -1995,149 +1800,8 @@
         entity_id: switch.ev_smart_charging_continuous_charging_preferred
   mode: single
   max_exceeded: warning
-- id: disable_i4_climate_if_not_home
-  alias: 🔋🚗⚡Disable i4 Climate if not home
-  description: Automação ativada por mudança de estado em ['switch.i4_edrive40_climate'].
-  trigger:
-  - platform: state
-    entity_id:
-    - switch.i4_edrive40_climate
-    from: 'off'
-    to: 'on'
-  condition:
-  - condition: device
-    device_id: 73087b9e1e3a0ceb0fc6d4024bd9ffe1
-    domain: device_tracker
-    entity_id: 17973f520f671f084cc637505d0c747d
-    type: is_not_home
-  - condition: time
-    after: 07:40:00
-    before: 08:00:00
-    weekday:
-    - mon
-    - tue
-    - wed
-    - thu
-    - fri
-  action:
-  - service: switch.turn_off
-    metadata: {}
-    data: {}
-    target:
-      entity_id: switch.i4_edrive40_climate
-  mode: single
-  max_exceeded: warning
-- id: help_for_charging_at_home
-  alias: 🔋🚗⚡Help for charging at home
-  description: Automação do Home Assistant.
-  trigger:
-  - entity_id:
-    - sensor.ev_smart_charging_charging
-    to: 'on'
-    trigger: state
-    for:
-      hours: 0
-      minutes: 5
-      seconds: 0
-    id: i4
-  - entity_id:
-    - sensor.ev_smart_charging_charging_2
-    to: 'on'
-    trigger: state
-    for:
-      hours: 0
-      minutes: 5
-      seconds: 0
-    id: x1
-  condition:
-  - condition:
-    - condition:
-      - condition: state
-        entity_id: device_tracker.i4_edrive40
-        state: home
-      - condition: state
-        entity_id: binary_sensor.i4_edrive40_connection_status
-        state: 'on'
-      - condition: numeric_state
-        entity_id: sensor.wallbox_charging_power
-        below: 2
-      - condition: trigger
-        id:
-        - i4
-    - condition:
-      - condition: state
-        entity_id: device_tracker.x1_xdrive25e
-        state: Home
-      - condition: state
-        entity_id: binary_sensor.x1_xdrive25e_connection_status
-        state: 'on'
-      - condition: numeric_state
-        entity_id: sensor.wallbox_charging_power
-        below: 2
-      - condition: trigger
-        id:
-        - x1
-  action:
-  - if:
-    - condition: trigger
-      id:
-      - i4
-    then:
-    - device_id: 73087b9e1e3a0ceb0fc6d4024bd9ffe1
-      domain: lock
-      entity_id: 4cad819e94c6b23041776358896b68a0
-      type: unlock
-    - delay:
-        hours: 0
-        minutes: 1
-        seconds: 0
-        milliseconds: 0
-    - device_id: 73087b9e1e3a0ceb0fc6d4024bd9ffe1
-      domain: lock
-      entity_id: 4cad819e94c6b23041776358896b68a0
-      type: lock
-    - delay:
-        hours: 0
-        minutes: 1
-        seconds: 0
-        milliseconds: 0
-    - service: button.press
-      metadata: {}
-      data: {}
-      target:
-        entity_id: button.ev_smart_charging_manually_start_charging
-  - if:
-    - condition: trigger
-      id:
-      - x1
-    then:
-    - device_id: d2b7376b62ba76e3cebf5d2479e76922
-      domain: lock
-      entity_id: 2574b858b69f29422a37da5a8a6db887
-      type: unlock
-    - delay:
-        hours: 0
-        minutes: 1
-        seconds: 0
-        milliseconds: 0
-    - device_id: d2b7376b62ba76e3cebf5d2479e76922
-      domain: lock
-      entity_id: 2574b858b69f29422a37da5a8a6db887
-      type: lock
-    - delay:
-        hours: 0
-        minutes: 1
-        seconds: 0
-        milliseconds: 0
-    - service: button.press
-      metadata: {}
-      data: {}
-      target:
-        entity_id: button.ev_smart_charging_manually_start_charging
-  mode: single
-  max_exceeded: warning
 - id: sala_baixar_estores_sunset
-  alias: '🛋️ Sala: Baixar Estores Sunset'
+  alias: "\U0001F6CB️ Sala: Baixar Estores Sunset"
   description: Baixar os estores quando o sol se põe
   trigger:
   - platform: sun
@@ -2191,7 +1855,7 @@
   mode: single
   max_exceeded: warning
 - id: sala_subir_estores_manha
-  alias: '🛋️ Sala: Subir estores manhã'
+  alias: "\U0001F6CB️ Sala: Subir estores manhã"
   description: Subir os estores quando as 07:45
   trigger:
   - at: 07:45:00
@@ -2206,7 +1870,7 @@
   mode: single
   max_exceeded: warning
 - id: luz_corredor_auto
-  alias: 💡Luz Corredor auto
+  alias: "\U0001F4A1Luz Corredor auto"
   description: Automação do Home Assistant.
   use_blueprint:
     path: Blackshome/sensor-light.yaml
@@ -2240,25 +1904,8 @@
       entity_id: sensor.coopernico_injection
   mode: single
   max_exceeded: warning
-- id: solcast_update
-  alias: Solcast update
-  description: Automação do Home Assistant.
-  trigger:
-  - platform: template
-    value_template: "{% set nr = as_datetime(state_attr('sun.sun','next_rising')) | as_local %} {% set ns = as_datetime(state_attr('sun.sun','next_setting')) | as_local %} {% set api_request_limit = 10 %} {% if nr > ns %}\n  {% set nr = nr - timedelta(hours = 24) %} \n{% endif %} {% set hours_difference = (ns - nr) %} {% set interval_hours = hours_difference / api_request_limit %} {% set ns = namespace(match = false) %} {% for i in range(api_request_limit) %}\n  {% set start_time = nr + (i * interval_hours) %}\n  {% if ((start_time - timedelta(seconds=30)) <= now()) and (now() <= (start_time + timedelta(seconds=30))) %}\n    {% set ns.match = true %}\n  {% endif %}\n{% endfor %} {{ ns.match }}"
-  condition:
-  - condition: sun
-    before: sunset
-    after: sunrise
-  action:
-  - delay:
-      seconds: '{{ range(30, 360)|random|int }}'
-  - service: solcast_solar.update_forecasts
-    data: {}
-  mode: single
-  max_exceeded: warning
 - id: luz_escadas_superior_auto
-  alias: 💡Luz Escadas Superior Auto
+  alias: "\U0001F4A1Luz Escadas Superior Auto"
   description: Automação do Home Assistant.
   use_blueprint:
     path: Blackshome/sensor-light.yaml
@@ -2274,7 +1921,7 @@
   mode: single
   max_exceeded: warning
 - id: ups_-_notification
-  alias: 🔋UPS - Notification
+  alias: "\U0001F50BUPS - Notification"
   description: Automação do Home Assistant.
   trigger:
   - entity_id:
@@ -2322,8 +1969,8 @@
       sequence:
       - service: notify.mobile_app_glphone
         data:
-          message: A UPS está em modo de bateria!!! 🔋
-          title: 🚨Energia
+          message: "A UPS está em modo de bateria!!! \U0001F50B"
+          title: "\U0001F6A8Energia"
           data:
             push:
               interruption-level: time-sensitive
@@ -2337,7 +1984,7 @@
       sequence:
       - service: notify.mobile_app_glphone
         data:
-          message: A UPS já está online.🔋⚡
+          message: "A UPS já está online.\U0001F50B⚡"
           title: ✅Energia
     - conditions:
       - condition: trigger
@@ -2418,7 +2065,8 @@
   max_exceeded: warning
 - id: mqtt_publish
   alias: MQTT  Publish
-  description: Automação ativada por mudança de estado em ['sensor.bmw_x1_charging_w_2'], mudança de estado em ['sensor.bmw_i4_charging_w'].
+  description: Automação ativada por mudança de estado em ['sensor.bmw_x1_charging_w_2'],
+    mudança de estado em ['sensor.bmw_i4_charging_w'].
   trigger:
   - platform: state
     entity_id:
@@ -2441,7 +2089,8 @@
         evaluate_payload: false
         qos: '2'
         topic: homeassistant/sensor/ev/bmwx1_charging_w
-        payload: '"{{ states(''sensor.bmw_x1_charging_w_2'') | float(0) | round(0) }}"'
+        payload: '"{{ states(''sensor.bmw_x1_charging_w_2'') | float(0) | round(0)
+          }}"'
   - if:
     - condition: trigger
       id:
@@ -2486,7 +2135,23 @@
     response_variable: daily_forecast
   - data:
       agent_id: conversation.chatgpt
-      text: '"Para esta tarefa, es um consultor meteorológico e es responsavel por garantir a qualidade do ar no interior da casa. Please provide your thoughts on our indoor air quality as it relates to the weather outside and our current heating / cooling system settings.  Podes e deves usar um tom humorista. Podes usar emojis. Responde em portugues de portugal sem gerúndio.  \_ Current time {{now()}} Current thermostat setting {{states(''select.hpsu_can_target_room_1_temperature'')}} Current Home temperature {{states(''sensor.emoncms_home_temperature'')}} °C Current Home average temperature is {{states(''sensor.casa_temperatura_media'')}} °C Current Home average humidity is {{states(''sensor.casa_humidade_media_relativa'')}} % Exterior Weather Data Temperature is {{ states(''sensor.bthome_sensor_6a2b_temperature'') }} °C Exterior Feels like temperature is {{ states(''sensor.home_temperatura_aparente'') }} °C Exterior Weather Data Humidity is {{ states(''sensor.bthome_sensor_6a2b_humidity'') }} % Current Rain Intensity {{ states(''sensor.home_precipitacao'') }} mm/h Forecasted Conditions for Today {{states(''sensor.home_condicao_dia_0'')}} Forecasted High Tempterature for Today {{states(''sensor.home_temperatura_max_realfeel_dia_0'')}} °C Forecasted Low Temperature for Today {{states(''sensor.home_temperatura_min_realfeel_dia_0'')}} °C'
+      text: '"Para esta tarefa, es um consultor meteorológico e es responsavel por
+        garantir a qualidade do ar no interior da casa. Please provide your thoughts
+        on our indoor air quality as it relates to the weather outside and our current
+        heating / cooling system settings.  Podes e deves usar um tom humorista. Podes
+        usar emojis. Responde em portugues de portugal sem gerúndio.  \_ Current time
+        {{now()}} Current thermostat setting {{states(''select.hpsu_can_target_room_1_temperature'')}}
+        Current Home temperature {{states(''sensor.emoncms_home_temperature'')}} °C
+        Current Home average temperature is {{states(''sensor.casa_temperatura_media'')}}
+        °C Current Home average humidity is {{states(''sensor.casa_humidade_media_relativa'')}}
+        % Exterior Weather Data Temperature is {{ states(''sensor.bthome_sensor_6a2b_temperature'')
+        }} °C Exterior Feels like temperature is {{ states(''sensor.home_temperatura_aparente'')
+        }} °C Exterior Weather Data Humidity is {{ states(''sensor.bthome_sensor_6a2b_humidity'')
+        }} % Current Rain Intensity {{ states(''sensor.home_precipitacao'') }} mm/h
+        Forecasted Conditions for Today {{states(''sensor.home_condicao_dia_0'')}}
+        Forecasted High Tempterature for Today {{states(''sensor.home_temperatura_max_realfeel_dia_0'')}}
+        °C Forecasted Low Temperature for Today {{states(''sensor.home_temperatura_min_realfeel_dia_0'')}}
+        °C'
       language: pt-pt
     enabled: true
     response_variable: agent
@@ -2499,7 +2164,7 @@
   mode: single
   max_exceeded: warning
 - id: candeeiros_ligardesligar
-  alias: 💡Candeeiros Ligar/Desligar
+  alias: "\U0001F4A1Candeeiros Ligar/Desligar"
   description: Automação do Home Assistant.
   trigger:
   - device_id: e8a6c706997d87b98183e26e7598ae8b
@@ -2567,7 +2232,8 @@
   max_exceeded: warning
 - id: heat_pump_error
   alias: ♨️ Heat Pump Error
-  description: Automação ativada por mudança de estado em ['sensor.hpsu_can_error_code'], mudança de estado em ['sensor.hpsu_can_error_code'].
+  description: Automação ativada por mudança de estado em ['sensor.hpsu_can_error_code'],
+    mudança de estado em ['sensor.hpsu_can_error_code'].
   trigger:
   - platform: state
     entity_id:
@@ -2604,7 +2270,8 @@
       - service: telegram_bot.send_message
         metadata: {}
         data:
-          message: 'A bomba de calor está em {{states(''sensor.hpsu_can_error_code'') }}
+          message: 'A bomba de calor está em {{states(''sensor.hpsu_can_error_code'')
+            }}
 
             '
           title: ✅ OK Bomba de Calor ✅
@@ -2632,7 +2299,7 @@
   mode: single
   max_exceeded: warning
 - id: botao_sala_estore1
-  alias: '🪟Botão Sala Estore1 '
+  alias: "\U0001FA9FBotão Sala Estore1 "
   description: Automação do Home Assistant.
   trigger:
   - device_id: e8a6c706997d87b98183e26e7598ae8b
@@ -2650,7 +2317,7 @@
   mode: single
   max_exceeded: warning
 - id: atualizar_ph_filtrado_com_bomba_ligada
-  alias: 🏊🏻Atualizar pH filtrado com bomba ligada
+  alias: "\U0001F3CA\U0001F3FBAtualizar pH filtrado com bomba ligada"
   description: Automação do Home Assistant.
   trigger:
   - entity_id:
@@ -2673,7 +2340,8 @@
       minutes: 10
       seconds: 0
   - condition: template
-    value_template: '{{ states(''sensor.ph_corrigido'') not in [''unavailable'', ''unknown''] }}'
+    value_template: '{{ states(''sensor.ph_corrigido'') not in [''unavailable'', ''unknown'']
+      }}'
   action:
   - target:
       entity_id:
@@ -2702,8 +2370,10 @@
     response_variable: forecast
     action: weather.get_forecasts
   - variables:
-      clouds: "{{ forecast['weather.forecast']['forecast'][:8]\n   | map(attribute='cloud_coverage')\n   | reject('none')\n   | list }}\n"
-      avg_clouds: "{% if clouds | length > 0 %}\n  {{ (clouds | map('float') | sum / clouds | length)\n     | round(1) }}\n{% else %}\n  0\n{% endif %}\n"
+      clouds: "{{ forecast['weather.forecast']['forecast'][:8]\n   | map(attribute='cloud_coverage')\n
+        \  | reject('none')\n   | list }}\n"
+      avg_clouds: "{% if clouds | length > 0 %}\n  {{ (clouds | map('float') | sum
+        / clouds | length)\n     | round(1) }}\n{% else %}\n  0\n{% endif %}\n"
   - data:
       entity_id: input_number.average_cloud_cover
       value: '{{ avg_clouds }}'
@@ -2733,14 +2403,19 @@
         entries: '{{ forecast[''weather.forecast''][''forecast''] }}
 
           '
-        start: '{{ utcnow().replace(hour=10, minute=0, second=0, microsecond=0).isoformat(sep=''T'') }}
+        start: '{{ utcnow().replace(hour=10, minute=0, second=0, microsecond=0).isoformat(sep=''T'')
+          }}
 
           '
-        end: '{{ utcnow().replace(hour=18, minute=0, second=0, microsecond=0).isoformat(sep=''T'') }}
+        end: '{{ utcnow().replace(hour=18, minute=0, second=0, microsecond=0).isoformat(sep=''T'')
+          }}
 
           '
-        clouds: "{{ entries\n   | selectattr('datetime', '>=', start)\n   | selectattr('datetime', '<=', end)\n   | map(attribute='cloud_coverage')\n   | reject('none')\n   | list }}\n"
-        avg_clouds: "{% if clouds | length > 0 %}\n  {{ (clouds | map('float') | sum / clouds | length) | round(1) }}\n{% else %}\n  0\n{% endif %}\n"
+        clouds: "{{ entries\n   | selectattr('datetime', '>=', start)\n   | selectattr('datetime',
+          '<=', end)\n   | map(attribute='cloud_coverage')\n   | reject('none')\n
+          \  | list }}\n"
+        avg_clouds: "{% if clouds | length > 0 %}\n  {{ (clouds | map('float') | sum
+          / clouds | length) | round(1) }}\n{% else %}\n  0\n{% endif %}\n"
     - data:
         entity_id: input_number.average_cloud_cover_piscina
         value: '{{ avg_clouds }}'
@@ -2756,14 +2431,19 @@
         entries: '{{ forecast[''weather.forecast''][''forecast''] }}
 
           '
-        start: '{{ (utcnow() + timedelta(days=1)).replace(hour=10, minute=0, second=0, microsecond=0).isoformat(sep=''T'') }}
+        start: '{{ (utcnow() + timedelta(days=1)).replace(hour=10, minute=0, second=0,
+          microsecond=0).isoformat(sep=''T'') }}
 
           '
-        end: '{{ (utcnow() + timedelta(days=1)).replace(hour=18, minute=0, second=0, microsecond=0).isoformat(sep=''T'') }}
+        end: '{{ (utcnow() + timedelta(days=1)).replace(hour=18, minute=0, second=0,
+          microsecond=0).isoformat(sep=''T'') }}
 
           '
-        clouds: "{{ entries\n   | selectattr('datetime', '>=', start)\n   | selectattr('datetime', '<=', end)\n   | map(attribute='cloud_coverage')\n   | reject('none')\n   | list }}\n"
-        avg_clouds: "{% if clouds | length > 0 %}\n  {{ (clouds | map('float') | sum / clouds | length) | round(1) }}\n{% else %}\n  0\n{% endif %}\n"
+        clouds: "{{ entries\n   | selectattr('datetime', '>=', start)\n   | selectattr('datetime',
+          '<=', end)\n   | map(attribute='cloud_coverage')\n   | reject('none')\n
+          \  | list }}\n"
+        avg_clouds: "{% if clouds | length > 0 %}\n  {{ (clouds | map('float') | sum
+          / clouds | length) | round(1) }}\n{% else %}\n  0\n{% endif %}\n"
     - data:
         entity_id: input_number.average_cloud_cover_piscina
         value: '{{ avg_clouds }}'
@@ -2771,7 +2451,7 @@
   mode: single
   max_exceeded: warning
 - id: bomba_peristaltica
-  alias: 🏊🏻Bomba Peristaltica
+  alias: "\U0001F3CA\U0001F3FBBomba Peristaltica"
   description: Automação ativada por mudança de estado em ['switch.bomba_piscina_switch_0'].
   trigger:
   - platform: state
@@ -2812,7 +2492,7 @@
   mode: single
   max_exceeded: warning
 - id: abrir_estore_1
-  alias: 🪟Abrir Estore 1
+  alias: "\U0001FA9FAbrir Estore 1"
   description: Automação do Home Assistant.
   trigger:
   - device_id: d686deeba13232cfa6ab008fa8c80dc0
@@ -2843,7 +2523,7 @@
   mode: single
   max_exceeded: warning
 - id: fechar_estore_1
-  alias: 🪟Fechar Estore 1
+  alias: "\U0001FA9FFechar Estore 1"
   description: Automação do Home Assistant.
   trigger:
   - device_id: d686deeba13232cfa6ab008fa8c80dc0
