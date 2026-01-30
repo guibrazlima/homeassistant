@@ -11,108 +11,19 @@
 # 📅 Última atualização: 2025-11-11
 #############################################
 
+# ⚠️ NOTA: As automações deste package foram movidas para automations.yaml
+#    para permitir edição via GUI. Este ficheiro contém apenas:
+#    - input_boolean, input_number, template sensors, etc.
+#    Ver: automations.yaml (procurar por '# Package: piscina_cobertura.yaml')
+#
 template:
-  - binary_sensor:
-      - name: piscina_cobertura_fechada_ai
-        unique_id: piscina_cobertura_fechada_ai
-        state: "{{ is_state('input_boolean.piscina_cobertura_fechada', 'on') }}"
-        attributes:
-          description: "Estado da cobertura inferido por LLM Vision a partir de camera.piscina; true=fechada, false=aberta."
-          source_entity: "input_boolean.piscina_cobertura_fechada"
-          analyzer: "llmvision.data_analyzer (modelo: gpt-4o-mini)"
-          last_updated_by: "automação piscina_llmvision_cobertura"
-
-automation:
-  - id: piscina_llmvision_cobertura
-    alias: Piscina — Estado da cobertura (LLM Vision)
-    mode: restart
-    trigger:
-      - platform: state
-        entity_id: switch.bomba_piscina_switch_0
-        to: "on"
-        for: "00:05:00"
-      - platform: time_pattern
-        minutes: "/30"        # verifica a cada 30 minutos
-    condition:
-      - condition: state
-        entity_id: switch.bomba_piscina_switch_0
-        state: "on"
-    action:
-      - service: llmvision.data_analyzer
-        continue_on_error: true  # ✨ NOVO: Continuar se houver erro
-        response_variable: llmresp
-        data:
-          # IMPORTANTE: seleciona no UI o teu provider; aqui é só exemplo.
-          provider: 01K5S60RJSW6MFMB543KEDHE23
-          model: gpt-4o-mini
-          message: >
-            TAREFA: Classificar a imagem de uma piscina com cobertura branca.
-
-            CRITÉRIO:
-            - "true" se a cobertura cobre toda a água (ripas/linhas e reflexos contam como fechada).
-            - "false" se se vê água descoberta ~10% ou uma abertura evidente.
-
-            CONTEXTO:
-            - Estado anterior: {{ 'true' if is_state('input_boolean.piscina_cobertura_fechada','on') else 'false' }}
-            - Se a imagem for ambígua, responde com o Estado anterior.
-
-            RESPOSTA:
-            Responde EXACTAMENTE: true ou false (minúsculas), sem mais texto.
-          sensor_entity: input_boolean.piscina_cobertura_fechada
-          image_entity:
-            - camera.eira_piscina_hd_stream
-          max_tokens: 1          # recomendado baixo p/ custo/latência
-          target_width: 960     # downscale eficiente
-          include_filename: false
-
-  - id: piscina_cobertura_quando_bomba_para
-    alias: Piscina — Verificar cobertura ao parar da bomba
-    mode: restart
-    trigger:
-      - platform: state
-        entity_id: switch.bomba_piscina_switch_0
-        to: "off"
-        for: "00:15:00"       # dispara se a bomba permanecer parada por 15 minutos
-      - platform: sun
-        event: sunset
-    action:
-      # 1) Analisar a imagem via LLM Vision
-      - service: llmvision.data_analyzer
-        continue_on_error: true  # ✨ NOVO: Continuar se houver erro
-        #timeout: 30              # ✨ NOVO: Timeout de 30 segundos
-        response_variable: llmresp
-        data:
-          # IMPORTANTE: seleciona no UI o teu provider; aqui é só exemplo.
-          provider: 01K5S60RJSW6MFMB543KEDHE23
-          model: gpt-4o-mini
-          message: >
-            TAREFA: Classificar a imagem de uma piscina com cobertura branca.
-
-            CRITÉRIO:
-            - "true" se a cobertura cobre toda a água (ripas/linhas e reflexos contam como fechada).
-            - "false" se se vê água descoberta ~10% ou uma abertura evidente.
-            
-            CONTEXTO:
-            - Estado anterior: {{ 'true' if is_state('input_boolean.piscina_cobertura_fechada','on') else 'false' }}
-            - Se a imagem for ambígua, responde com o Estado anterior.
-            
-            RESPOSTA:
-            Responde EXACTAMENTE: true ou false (minúsculas), sem mais texto.
-          sensor_entity: input_boolean.piscina_cobertura_fechada
-          image_entity:
-            - camera.eira_piscina_hd_stream
-          max_tokens: 1          # recomendado baixo p/ custo/latência
-          target_width: 960     # downscale eficiente
-          include_filename: false
-
-      # 2) Se o LLM Vision indicar que a cobertura está aberta (response_text == "false"), envia alerta
-      - choose:
-          - conditions:
-              - condition: template
-                value_template: >
-                  {{ llmresp.response_text | default('') | lower() | trim == 'false' }}
-            sequence:
-              - service: telegram_bot.send_message
-                data:
-                  message: >
-                    🚨 A cobertura da piscina está ABERTA!
+- binary_sensor:
+  - name: piscina_cobertura_fechada_ai
+    unique_id: piscina_cobertura_fechada_ai
+    state: '{{ is_state(''input_boolean.piscina_cobertura_fechada'', ''on'') }}'
+    attributes:
+      description: Estado da cobertura inferido por LLM Vision a partir de camera.piscina;
+        true=fechada, false=aberta.
+      source_entity: input_boolean.piscina_cobertura_fechada
+      analyzer: 'llmvision.data_analyzer (modelo: gpt-4o-mini)'
+      last_updated_by: automação piscina_llmvision_cobertura

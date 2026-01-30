@@ -8,17 +8,18 @@
 # - Debounce para desligar só após N 'off' seguidos
 #############################################
 
+# ⚠️ NOTA: As automações deste package foram movidas para automations.yaml
+#    para permitir edição via GUI. Este ficheiro contém apenas:
+#    - input_boolean, input_number, template sensors, etc.
+#    Ver: automations.yaml (procurar por '# Package: piscina_clorador_sal.yaml')
+#
 input_boolean:
   piscina_sal_baixo_raw:
     name: Piscina — Sal baixo (RAW via LLM Vision)
     icon: mdi:water-alert
-    # Sem 'initial' para restaurar último estado após restart
-
   piscina_sal_baixo:
     name: Piscina — Sal baixo (debounced)
     icon: mdi:water-alert-outline
-    # Sem 'initial' para restaurar último estado após restart
-
 input_number:
   piscina_sal_baixo_off_streak:
     name: Piscina — Sal baixo OFF streak
@@ -26,119 +27,20 @@ input_number:
     max: 100
     step: 1
     mode: box
-    # Sem 'initial' para restaurar último valor após restart
-
   piscina_sal_baixo_off_debounce:
     name: Piscina — Debounce OFF (leituras consecutivas)
     min: 1
     max: 20
     step: 1
     mode: slider
-    initial: 3   # podes ajustar: quantas leituras 'off' seguidas para desligar
-
+    initial: 3
 template:
-  - binary_sensor:
-      - name: "Piscina — Sal baixo (via LLM Vision)"
-        unique_id: piscina_sal_baixo_llmvision
-        state: "{{ is_state('input_boolean.piscina_sal_baixo', 'on') }}"
-        device_class: problem
-        attributes:
-          description: >-
-            Indicador final (com debounce) para SAL BAIXO no clorador CTX,
-            obtido por análise de imagem (LLM Vision) do painel. 'on' quando o LED
-            de sal baixo é detetado aceso/intermitente; 'off' caso contrário.
-
-automation:
-  - id: piscina_llmvision_sal_baixo
-    alias: Piscina — Sal baixo (LLM Vision, amostragem+debounce)
-    description: >-
-      Recolhe até 3 amostras rápidas (1.2s) do painel do clorador CTX com LLM Vision.
-      Se alguma amostra der 'on', ativa o estado RAW. Em seguida aplica debounce para
-      só desligar o estado final após N leituras 'off' consecutivas.
-    mode: restart
-    trigger:
-      - platform: time_pattern
-        seconds: "/30"
-      - platform: state
-        entity_id: switch.piscina_cloro_permitir_producao
-        to: "on"
-        for: "00:00:30"
-    condition:
-      - condition: state
-        entity_id: switch.piscina_cloro_permitir_producao
-        state: "on"
-
-    action:
-      - variables:
-          provider_id: 01K5S60RJSW6MFMB543KEDHE23             # Seleciona no UI (ver docs LLM Vision)
-          camera_entity: camera.cave_hd_stream   # <-- ajusta para o ID exato da tua câmara
-
-      # AMOSTRAGEM: até 3 tentativas ou parar cedo se o RAW ficar 'on'
-      - repeat:
-          sequence:
-            - service: llmvision.data_analyzer
-              continue_on_error: true  # ✨ NOVO: Continuar se houver erro
-              data:
-                provider: "{{ provider_id }}"
-                model: gpt-4o-mini
-                sensor_entity: input_boolean.piscina_sal_baixo_raw
-                image_entity:
-                  - "{{ camera_entity }}"
-                target_width: 1280
-                include_filename: false
-                max_tokens: 3
-                message: >-
-                  Observa APENAS o painel frontal do clorador CTX Go Salt.
-                  Foca a luz/LED de SAL BAIXO (canto superior direito do painel).
-                  Se a luz estiver acesa OU a piscar em qualquer intensidade, responde: on
-                  Caso contrário, responde: off
-                  Responde apenas com 'on' ou 'off' — sem mais texto.
-              response_variable: response
-              timeout: 30  # ✨ NOVO: Timeout de 30 segundos
-            - delay: "00:00:01.2"
-          until:
-            - or:
-                - condition: state
-                  entity_id: input_boolean.piscina_sal_baixo_raw
-                  state: "on"
-                - condition: template
-                  value_template: "{{ repeat.index >= 3 }}"
-
-      # DEBOUNCE: consolidar estado final
-      - choose:
-          # Caso positivo em alguma amostra
-          - conditions:
-              - condition: state
-                entity_id: input_boolean.piscina_sal_baixo_raw
-                state: "on"
-            sequence:
-              - service: input_boolean.turn_on
-                target:
-                  entity_id: input_boolean.piscina_sal_baixo
-              - service: input_number.set_value
-                target:
-                  entity_id: input_number.piscina_sal_baixo_off_streak
-                data:
-                  value: 0
-
-          # Caso nenhuma amostra tenha captado o LED (todas 'off')
-          - conditions:
-              - condition: state
-                entity_id: input_boolean.piscina_sal_baixo_raw
-                state: "off"
-            sequence:
-              - service: input_number.increment
-                target:
-                  entity_id: input_number.piscina_sal_baixo_off_streak
-              - condition: template
-                value_template: >-
-                  {{ states('input_number.piscina_sal_baixo_off_streak')|int(0)
-                     >= states('input_number.piscina_sal_baixo_off_debounce')|int(3) }}
-              - service: input_boolean.turn_off
-                target:
-                  entity_id: input_boolean.piscina_sal_baixo
-              - service: input_number.set_value
-                target:
-                  entity_id: input_number.piscina_sal_baixo_off_streak
-                data:
-                  value: 0
+- binary_sensor:
+  - name: Piscina — Sal baixo (via LLM Vision)
+    unique_id: piscina_sal_baixo_llmvision
+    state: '{{ is_state(''input_boolean.piscina_sal_baixo'', ''on'') }}'
+    device_class: problem
+    attributes:
+      description: Indicador final (com debounce) para SAL BAIXO no clorador CTX,
+        obtido por análise de imagem (LLM Vision) do painel. 'on' quando o LED de
+        sal baixo é detetado aceso/intermitente; 'off' caso contrário.

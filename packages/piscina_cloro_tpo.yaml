@@ -10,138 +10,66 @@
 # 📅 Última atualização: 2025-11-11
 #############################################
 
+# ⚠️ NOTA: As automações deste package foram movidas para automations.yaml
+#    para permitir edição via GUI. Este ficheiro contém apenas:
+#    - input_boolean, input_number, template sensors, etc.
+#    Ver: automations.yaml (procurar por '# Package: piscina_cloro_tpo.yaml')
+#
 input_boolean:
   piscina_cloro_tpo_enable:
-    name: "Cloro - TPO ativo"
+    name: Cloro - TPO ativo
     icon: mdi:chart-timeline-variant
-
 input_number:
   piscina_cloro_janela_min:
-    name: "Cloro - Janela TPO (min)"
+    name: Cloro - Janela TPO (min)
     min: 5
     max: 60
     step: 5
     initial: 10
-    unit_of_measurement: "min"
+    unit_of_measurement: min
   piscina_pct_cobertura_aberta:
-    name: "Cloro - % com cobertura ABERTA"
+    name: Cloro - % com cobertura ABERTA
     min: 0
     max: 100
     step: 1
     initial: 100
-    unit_of_measurement: "%"
+    unit_of_measurement: '%'
   piscina_pct_cobertura_fechada:
-    name: "Cloro - % com cobertura FECHADA"
+    name: Cloro - % com cobertura FECHADA
     min: 0
     max: 100
     step: 1
     initial: 30
-    unit_of_measurement: "%"
-
-automation:
-  - id: piscina_cloro_tpo_seconds
-    alias: 🏊🏻 Piscina - Cloração TPO por Cobertura (segundos)
-    trigger:
-      - platform: time_pattern
-        seconds: "/30"
-    variables:
-      janela_min: "{{ states('input_number.piscina_cloro_janela_min') | int(10) }}"
-      janela_s: "{{ janela_min * 60 }}"
-      pct_aberta: "{{ states('input_number.piscina_pct_cobertura_aberta') | float(100) }}"
-      pct_fechada: "{{ states('input_number.piscina_pct_cobertura_fechada') | float(30) }}"
-      pct: >-
-        {{ pct_fechada if is_state('input_boolean.piscina_cobertura_fechada','on')
-           else pct_aberta }}
-      on_s: "{{ (pct/100 * janela_s) | int }}"
-      ciclo_s: "{{ (now().timestamp() | int) % janela_s }}"
-    condition:
-      - condition: state
-        entity_id: input_boolean.piscina_cloro_tpo_enable
-        state: "on"
-      - condition: state
-        entity_id: switch.bomba_piscina_switch_0
-        state: "on"
-    action:
-      - choose:
-          - conditions: "{{ pct >= 99 }}"
-            sequence:
-              - service: switch.turn_on
-                target: { entity_id: switch.piscina_cloro_permitir_producao }
-          - conditions: "{{ pct <= 1 }}"
-            sequence:
-              - service: switch.turn_off
-                target: { entity_id: switch.piscina_cloro_permitir_producao }
-          - conditions: "{{ ciclo_s < on_s }}"
-            sequence:
-              - service: switch.turn_on
-                target: { entity_id: switch.piscina_cloro_permitir_producao }
-          - conditions: []
-            sequence:
-              - service: switch.turn_off
-                target: { entity_id: switch.piscina_cloro_permitir_producao }
-    mode: single
-
-  - id: piscina_cloro_tpo_failsafe
-    alias: 🏊🏻 Piscina - Cloração TPO (failsafe OFF)
-    trigger:
-      - platform: state
-        entity_id: switch.bomba_piscina_switch_0
-      - platform: state
-        entity_id: input_boolean.piscina_cloro_tpo_enable
-      - platform: state
-        entity_id: input_boolean.piscina_cobertura_fechada
-    action:
-      - choose:
-          - conditions:
-              - condition: or
-                conditions:
-                  - condition: state
-                    entity_id: switch.bomba_piscina_switch_0
-                    state: "off"
-                  - condition: state
-                    entity_id: input_boolean.piscina_cloro_tpo_enable
-                    state: "off"
-            sequence:
-              - service: switch.turn_off
-                target: { entity_id: switch.piscina_cloro_permitir_producao }
-    mode: restart
-
-# horas efetivas de produção do clorador por dia, mês e ano no Home Assistant.
-
+    unit_of_measurement: '%'
 template:
-  - binary_sensor:
-      - name: "Piscina - Clorador COMANDO ON"
-        unique_id: piscina_clorador_comando_on
-        # ON se estamos a mandar produzir E a bomba está ligada
-        state: >
-          {{ is_state('switch.piscina_cloro_permitir_producao','on')
-             and is_state('switch.bomba_piscina_switch_0','on') }}
-        device_class: running
-        # pequenos delays para filtrar picos de 1-2 segundos
-        delay_on: "00:00:15"
-        delay_off: "00:00:15"
-
+- binary_sensor:
+  - name: Piscina - Clorador COMANDO ON
+    unique_id: piscina_clorador_comando_on
+    state: "{{ is_state('switch.piscina_cloro_permitir_producao','on')\n   and is_state('switch.bomba_piscina_switch_0','on')\
+      \ }}\n"
+    device_class: running
+    delay_on: 00:00:15
+    delay_off: 00:00:15
 sensor:
-  - platform: history_stats
-    name: "Clorador - Horas hoje"
-    entity_id: binary_sensor.piscina_clorador_comando_on
-    state: "on"
-    type: time
-    start: "{{ now().replace(hour=0, minute=0, second=0, microsecond=0) }}"
-    end: "{{ now() }}"
-
-  - platform: history_stats
-    name: "Clorador - Horas este mês"
-    entity_id: binary_sensor.piscina_clorador_comando_on
-    state: "on"
-    type: time
-    start: "{{ now().replace(day=1, hour=0, minute=0, second=0, microsecond=0) }}"
-    end: "{{ now() }}"
-
-  - platform: history_stats
-    name: "Clorador - Horas este ano"
-    entity_id: binary_sensor.piscina_clorador_comando_on
-    state: "on"
-    type: time
-    start: "{{ now().replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0) }}"
-    end: "{{ now() }}"
+- platform: history_stats
+  name: Clorador - Horas hoje
+  entity_id: binary_sensor.piscina_clorador_comando_on
+  state: 'on'
+  type: time
+  start: '{{ now().replace(hour=0, minute=0, second=0, microsecond=0) }}'
+  end: '{{ now() }}'
+- platform: history_stats
+  name: Clorador - Horas este mês
+  entity_id: binary_sensor.piscina_clorador_comando_on
+  state: 'on'
+  type: time
+  start: '{{ now().replace(day=1, hour=0, minute=0, second=0, microsecond=0) }}'
+  end: '{{ now() }}'
+- platform: history_stats
+  name: Clorador - Horas este ano
+  entity_id: binary_sensor.piscina_clorador_comando_on
+  state: 'on'
+  type: time
+  start: '{{ now().replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    }}'
+  end: '{{ now() }}'

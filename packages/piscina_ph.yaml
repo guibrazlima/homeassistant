@@ -3,6 +3,11 @@
 #############################################
 
 # --- Helpers ---
+# ⚠️ NOTA: As automações deste package foram movidas para automations.yaml
+#    para permitir edição via GUI. Este ficheiro contém apenas:
+#    - input_boolean, input_number, template sensors, etc.
+#    Ver: automations.yaml (procurar por '# Package: piscina_ph.yaml')
+#
 input_number:
   ph_piscina:
     name: pH Piscina
@@ -11,7 +16,7 @@ input_number:
     step: 0.01
     mode: box
     icon: mdi:pool
-    unit_of_measurement: "pH"
+    unit_of_measurement: pH
   ph_piscina_raw:
     name: pH Piscina (raw)
     min: -1
@@ -19,13 +24,7 @@ input_number:
     step: 0.01
     mode: box
     icon: mdi:flask
-    unit_of_measurement: "pH"
-
-#############################################
-# Package: Piscina — Persistência pH (forte)
-#############################################
-
-# Backups persistentes
+    unit_of_measurement: pH
 input_text:
   ph_piscina_backup:
     name: pH — Backup
@@ -35,225 +34,55 @@ input_text:
     name: pH Raw — Backup
     max: 12
     mode: text
-
-#############################################
-# Package: Piscina — pH (sensores min/máx)
-#############################################
-
-# 1) Espelhar o input_number para sensor numérico
 template:
-  - sensor:
-      - name: "Piscina — pH"
-        unique_id: piscina_ph_sensor
-        state: "{{ states('input_number.ph_piscina') | float(0) }}"
-        unit_of_measurement: "pH"
-        state_class: measurement
-        icon: mdi:pool
-
-# 2) Estatísticas — mínimos e máximos (24h e 7 dias)
+- sensor:
+  - name: Piscina — pH
+    unique_id: piscina_ph_sensor
+    state: '{{ states(''input_number.ph_piscina'') | float(0) }}'
+    unit_of_measurement: pH
+    state_class: measurement
+    icon: mdi:pool
 sensor:
-  - platform: statistics
-    name: "pH — Mín 24h"
-    unique_id: ph_piscina_min_24h
-    entity_id: sensor.piscina_ph
-    state_characteristic: value_min
-    max_age:
-      hours: 24
-    sampling_size: 200
-    precision: 2
-
-  - platform: statistics
-    name: "pH — Máx 24h"
-    unique_id: ph_piscina_max_24h
-    entity_id: sensor.piscina_ph
-    state_characteristic: value_max
-    max_age:
-      hours: 24
-    sampling_size: 200
-    precision: 2
-
-  - platform: statistics
-    name: "pH — Mín 7d"
-    unique_id: ph_piscina_min_7d
-    entity_id: sensor.piscina_ph
-    state_characteristic: value_min
-    max_age:
-      days: 7
-    sampling_size: 2000
-    precision: 2
-
-  - platform: statistics
-    name: "pH — Máx 7d"
-    unique_id: ph_piscina_max_7d
-    entity_id: sensor.piscina_ph
-    state_characteristic: value_max
-    max_age:
-      days: 7
-    sampling_size: 2000
-    precision: 2
-
-# Descrições (atributos)
+- platform: statistics
+  name: pH — Mín 24h
+  unique_id: ph_piscina_min_24h
+  entity_id: sensor.piscina_ph
+  state_characteristic: value_min
+  max_age:
+    hours: 24
+  sampling_size: 200
+  precision: 2
+- platform: statistics
+  name: pH — Máx 24h
+  unique_id: ph_piscina_max_24h
+  entity_id: sensor.piscina_ph
+  state_characteristic: value_max
+  max_age:
+    hours: 24
+  sampling_size: 200
+  precision: 2
+- platform: statistics
+  name: pH — Mín 7d
+  unique_id: ph_piscina_min_7d
+  entity_id: sensor.piscina_ph
+  state_characteristic: value_min
+  max_age:
+    days: 7
+  sampling_size: 2000
+  precision: 2
+- platform: statistics
+  name: pH — Máx 7d
+  unique_id: ph_piscina_max_7d
+  entity_id: sensor.piscina_ph
+  state_characteristic: value_max
+  max_age:
+    days: 7
+  sampling_size: 2000
+  precision: 2
 homeassistant:
   customize:
     input_number.ph_piscina:
-      description: "Valor de pH validado (6–9) lido por OCR ao ligar a bomba e de hora a hora."
+      description: Valor de pH validado (6–9) lido por OCR ao ligar a bomba e de hora
+        a hora.
     input_number.ph_piscina_raw:
-      description: "Leitura bruta do pH devolvida pelo LLMVision; -1 quando ilegível."
-
-# --- Automação ---
-automation:
-  - id: piscina_ph_ocr
-    alias: Piscina — pH (bomba ON; hora a hora)
-    mode: restart
-    trigger:
-      - platform: state
-        entity_id: switch.bomba_piscina_switch_0   # <-- ALTERA para a tua entidade
-        to: "on"
-        for: "00:05:00"
-    variables:
-      camera_entity: camera.cave_hd_stream     # <-- ALTERA para a tua câmara
-      provider: 01K5S60RJSW6MFMB543KEDHE23                   # <-- ALTERA se necessário
-      model: gpt-4o-mini
-      ph_prompt: >-
-        TAREFA: Ler o valor de pH no visor da bomba (dígitos 7-seg).
-        REGRAS:
-        - Devolve apenas um número com PONTO e 1 decimal (ex.: 7.3).
-        - Se não vires o ponto mas leres dois dígitos (ex.: 73), interpreta como 7.3.
-        RESPOSTA: apenas o número.
-
-    action:
-      # Leitura imediata
-      - service: llmvision.data_analyzer
-        continue_on_error: true  # ✨ NOVO: Continuar se houver erro
-        data:
-          provider: "{{ provider }}"
-          model: "{{ model }}"
-          message: "{{ ph_prompt }}"
-          sensor_entity: input_number.ph_piscina_raw
-          image_entity: ["{{ camera_entity }}"]
-          max_tokens: 5
-          target_width: 1280
-          include_filename: false
-          temperature: 0
-        response_variable: resp_ph_now
-
-      # Validar (6–9) e atualizar
-      - choose:
-          - conditions: >
-              {{ (states('input_number.ph_piscina_raw')|float(-1)) >= 6
-                 and (states('input_number.ph_piscina_raw')|float(-1)) <= 9 }}
-            sequence:
-              - service: input_number.set_value
-                target: { entity_id: input_number.ph_piscina }
-                data:
-                  value: "{{ states('input_number.ph_piscina_raw')|float }}"
-        default: []
-
-      # Loop hora a hora até a bomba parar
-      - repeat:
-          while:
-            - condition: state
-              entity_id: switch.bomba_piscina_switch_0   # <-- ALTERA
-              state: "on"
-          sequence:
-            - delay: "01:00:00"
-            - condition: state
-              entity_id: switch.bomba_piscina_switch_0  # <-- ALTERA
-              state: "on"
-            - service: llmvision.data_analyzer
-              continue_on_error: true  # ✨ NOVO: Continuar se houver erro
-              timeout: 30              # ✨ NOVO: Timeout de 30 segundos
-              data:
-                provider: "{{ provider }}"
-                model: "{{ model }}"
-                message: "{{ ph_prompt }}"
-                sensor_entity: input_number.ph_piscina_raw
-                image_entity: ["{{ camera_entity }}"]
-                max_tokens: 5
-                target_width: 1280
-                include_filename: false
-                temperature: 0
-              response_variable: resp_ph_loop
-            - choose:
-                - conditions: >
-                    {{ (states('input_number.ph_piscina_raw')|float(-1)) >= 6
-                       and (states('input_number.ph_piscina_raw')|float(-1)) <= 9 }}
-                  sequence:
-                    - service: input_number.set_value
-                      target: { entity_id: input_number.ph_piscina }
-                      data:
-                        value: "{{ states('input_number.ph_piscina_raw')|float }}"
-    # 1) Guardar backup SEMPRE que o valor muda
-  - id: piscina_ph_backup_on_change
-    alias: Piscina — pH (guardar backups ao mudar)
-    mode: queued
-    trigger:
-      - platform: state
-        entity_id:
-          - input_number.ph_piscina
-          - input_number.ph_piscina_raw
-    action:
-      - choose:
-          # Backup do pH validado (ignora zeros/unknown)
-          - conditions: "{{ trigger.entity_id == 'input_number.ph_piscina' }}"
-            sequence:
-              - variables:
-                  v: "{{ states('input_number.ph_piscina') }}"
-              - condition: template
-                value_template: "{{ v not in ['unknown','unavailable','none'] and (v|float(0)) != 0 }}"
-              - action: input_text.set_value
-                target: { entity_id: input_text.ph_piscina_backup }
-                data:
-                  value: "{{ '%.2f'|format(v|float) }}"
-          # Backup do pH RAW (aceita -1 também)
-          - conditions: "{{ trigger.entity_id == 'input_number.ph_piscina_raw' }}"
-            sequence:
-              - variables:
-                  r: "{{ states('input_number.ph_piscina_raw') }}"
-              - condition: template
-                value_template: "{{ r not in ['unknown','unavailable','none'] }}"
-              - action: input_text.set_value
-                target: { entity_id: input_text.ph_piscina_raw_backup }
-                data:
-                  value: "{{ r }}"
-
-  # 2) Restaurar no arranque se os helpers vierem a zero/unknown
-  - id: piscina_ph_restore_on_start
-    alias: Piscina — pH (restaurar no arranque)
-    mode: single
-    trigger:
-      - platform: homeassistant
-        event: start
-    action:
-      # dá tempo ao HA para restaurar estados nativos antes de decidir
-      - delay: "00:00:15"
-
-      # Restaurar pH validado
-      - variables:
-          ph_state: "{{ states('input_number.ph_piscina') }}"
-          ph_backup: "{{ states('input_text.ph_piscina_backup') }}"
-      - choose:
-          - conditions: >
-              {{ ph_state in ['unknown','unavailable','none','0','0.0'] or (ph_state|float(0) == 0) }}
-            sequence:
-              - condition: template
-                value_template: "{{ ph_backup not in ['','unknown','unavailable','none'] }}"
-              - service: input_number.set_value
-                target: { entity_id: input_number.ph_piscina }
-                data:
-                  value: "{{ ph_backup|float }}"
-
-      # Restaurar pH RAW (permite -1)
-      - variables:
-          ph_raw_state: "{{ states('input_number.ph_piscina_raw') }}"
-          ph_raw_backup: "{{ states('input_text.ph_piscina_raw_backup') }}"
-      - choose:
-          - conditions: >
-              {{ ph_raw_state in ['unknown','unavailable','none','0','0.0'] or (ph_raw_state|float(0) == 0) }}
-            sequence:
-              - condition: template
-                value_template: "{{ ph_raw_backup not in ['','unknown','unavailable','none'] }}"
-              - service: input_number.set_value
-                target: { entity_id: input_number.ph_piscina_raw }
-                data:
-                  value: "{{ ph_raw_backup|float }}"
+      description: Leitura bruta do pH devolvida pelo LLMVision; -1 quando ilegível.

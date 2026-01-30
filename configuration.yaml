@@ -28,9 +28,9 @@ default_config:
 
 recorder:
   db_url: !secret mariadb_connection
-  #purge_keep_days: 10
-  #commit_interval: 5
-  auto_purge: false
+  purge_keep_days: 31
+  commit_interval: 5
+  auto_purge: true
 
 # Configuração de logs com rotação automática
 logger:
@@ -76,7 +76,7 @@ tts:
   - platform: google_translate
 
 group: !include groups.yaml
-automation: !include_dir_merge_list automations/
+automation: !include automations.yaml
 script: !include_dir_merge_named scripts/
 # scene: !include scenes.yaml  # Comentado - arquivo vazio removido
 sensor: !include_dir_merge_list sensors/
@@ -125,5 +125,3 @@ timer:
 
 #  cfos_enable_charging:
 #    url: !secret cfos_enable_url
-
-
