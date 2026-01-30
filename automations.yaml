@@ -1457,7 +1457,8 @@
   max_exceeded: warning
 - id: automatic_backups
   alias: Automatic Backups
-  description: Automação ativada por horário (01:00:00).
+  description: Automação ativada por horário (01:00:00). Usa serviço nativo backup.create
+    do Home Assistant.
   trigger:
   - id: daily
     platform: time
@@ -1485,33 +1486,23 @@
         - variables:
             name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A, \"\n    ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~ \"%B %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2, 2006 #}\n{# DailyBackup: Monday, January 2, 2006 #}\n"
             backup_action:
-            - service: auto_backup.backup
+            - service: backup.create
               data:
                 name: '{{ name }}'
-                password: '{{ password }}'
-                keep_days: '{{ keep_days }}'
-                include_folders:
-                - config
         - if:
           - condition: template
             value_template: '{{ not use_action_hourly }}'
           - condition: template
             value_template: '{{ backup_action | length > 0 }}'
           then:
-          - service: auto_backup.backup
+          - service: backup.create
             data:
               name: '{{ name }}'
-              password: '{{ password }}'
-              keep_days: '{{ keep_days }}'
-              include_folders:
-              - config
           else:
           - alias: Creating a full backup (default action)
-            service: auto_backup.backup
+            service: backup.create
             data:
               name: '{{ name }}'
-              password: '{{ password }}'
-              keep_days: '{{ keep_days }}'
       - conditions:
         - condition: template
           value_template: '{{ enable_monthly }}'
@@ -1524,33 +1515,23 @@
         - variables:
             name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A, \"\n    ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~ \"%B %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2, 2006 #}\n{# DailyBackup: Monday, January 2, 2006 #}\n"
             backup_action:
-            - service: auto_backup.backup
+            - service: backup.create
               data:
                 name: '{{ name }}'
-                password: '{{ password }}'
-                keep_days: '{{ keep_days }}'
-                include_folders:
-                - config
         - if:
           - condition: template
             value_template: '{{ not use_action_hourly }}'
           - condition: template
             value_template: '{{ backup_action | length > 0 }}'
           then:
-          - service: auto_backup.backup
+          - service: backup.create
             data:
               name: '{{ name }}'
-              password: '{{ password }}'
-              keep_days: '{{ keep_days }}'
-              include_folders:
-              - config
           else:
           - alias: Creating a full backup (default action)
-            service: auto_backup.backup
+            service: backup.create
             data:
               name: '{{ name }}'
-              password: '{{ password }}'
-              keep_days: '{{ keep_days }}'
       - conditions:
         - condition: template
           value_template: '{{ enable_weekly }}'
@@ -1563,33 +1544,23 @@
         - variables:
             name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A, \"\n    ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~ \"%B %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2, 2006 #}\n{# DailyBackup: Monday, January 2, 2006 #}\n"
             backup_action:
-            - service: auto_backup.backup
+            - service: backup.create
               data:
                 name: '{{ name }}'
-                password: '{{ password }}'
-                keep_days: '{{ keep_days }}'
-                include_folders:
-                - config
         - if:
           - condition: template
             value_template: '{{ not use_action_hourly }}'
           - condition: template
             value_template: '{{ backup_action | length > 0 }}'
           then:
-          - service: auto_backup.backup
+          - service: backup.create
             data:
               name: '{{ name }}'
-              password: '{{ password }}'
-              keep_days: '{{ keep_days }}'
-              include_folders:
-              - config
           else:
           - alias: Creating a full backup (default action)
-            service: auto_backup.backup
+            service: backup.create
             data:
               name: '{{ name }}'
-              password: '{{ password }}'
-              keep_days: '{{ keep_days }}'
       - conditions:
         - condition: template
           value_template: '{{ enable_daily }}'
@@ -1600,33 +1571,23 @@
         - variables:
             name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A, \"\n    ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~ \"%B %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2, 2006 #}\n{# DailyBackup: Monday, January 2, 2006 #}\n"
             backup_action:
-            - service: auto_backup.backup
+            - service: backup.create
               data:
                 name: '{{ name }}'
-                password: '{{ password }}'
-                keep_days: '{{ keep_days }}'
-                include_folders:
-                - config
         - if:
           - condition: template
             value_template: '{{ not use_action_hourly }}'
           - condition: template
             value_template: '{{ backup_action | length > 0 }}'
           then:
-          - service: auto_backup.backup
+          - service: backup.create
             data:
               name: '{{ name }}'
-              password: '{{ password }}'
-              keep_days: '{{ keep_days }}'
-              include_folders:
-              - config
           else:
           - alias: Creating a full backup (default action)
-            service: auto_backup.backup
+            service: backup.create
             data:
               name: '{{ name }}'
-              password: '{{ password }}'
-              keep_days: '{{ keep_days }}'
     else:
     - variables:
         backup_type: hourly
@@ -1634,33 +1595,21 @@
     - variables:
         name: "{{ backup_type | title }}Backup: {{\n  now().strftime(\n    \"%A, \"\n    ~ iif(backup_type == \"hourly\", \"%-I:%M %p, \", \"\")\n    ~ \"%B %-d, %Y\"\n  )\n}}\n{# HourlyBackup: Monday, 3:04 PM, January 2, 2006 #}\n{# DailyBackup: Monday, January 2, 2006 #}\n"
         backup_action:
-        - service: auto_backup.backup
+        - service: backup.create
           data:
             name: '{{ name }}'
-            password: '{{ password }}'
-            keep_days: '{{ keep_days }}'
-            include_folders:
-            - config
     - if:
       - condition: template
         value_template: '{{ backup_action | length > 0 }}'
       then:
-      - service: auto_backup.backup
+      - service: backup.create
         data:
           name: '{{ name }}'
-          password: '{{ password }}'
-          keep_days: '{{ keep_days }}'
-          include_folders:
-          - config
       else:
       - alias: Creating a partial backup (default action)
-        service: auto_backup.backup
+        service: backup.create
         data:
           name: '{{ name }}'
-          password: '{{ password }}'
-          keep_days: '{{ keep_days }}'
-          include_folders:
-          - config
   mode: single
   variables:
     password: ''
