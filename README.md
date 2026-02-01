@@ -3,8 +3,9 @@
 > **Sistema Home Assistant** com automações inteligentes, controlo de energia solar, 
 > gestão de piscina e climatização avançada.
 
-[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2023.1+-blue.svg)](https://www.home-assistant.io/)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.1+-blue.svg)](https://www.home-assistant.io/)
 [![Maintenance](https://img.shields.io/badge/Maintained-Yes-green.svg)](https://github.com/guibrazlima/homeassistant)
+[![Blueprint](https://img.shields.io/badge/Blueprint-Piscina%20Solar%20v2-green.svg)](docs/BLUEPRINT_PISCINA_SOLAR_V2.md)
 
 ---
 
@@ -12,11 +13,11 @@
 
 ### Componentes Principais
 
-- **🤖 Automações:** 68+ automações organizadas em 13 categorias
+- **🤖 Automações:** 70+ automações organizadas em 13 categorias
 - **📦 Packages:** 8 packages modulares (AQS, Piscina, Climatização)
 - **🔌 Integrações:** 24+ integrações personalizadas
-- **☀️ Energia Solar:** Controlo automático de excesso PV
-- **🏊 Piscina:** Gestão completa (cloro, pH, cobertura)
+- **☀️ Energia Solar:** Controlo automático de excesso PV com Solcast
+- **🏊 Piscina:** Gestão completa com Blueprint Solar v2 inteligente
 - **🌡️ Climatização:** Sensores de conforto térmico
 
 ### Estrutura do Projeto
@@ -24,12 +25,16 @@
 ```
 homeassistant/
 ├── automations/           # 13 ficheiros de automações categorizadas
+├── blueprints/            # 🆕 Blueprints personalizados (Piscina Solar v2)
 ├── packages/              # 8 packages modulares
 ├── custom_components/     # Integrações personalizadas
 ├── docs/                  # 📚 Documentação consolidada
 │   ├── historico/         # Histórico de reorganizações
 │   ├── analises/          # Análises técnicas
+│   ├── BLUEPRINT_PISCINA_SOLAR_V2.md  # 🆕 Documentação do Blueprint
 │   └── SECURITY.md        # Guia de segurança
+├── sensors/               # 🆕 Sensores template e estatísticas
+├── templates/             # Sensores template
 ├── scripts/               # Scripts de automação
 └── configuration.yaml     # Configuração principal
 ```
@@ -42,6 +47,7 @@ homeassistant/
 
 | Documento | Descrição |
 |-----------|-----------|
+| [🏊 Blueprint Piscina Solar v2](docs/BLUEPRINT_PISCINA_SOLAR_V2.md) | **🆕** Automação inteligente com Solcast e tarifa bi-horária |
 | [📋 Histórico de Reorganização](docs/historico/REORGANIZACAO.md) | Completo histórico de todas as reorganizações |
 | [📦 Análise de Packages](docs/analises/PACKAGES.md) | Análise técnica detalhada de todos os packages |
 | [🔍 Análise de Erros](docs/analises/ERROS_LOGS.md) | Diagnóstico de erros e soluções |
@@ -100,6 +106,11 @@ homeassistant/
 - Integração com previsões Solcast
 
 ### 🏊 Automação de Piscina
+- **🆕 Blueprint Solar v2:** Controlo inteligente com Solcast e bi-horário
+  - Excedente solar com previsão de produção
+  - Tempo de filtragem dinâmico baseado em temperatura
+  - Modo noturno automático em tarifa vazio (22h-08h)
+  - 4 modos adaptativos: eco, balanced, comfort, max_solar
 - **Clorador de sal:** Controlo automático de produção de cloro
 - **pH:** Monitorização e alertas
 - **Cobertura:** Deteção automática via IA (LLM Vision)
@@ -167,11 +178,12 @@ Ver [SECURITY.md](docs/SECURITY.md) para detalhes completos.
 
 | Categoria | Quantidade | Estado |
 |-----------|------------|--------|
-| **Automações** | 68+ | ✅ 100% válidas |
+| **Automações** | 70+ | ✅ 100% válidas |
+| **Blueprints** | 2 | ✅ Piscina Solar v1 e v2 |
 | **Packages** | 8 | ✅ 100% documentados |
 | **Integrações** | 24+ | ✅ Funcionais |
 | **Sensores** | 100+ | ✅ Monitorizados |
-| **Documentação** | 2800+ linhas | ✅ Consolidada |
+| **Documentação** | 3500+ linhas | ✅ Consolidada |
 
 ### Qualidade do Código
 
@@ -184,6 +196,25 @@ Ver [SECURITY.md](docs/SECURITY.md) para detalhes completos.
 ---
 
 ## 🚀 Melhorias Recentes
+
+### Fevereiro 2026
+
+#### 🏊 Blueprint Piscina Solar v2
+- ✅ **Novo:** Integração Solcast para previsão solar
+- ✅ **Novo:** Tempo de filtragem dinâmico baseado em temperatura
+- ✅ **Novo:** Modo noturno bi-horário (22h-08h tarifa vazio €0.0929/kWh)
+- ✅ **Novo:** 4 modos adaptativos: eco, balanced, comfort, max_solar
+- ✅ **Novo:** Média móvel 7 dias para consumo da casa
+- ✅ **Novo:** Documentação completa com fórmulas matemáticas
+- ✅ Potência bomba atualizada para 1380W (6A × 230V)
+- ✅ device_class adicionado a 50+ sensores EmonCMS
+
+### Janeiro 2026
+
+#### 🔧 Reorganização e Manutenção
+- ✅ Migração de automações modulares para ficheiro único
+- ✅ Backup de packages antigos
+- ✅ Análise de automações redundantes da piscina
 
 ### Novembro 2025
 
@@ -257,6 +288,6 @@ Este projeto está sob licença MIT. Ver `LICENSE` para detalhes.
 
 ---
 
-**Última atualização:** 11 de novembro de 2025  
-**Versão:** 2.0.0  
+**Última atualização:** 1 de fevereiro de 2026  
+**Versão:** 2.1.0  
 **Manutenção:** Ativa ✅

@@ -3,8 +3,9 @@
 <div align="center">
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.1+-blue?style=for-the-badge&logo=home-assistant)
-![Blueprint](https://img.shields.io/badge/Blueprint-v2.0-green?style=for-the-badge)
+![Blueprint](https://img.shields.io/badge/Blueprint-v2.1-green?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
+![Updated](https://img.shields.io/badge/Updated-Feb%202026-orange?style=for-the-badge)
 
 **Automação inteligente para bomba de piscina com excedente solar, previsão Solcast e tarifa bi-horária**
 
@@ -639,6 +640,25 @@ entities:
 ## 📄 Licença
 
 MIT License - Uso livre com atribuição.
+
+---
+
+## 📅 Changelog
+
+### v2.1 - Fevereiro 2026
+- ✅ Potência da bomba atualizada para 1380W (6A × 230V)
+- ✅ device_class adicionado a 50+ sensores EmonCMS
+- ✅ Documentação expandida com fórmulas matemáticas
+
+### v2.0 - Janeiro 2026
+- ✅ Integração Solcast para previsão solar
+- ✅ Tempo de filtragem dinâmico baseado em temperatura
+- ✅ Modo noturno bi-horário (22h-08h tarifa vazio)
+- ✅ 4 modos adaptativos: eco, balanced, comfort, max_solar
+- ✅ Média móvel 7 dias para consumo da casa
+
+### v1.0 - Dezembro 2025
+- ✅ Versão inicial com excedente solar básico
 
 ---
 
