@@ -1,0 +1,473 @@
+# ======================================================================
+# 🏊 PISCINA
+# ======================================================================
+# Ficheiro: piscina_geral.yaml
+# Automações: 12
+# Última atualização: 2026-01-13
+# Migrado automaticamente - Fase 2
+# ======================================================================
+
+
+- id: bomba_piscina_noite
+  alias: 🏊🏻 Bomba Piscina Noite
+  description: >
+    Liga a bomba da piscina à noite para compensar filtragem insuficiente
+    durante o dia (prioridade solar). Ajusta duração por estação.
+    Só liga se faltar mais de 1 hora de filtragem.
+  
+  trigger:
+    - trigger: time
+      at: "00:00:00"
+      id: meia_noite
+    - trigger: time
+      at: input_datetime.horario_piscina_noite
+      id: horario_dinamico
+
+  variables:
+    # Centralizar todas as variáveis no início
+    filtragem_ontem: >
+      {{ state_attr('sensor.filtragem_piscina_historico_s', 'today-1') | int(0) }}
+    filtragem_hoje: >
+      {{ states('sensor.filtragem_piscina_historico_s') | int(0) }}
+    threshold_verao: >
+      {{ states('input_number.pool_pump_duration_lower_threshold') | int(240) }}
+    threshold_inverno: >
+      {{ states('input_number.pool_pump_duration_inverno') | int(120) }}
+    cobertura_nuvens: >
+      {{ states('sensor.media_de_cobertura_de_nuvens_10_00_18_00') | float(100) }}
+    e_verao_primavera: >
+      {{ states('sensor.season') in ['summer', 'spring'] }}
+    threshold_ativo: >
+      {{ threshold_verao if e_verao_primavera else threshold_inverno }}
+    threshold_segundos: >
+      {{ threshold_ativo * 60 }}
+    tempo_compensar: >
+      {{ [threshold_segundos - filtragem_ontem, 0] | max }}
+    ultima_execucao: >
+      {{ state_attr('automation.bomba_piscina_noite', 'last_triggered') }}
+    ja_correu_hoje: >
+      {{ ultima_execucao is not none and ultima_execucao.date() == now().date() }}
+
+  conditions:
+    # Condição 1: Não repetir no mesmo dia
+    - alias: "Ainda não correu hoje"
+      condition: template
+      value_template: "{{ not ja_correu_hoje }}"
+    
+    # Condição 2: Falta mais de 1 hora de filtragem
+    - alias: "Falta mais de 1 hora de filtragem"
+      condition: template
+      value_template: "{{ tempo_compensar > 3600 }}"
+    
+    # Condição 3: Confirmar que foi dia problemático
+    - alias: "Dia nublado OU filtragem hoje muito baixa"
+      condition: or
+      conditions:
+        - condition: template
+          value_template: "{{ cobertura_nuvens > 35 }}"
+        - condition: template
+          value_template: "{{ filtragem_hoje <= 3600 }}"
+
+  action:
+    # Log inicial para debugging
+    - alias: "Registar início da filtragem noturna"
+      action: system_log.write
+      data:
+        message: >
+          Bomba Piscina Noite iniciada:
+          Trigger={{ trigger.id }},
+          Filtragem ontem={{ (filtragem_ontem / 3600) | round(2) }}h,
+          Threshold={{ threshold_ativo }}min ({{ 'verão/primavera' if e_verao_primavera else 'outono/inverno' }}),
+          Tempo a compensar={{ (tempo_compensar / 60) | round(0) }}min,
+          Nuvens={{ cobertura_nuvens }}%
+        level: info
+        logger: automations.piscina
+    
+    # Notificação opcional
+    - alias: "Notificar início"
+      action: persistent_notification.create
+      data:
+        title: "🏊 Bomba Piscina Noite"
+        message: >
+          A iniciar filtragem noturna.
+          Duração prevista: {{ (tempo_compensar / 60) | round(0) }} minutos.
+          Motivo: Filtragem ontem ({{ (filtragem_ontem / 3600) | round(1) }}h) < mínimo ({{ threshold_ativo / 60 }}h)
+        notification_id: bomba_piscina_noite
+
+    # Ligar bomba com retry robusto
+    - alias: "Ligar bomba com retry"
+      repeat:
+        while:
+          - condition: state
+            entity_id: switch.bomba_piscina_switch_0
+            state: "off"
+          - condition: template
+            value_template: "{{ repeat.index <= 20 }}"
+        sequence:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.bomba_piscina_switch_0
+          - delay:
+              seconds: 10
+          - if:
+              - condition: state
+                entity_id: switch.bomba_piscina_switch_0
+                state: "off"
+            then:
+              - action: system_log.write
+                data:
+                  message: "Bomba Piscina: Tentativa {{ repeat.index }} falhou, a tentar novamente..."
+                  level: warning
+                  logger: automations.piscina
+
+    # Verificar se conseguiu ligar
+    - alias: "Verificar se bomba ligou"
+      if:
+        - condition: state
+          entity_id: switch.bomba_piscina_switch_0
+          state: "off"
+      then:
+        - action: persistent_notification.create
+          data:
+            title: "⚠️ Bomba Piscina - ERRO"
+            message: "Não foi possível ligar a bomba após 10 tentativas!"
+            notification_id: bomba_piscina_erro
+        - stop: "Bomba não ligou após 10 tentativas"
+
+    # Aguardar tempo necessário
+    - alias: "Aguardar tempo de filtragem"
+      delay:
+        seconds: "{{ tempo_compensar }}"
+
+    # Desligar bomba
+    - alias: "Desligar bomba"
+      action: switch.turn_off
+      target:
+        entity_id: switch.bomba_piscina_switch_0
+
+    # Log final
+    - alias: "Registar fim da filtragem noturna"
+      action: system_log.write
+      data:
+        message: "Bomba Piscina Noite concluída: {{ (tempo_compensar / 60) | round(0) }} minutos de filtragem"
+        level: info
+        logger: automations.piscina
+
+    # Limpar notificação
+    - action: persistent_notification.dismiss
+      data:
+        notification_id: bomba_piscina_noite
+
+  mode: single
+  max_exceeded: warning
+
+- id: ligardesligar_automacao_piscina
+  alias: 🏊🏻 Ligar/Desligar Automação Piscina
+  description: Liga e desliga a Wallbox
+  trigger:
+  - minutes: /5
+    trigger: time_pattern
+  conditions: []
+  action:
+  - if:
+    - condition:
+      - condition: sun
+        after: sunrise
+        before: sunset
+      - condition: numeric_state
+        entity_id: sensor.duracao_filtragem_piscina_diario_em_segundos
+        above: 10800
+      - condition: state
+        entity_id: device_tracker.i4_edrive40
+        state: home
+      - condition: state
+        entity_id: binary_sensor.i4_edrive40_connection_status
+        state: 'on'
+      - condition: numeric_state
+        entity_id: sensor.i4_edrive40_remaining_battery_percent
+        below: 100
+    then:
+    - data:
+        stop_actions: true
+      target:
+        entity_id: automation.bomba_piscina_dia
+      action: automation.turn_off
+    - metadata: {}
+      data: {}
+      target:
+        entity_id:
+        - switch.bomba_piscina_switch_0
+      action: switch.turn_off
+    - metadata: {}
+      data: {}
+      target:
+        entity_id: switch.wallbox_charging_enabled
+      action: switch.turn_on
+    else:
+    - if:
+      - condition: time
+        after: 09:00:00
+        before: '18:00:00'
+      then:
+      - data: {}
+        target:
+          entity_id: automation.bomba_piscina_dia
+        action: automation.turn_on
+      - metadata: {}
+        data: {}
+        target:
+          entity_id: switch.wallbox_charging_enabled
+        enabled: false
+        action: switch.turn_off
+      - metadata: {}
+        data:
+          skip_condition: true
+        target:
+          entity_id: automation.bomba_piscina_dia
+        action: automation.trigger
+      else:
+      - data:
+          stop_actions: true
+        target:
+          entity_id: automation.bomba_piscina_dia
+        action: automation.turn_off
+      - target:
+          entity_id:
+          - switch.wallbox_charging_enabled
+        data: {}
+        enabled: false
+        action: switch.turn_on
+  mode: single
+  max_exceeded: warning
+- id: variable_piscina_timer
+  alias: 🏊🏻 Variable Piscina timer
+  description: Automação do Home Assistant.
+  trigger:
+  - at: 00:00:00
+    trigger: time
+  conditions: []
+  action:
+  - metadata: {}
+    data:
+      replace_attributes: false
+      value: '{{ states(''sensor.duracao_filtragem_piscina_diario_em_segundos'') | int(0) }}'
+      attributes:
+        today-1: '{{ states(''sensor.filtragem_piscina_historico_s'') | int(0) }}'
+        today-2: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-1'') | int(0) }}'
+        today-3: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-2'') | int(0) }}'
+        today-4: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-3'') | int(0) }}'
+        today-5: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-4'') | int(0) }}'
+        today-6: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-5'') | int(0) }}'
+        today-7: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-6'') | int(0) }}'
+        today-8: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-7'') | int(0) }}'
+        today-9: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-8'') | int(0) }}'
+        today-10: '{{ state_attr(''sensor.filtragem_piscina_historico_s'',''today-9'') | int(0) }}'
+    target:
+      entity_id: sensor.filtragem_piscina_historico_s
+    action: variable.update_sensor
+  mode: single
+  max_exceeded: warning
+
+- id: automacao_bomba_piscina
+  alias: 🏊🏻 Automação Bomba Piscina
+  description: Automação ativada por valor numérico de ['sensor.potencia_emonpi_import_export_media_5_minutos'], valor numérico de ['sensor.potencia_emonpi_import_export_media_5_minutos'].
+  trigger:
+  - platform: numeric_state
+    entity_id:
+    - sensor.potencia_emonpi_import_export_media_5_minutos
+    below: -750
+    id: 'ON'
+  - platform: numeric_state
+    entity_id:
+    - sensor.potencia_emonpi_import_export_media_5_minutos
+    id: 'OFF'
+    above: 750
+  condition:
+  - condition: sun
+    after: sunrise
+    before: sunset
+  action:
+  - if:
+    - condition: trigger
+      id:
+      - 'ON'
+    then:
+    - type: turn_on
+      device_id: 1cb87651e79e117ef2610fc7e5c6a170
+      entity_id: d1b3ca4d6a019622064ef94336bbd650
+      domain: switch
+    - type: turn_on
+      device_id: d752f893fd0bb44490ec4bfcb83c333f
+      entity_id: ae742d0d2f0dc5dea53a674346911926
+      domain: switch
+  - if:
+    - condition: trigger
+      id:
+      - 'OFF'
+    then:
+    - type: turn_off
+      device_id: 1cb87651e79e117ef2610fc7e5c6a170
+      entity_id: d1b3ca4d6a019622064ef94336bbd650
+      domain: switch
+    - type: turn_off
+      device_id: d752f893fd0bb44490ec4bfcb83c333f
+      entity_id: ae742d0d2f0dc5dea53a674346911926
+      domain: switch
+  mode: single
+  max_exceeded: warning
+- id: bomba_piscina_botao
+  alias: 🏊🏻 Bomba piscina botão
+  description: Automação do Home Assistant.
+  trigger:
+  - device_id: e6ae30b2d7855ae2d2b83b4497674bfb
+    domain: bthome
+    type: button
+    subtype: press
+    trigger: device
+  conditions: []
+  action:
+  - type: toggle
+    device_id: d752f893fd0bb44490ec4bfcb83c333f
+    entity_id: ae742d0d2f0dc5dea53a674346911926
+    domain: switch
+  mode: single
+  max_exceeded: warning
+- id: openai_daily_piscina
+  alias: 'OpenAI Daily: Piscina'
+  description: Automação do Home Assistant.
+  trigger:
+  - at: '20:30:00'
+    trigger: time
+  conditions: []
+  action:
+  - data:
+      agent_id: conversation.chatgpt
+      text: Para esta tarefa, es um consultor de piscinas e queres garantir sempre que a piscina está limpa e pronta a usar. Mostra quando vai ser iniciada a filtragem da noite. Calcula se a horas de filtragem são suficientes, usa os dados que são enviados.  Podes e deves usar um tom humorista. Podes usar emojis. Responde em portugues de portugal sem gerúndio.  \_ Current time {{now()}} tempo que a bomba da piscina esteve a trabalhar em {{states('sensor.duracao_filtragem_piscina_diario')}} tempo que o aquecimento da piscina esteve a funcionar {{states('sensor.duracao_aquecimento_piscina_diario')}}  temperatura da piscina {{states('sensor.bomba_piscina_temperature')}}  tempo que falta filtrar a piscina {{states('sensor.pool_pump_remaining_time')}}  horario que vai ser iniciada a filtragem de noite {{states('sensor.bomba_piscina_noite_horario')}}   Quantidade maxima em minutos que a piscina filtra por dia, tranforma em horas {{states('input_number.pool_pump_duration_lower_threshold')}}  Energia gasta pela bomba da piscina {{states('sensor.energia_emonpi_piscina_use_total_kwhd')}} A bomba da piscina tem uma potencia de 1,5 CV. o volume da piscina é de 66 metros cubicos.  calcula se a tempo de filtragem foi suficiente.
+      language: pt-pt
+    enabled: true
+    response_variable: agent
+    action: conversation.process
+  - service: telegram_bot.send_message
+    metadata: {}
+    data:
+      title: Piscina
+      message: '{{agent.response.speech.plain.speech}}'
+  mode: single
+  max_exceeded: warning
+- id: piscina_-_arranque_com_excedente_fv
+  alias: 🏊🏻 Piscina - Arranque com excedente FV
+  description: Automação do Home Assistant.
+  triggers:
+  - entity_id: binary_sensor.piscina_excedente_fv_bomba
+    to: 'on'
+    for: 00:02:00
+    trigger: state
+  conditions:
+  - condition: numeric_state
+    entity_id: input_number.piscina_filtracao_min_restantes
+    above: 0
+  - condition: sun
+    after: sunrise
+    after_offset: 00:15:00
+    before: sunset
+    before_offset: -00:15:00
+  actions:
+  - target:
+      entity_id:
+      - switch.bomba_piscina
+      - switch.bomba_piscina_switch_0
+    action: switch.turn_on
+    data: {}
+  mode: single
+  max_exceeded: warning
+- id: piscina_-_manual_terminou_desligar_e_sair_do_overr
+  alias: Piscina - Manual terminou (desligar e sair do override)
+  description: Automação do Home Assistant.
+  triggers:
+  - event_type: timer.finished
+    event_data:
+      entity_id: timer.piscina_manual
+    trigger: event
+  conditions: []
+  actions:
+  - target:
+      entity_id:
+      - switch.bomba_piscina_switch_0
+    action: switch.turn_off
+    data: {}
+  - target:
+      entity_id: input_boolean.piscina_override_manual
+    action: input_boolean.turn_off
+    data: {}
+  mode: single
+  max_exceeded: warning
+- id: piscina_-_watchdog_arranque_fv_2min_v2
+  alias: 🏊🏻 Piscina - Watchdog arranque FV (*/2min) v2
+  description: Automação do Home Assistant.
+  triggers:
+  - minutes: /2
+    trigger: time_pattern
+  conditions:
+  - condition: state
+    entity_id: input_boolean.piscina_override_manual
+    state: 'off'
+  - condition: state
+    state: 'off'
+    entity_id: switch.bomba_piscina_switch_0
+  - condition: numeric_state
+    entity_id: input_number.piscina_filtracao_min_restantes
+    above: 0
+  - condition: state
+    entity_id: binary_sensor.piscina_excedente_fv_bomba
+    state: 'on'
+  - condition: sun
+    after: sunrise
+    after_offset: 00:15:00
+    before: sunset
+    before_offset: -00:15:00
+  actions:
+  - target:
+      entity_id: switch.bomba_piscina_switch_0
+    action: switch.turn_on
+    data: {}
+  mode: single
+  max_exceeded: warning
+- id: piscina_-_snapshot_5min
+  alias: Piscina - Snapshot 5min
+  description: Automação do Home Assistant.
+  triggers:
+  - trigger: time_pattern
+    minutes: /5
+  conditions: []
+  actions:
+  - action: camera.snapshot
+    metadata: {}
+    data:
+      filename: '"/config/www/piscina_latest.jpg"'
+    target:
+      entity_id: camera.eira_hd_stream
+  mode: single
+  max_exceeded: warning
+- id: actualizar_horario_bomba_piscina_noite
+  alias: 🏊🏻 Actualizar Horario Bomba Piscina Noite
+  description: Automação do Home Assistant.
+  triggers:
+  - trigger: time_pattern
+    minutes: /30
+    hours: /1
+  - trigger: state
+    entity_id:
+    - sensor.bomba_piscina_noite_horario
+  conditions:
+  - condition: time
+    after: '13:00:00'
+    before: '21:00:00'
+  actions:
+  - action: input_datetime.set_datetime
+    metadata: {}
+    data:
+      datetime: "{% set horario = states('sensor.bomba_piscina_noite_horario') %}\n{% if horario not in ['unknown', 'unavailable', '', None] %}\n  {{ as_datetime(horario).astimezone().isoformat() }}\n{% else %}\n  {{ (now() + timedelta(days=1)).replace(hour=2, minute=0, second=0, microsecond=0).isoformat() }}\n{% endif %}"
+    target:
+      entity_id: input_datetime.horario_piscina_noite
+  mode: single
+  max_exceeded: warning

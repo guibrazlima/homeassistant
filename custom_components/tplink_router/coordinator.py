@@ -1,6 +1,8 @@
 from __future__ import annotations
 import hashlib
 from datetime import timedelta, datetime
+import logging
+import json
 from logging import Logger
 from collections.abc import Callable
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -20,6 +22,8 @@ from .const import (
     DEFAULT_NAME,
 )
 
+_LOGGER = logging.getLogger(__name__)
+
 
 class TPLinkRouterCoordinator(DataUpdateCoordinator):
     def __init__(
@@ -38,6 +42,8 @@ class TPLinkRouterCoordinator(DataUpdateCoordinator):
         self.status = status
         self.tracked = {}
         self.lte_status = lte_status
+        self.mesh_nodes: list[dict] = []
+        self.mesh_clients_by_node: dict[str, int] = {}
         self.device_info = DeviceInfo(
             configuration_url=router.host,
             connections={(CONNECTION_NETWORK_MAC, self.status.lan_macaddr)},
@@ -99,6 +105,7 @@ class TPLinkRouterCoordinator(DataUpdateCoordinator):
                 self.router.get_lte_status,
             )
         await self._update_new_sms()
+        await self._update_mesh()
         self._last_update_time = datetime.now()
 
     async def _update_new_sms(self) -> None:
@@ -116,6 +123,50 @@ class TPLinkRouterCoordinator(DataUpdateCoordinator):
                 new_items.append(sms)
 
         self.new_sms = new_items
+
+    async def _update_mesh(self) -> None:
+        if not hasattr(self.router, "request"):
+            return
+
+        def callback():
+            try:
+                mesh = self.router.request(
+                    "admin/device?form=device_list",
+                    json.dumps({"operation": "read"}),
+                    ignore_errors=True,
+                )
+            except Exception:
+                return [], {}
+
+            if not isinstance(mesh, dict):
+                return [], {}
+
+            nodes = [n for n in mesh.get("device_list", []) if n.get("device_type") == "HOMEWIFISYSTEM"]
+            clients_by_node: dict[str, int] = {}
+            for node in nodes:
+                mac = node.get("mac")
+                if not mac:
+                    continue
+                try:
+                    clients = self.router.request(
+                        "admin/client?form=client_list",
+                        json.dumps({"operation": "read", "params": {"device_mac": mac}}),
+                        ignore_errors=True,
+                    )
+                    clients_by_node[mac] = sum(
+                        1 for c in clients.get("client_list", []) if c.get("online")
+                    )
+                except Exception:
+                    continue
+
+            _LOGGER.warning("tplink_router mesh nodes detected: %d", len(nodes))
+            return nodes, clients_by_node
+
+        nodes, clients_by_node = await self.hass.async_add_executor_job(
+            TPLinkRouterCoordinator.request, self.router, callback
+        )
+        self.mesh_nodes = nodes
+        self.mesh_clients_by_node = clients_by_node
 
     @staticmethod
     def _hash_item(sms: SMS) -> str:

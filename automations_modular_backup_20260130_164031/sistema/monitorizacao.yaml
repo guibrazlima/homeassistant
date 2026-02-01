@@ -1,0 +1,29 @@
+# ======================================================================
+# ⚙️ SISTEMA
+# ======================================================================
+# Ficheiro: monitorizacao.yaml
+# Automações: 1
+# Última atualização: 2025-11-11
+# Migrado automaticamente - Fase 2
+# ======================================================================
+
+
+- id: speedtests
+  alias: SpeedTests
+  description: Automação ativada por horário (06:30:00), horário (18:30:00).
+  trigger:
+  - platform: time
+    at: 06:30:00
+  - platform: time
+    at: '18:30:00'
+  - event: sunrise
+    offset: -00:35:00
+    platform: sun
+  condition: []
+  action:
+  - service: homeassistant.update_entity
+    data: {}
+    target:
+      entity_id: sensor.speedtest_download
+  mode: single
+  max_exceeded: warning

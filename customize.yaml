@@ -1,4 +1,356 @@
 sensor.emoncms_solar: {}
 
+# ═══════════════════════════════════════════════════════════════════
+# Sensores EmonCMS - Energia Diária (kWhd → kWh)
+# ═══════════════════════════════════════════════════════════════════
+
+sensor.emoncms_192_168_1_250_piscina_bomba_kwhd:
+  device_class: energy
+  unit_of_measurement: "kWh"
+  state_class: total_increasing
+  friendly_name: "Bomba Piscina - Energia Diária"
+
+sensor.emoncms_evse_power_kwhd:
+  device_class: energy
+  unit_of_measurement: "kWh"
+  state_class: total_increasing
+  friendly_name: "EVSE - Energia Diária"
+
+sensor.emoncms_192_168_1_250_ev_i4_charging_kwhd:
+  device_class: energy
+  unit_of_measurement: "kWh"
+  state_class: total_increasing
+  friendly_name: "EV i4 - Carregamento Diário"
+
+sensor.emoncms_192_168_1_250_ev_x1_charging_kwhd:
+  device_class: energy
+  unit_of_measurement: "kWh"
+  state_class: total_increasing
+  friendly_name: "EV X1 - Carregamento Diário"
+
+sensor.emoncms_192_168_1_250_export_kwhd:
+  device_class: energy
+  unit_of_measurement: "kWh"
+  state_class: total_increasing
+  friendly_name: "Exportação - Energia Diária"
+
+sensor.emoncms_192_168_1_250_use_kwhd:
+  device_class: energy
+  unit_of_measurement: "kWh"
+  state_class: total_increasing
+  friendly_name: "Consumo Casa - Energia Diária"
+
+# ═══════════════════════════════════════════════════════════════════
+# Outros sensores Shelly sem device_class
+# ═══════════════════════════════════════════════════════════════════
+
+sensor.shelly_plug_s_192_168_1_25_shelly_plug_s_192_168_1_25_energy:
+  device_class: energy
+  state_class: total_increasing
+
+sensor.shelly_plug_s_192_168_1_24_shelly_plug_s_192_168_1_24_energy:
+  device_class: energy
+  state_class: total_increasing
+
+# ═══════════════════════════════════════════════════════════════════
+# Sensores de Potência (kW)
+# ═══════════════════════════════════════════════════════════════════
+
+sensor.hpsu_can_thermal_power_2:
+  device_class: power
+  state_class: measurement
+  friendly_name: "HPSU - Potência Térmica 2"
+
+sensor.hp90_potencia_termica_kw:
+  device_class: power
+  state_class: measurement
+  friendly_name: "HP90 - Potência Térmica"
+
+# ═══════════════════════════════════════════════════════════════════
+# Sensores de Temperatura (°C)
+# ═══════════════════════════════════════════════════════════════════
+
+sensor.shelly_plug_s_192_168_1_25_shelly_plug_s_192_168_1_25_device_temperature:
+  device_class: temperature
+  state_class: measurement
+
+sensor.shelly_plug_s_192_168_1_24_shelly_plug_s_192_168_1_24_device_temperature:
+  device_class: temperature
+  state_class: measurement
+
+sensor.motion_sensor_z_wave_plus_motion_sensor_z_wave_plus_temperature:
+  device_class: temperature
+  state_class: measurement
+  friendly_name: "Sensor Movimento Z-Wave - Temperatura"
+
+sensor.temperatura_piscina_filtrado:
+  device_class: temperature
+  state_class: measurement
+  friendly_name: "Piscina - Temperatura Filtrada"
+
+sensor.piscina_temperatura_filtrada:
+  device_class: temperature
+  state_class: measurement
+  friendly_name: "Piscina - Temperatura Filtrada"
+
+sensor.hpsu_can_deltat:
+  device_class: temperature
+  state_class: measurement
+  friendly_name: "HPSU - Delta T"
+
+sensor.hpsu_can_deltat_dhw:
+  device_class: temperature
+  state_class: measurement
+  friendly_name: "HPSU - Delta T AQS"
+
+sensor.aqs_setpoint_degc:
+  device_class: temperature
+  state_class: measurement
+  friendly_name: "AQS - Setpoint"
+
+sensor.hp90_dt_previsto_hoje_degc:
+  device_class: temperature
+  state_class: measurement
+  friendly_name: "HP90 - Delta T Previsto Hoje"
+
+sensor.hp90_dt_liquido_previsto_degc:
+  device_class: temperature
+  state_class: measurement
+  friendly_name: "HP90 - Delta T Líquido Previsto"
+
+# Margens de condensação
+sensor.sala_inferior_margem_de_condensacao_2:
+  device_class: temperature
+  state_class: measurement
+  friendly_name: "Sala Inferior - Margem Condensação"
+
+sensor.cave_margem_de_condensacao_2:
+  device_class: temperature
+  state_class: measurement
+  friendly_name: "Cave - Margem Condensação"
+
+sensor.cozinha_margem_de_condensacao_2:
+  device_class: temperature
+  state_class: measurement
+  friendly_name: "Cozinha - Margem Condensação"
+
+sensor.quarto_luisa_margem_de_condensacao_2:
+  device_class: temperature
+  state_class: measurement
+  friendly_name: "Quarto Luísa - Margem Condensação"
+
+sensor.quarto_margem_de_condensacao_2:
+  device_class: temperature
+  state_class: measurement
+  friendly_name: "Quarto - Margem Condensação"
+
+sensor.quarto_gui_margem_de_condensacao_2:
+  device_class: temperature
+  state_class: measurement
+  friendly_name: "Quarto Gui - Margem Condensação"
+
+sensor.sala_superior_margem_de_condensacao_2:
+  device_class: temperature
+  state_class: measurement
+  friendly_name: "Sala Superior - Margem Condensação"
+
+# ═══════════════════════════════════════════════════════════════════
+# Sensores de Potência (W)
+# ═══════════════════════════════════════════════════════════════════
+
+sensor.shelly_plug_s_192_168_1_25_shelly_plug_s_192_168_1_25_power:
+  device_class: power
+  state_class: measurement
+
+sensor.shelly_plug_s_192_168_1_24_shelly_plug_s_192_168_1_24_power:
+  device_class: power
+  state_class: measurement
+
+sensor.solar_generation_solar_generation_power:
+  device_class: power
+  state_class: measurement
+  friendly_name: "Geração Solar - Potência"
+
+# ═══════════════════════════════════════════════════════════════════
+# Sensores de Bateria (%)
+# ═══════════════════════════════════════════════════════════════════
+
+sensor.corredor_superior_corredor_superior_battery:
+  device_class: battery
+  state_class: measurement
+
+sensor.wireless_switch_wireless_switch_battery:
+  device_class: battery
+  state_class: measurement
+
+sensor.escadas_escadas_battery:
+  device_class: battery
+  state_class: measurement
+
+sensor.shelly_blu_motion_3c_2e_f5_b9_91_79_shelly_blu_motion_3c_2e_f5_b9_91_79_battery:
+  device_class: battery
+  state_class: measurement
+
+# ═══════════════════════════════════════════════════════════════════
+# Sensores de Iluminância (lx)
+# ═══════════════════════════════════════════════════════════════════
+
+sensor.corredor_superior_corredor_superior_luminance:
+  device_class: illuminance
+  state_class: measurement
+
+sensor.escadas_escadas_luminance:
+  device_class: illuminance
+  state_class: measurement
+
+sensor.shelly_blu_motion_3c_2e_f5_b9_91_79_shelly_blu_motion_3c_2e_f5_b9_91_79_luminance:
+  device_class: illuminance
+  state_class: measurement
+
+# ═══════════════════════════════════════════════════════════════════
+# Sensores de Sinal (dBm / RSSI)
+# ═══════════════════════════════════════════════════════════════════
+
+sensor.coberto_rssi:
+  device_class: signal_strength
+  state_class: measurement
+
+sensor.sala_rssi:
+  device_class: signal_strength
+  state_class: measurement
+
+sensor.cave_rssi:
+  device_class: signal_strength
+  state_class: measurement
+
+sensor.portao_rssi:
+  device_class: signal_strength
+  state_class: measurement
+
+sensor.eira_jardim_rssi:
+  device_class: signal_strength
+  state_class: measurement
+
+sensor.shelly_blu_motion_3c_2e_f5_b9_91_79_shelly_blu_motion_3c_2e_f5_b9_91_79_signal:
+  device_class: signal_strength
+  state_class: measurement
+
+# ═══════════════════════════════════════════════════════════════════
+# Sensores Monetários (€)
+# ═══════════════════════════════════════════════════════════════════
+
+sensor.electricity_spend:
+  device_class: monetary
+  state_class: total
+
+sensor.electricity_spend_2:
+  device_class: monetary
+  state_class: total
+
+sensor.coopernico_spot_price_bihorario_kwh:
+  device_class: monetary
+  state_class: measurement
+
+# ═══════════════════════════════════════════════════════════════════
+# Sensores de Duração
+# ═══════════════════════════════════════════════════════════════════
+
+sensor.piscina_duracao_filtragem_segundos:
+  device_class: duration
+  state_class: measurement
+  unit_of_measurement: "s"
+
+# ═══════════════════════════════════════════════════════════════════
+# Sensores de Velocidade de Dados (Mbit/s)
+# ═══════════════════════════════════════════════════════════════════
+
+sensor.wallpanel_wifi_link_speed:
+  device_class: data_rate
+  state_class: measurement
+
+sensor.piscina_backhaul_speed:
+  device_class: data_rate
+  state_class: measurement
+
+sensor.coberto_backhaul_speed:
+  device_class: data_rate
+  state_class: measurement
+
+sensor.m5_backhaul_speed:
+  device_class: data_rate
+  state_class: measurement
+
+# ═══════════════════════════════════════════════════════════════════
+# Sensores de Frequência (MHz)
+# ═══════════════════════════════════════════════════════════════════
+
+sensor.wallpanel_wifi_frequency:
+  device_class: frequency
+  state_class: measurement
+
+# ═══════════════════════════════════════════════════════════════════
+# Sensores de Tamanho de Dados (GB)
+# ═══════════════════════════════════════════════════════════════════
+
+sensor.wallpanel_app_rx_gb:
+  device_class: data_size
+  state_class: total_increasing
+
+sensor.wallpanel_app_tx_gb:
+  device_class: data_size
+  state_class: total_increasing
+
+sensor.wallpanel_app_memory:
+  device_class: data_size
+  state_class: measurement
+
+sensor.wallpanel_total_rx_gb:
+  device_class: data_size
+  state_class: total_increasing
+
+sensor.wallpanel_total_tx_gb:
+  device_class: data_size
+  state_class: total_increasing
+
+# ═══════════════════════════════════════════════════════════════════
+# Sensores de Distância (m)
+# ═══════════════════════════════════════════════════════════════════
+
+sensor.iphone_de_cristina_3_distance:
+  device_class: distance
+  state_class: total_increasing
+
+sensor.iphone_de_emilia_distance:
+  device_class: distance
+  state_class: total_increasing
+
+# ═══════════════════════════════════════════════════════════════════
+# Sensores de CO2 / Qualidade do Ar
+# ═══════════════════════════════════════════════════════════════════
+
+sensor.co2_intensity:
+  device_class: carbon_dioxide
+  state_class: measurement
+  friendly_name: "Intensidade CO2 Rede"
+
+# ═══════════════════════════════════════════════════════════════════
+# Sensores de pH (Piscina)
+# ═══════════════════════════════════════════════════════════════════
+
+sensor.piscina_ph:
+  device_class: ph
+  state_class: measurement
+  friendly_name: "Piscina - pH"
+
+sensor.piscina_ph_corrigido_filtrado:
+  device_class: ph
+  state_class: measurement
+  friendly_name: "Piscina - pH Corrigido Filtrado"
+
+sensor.piscina_ph_sensor_filtrado:
+  device_class: ph
+  state_class: measurement
+  friendly_name: "Piscina - pH Sensor Filtrado"
+
 cover.garage_door:
   device_class: garage

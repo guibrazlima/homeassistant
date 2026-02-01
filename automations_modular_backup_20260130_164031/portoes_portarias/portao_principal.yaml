@@ -1,0 +1,221 @@
+# ======================================================================
+# 🚪 PORTÕES E PORTARIAS
+# ======================================================================
+# Ficheiro: portao_principal.yaml
+# Automações: 6
+# Última atualização: 2025-11-11
+# Migrado automaticamente - Fase 2
+# ======================================================================
+
+
+- id: callback_to_open_gate_from_action
+  alias: '[🏡] Callback to open gate from action'
+  description: Automação ativada por evento mobile_app_notification_action.
+  trigger:
+  - platform: event
+    event_type: mobile_app_notification_action
+    event_data:
+      action: ABRIR_PORTAO
+  condition: []
+  action:
+  - service: cover.open_cover
+    data: {}
+    target:
+      entity_id:
+      - cover.gate
+  mode: restart
+- id: garage_light_on_when_gate_openscloses
+  alias: '[💡🏡] Garage light on when gate opens/closes'
+  description: Automação ativada por mudança de estado em ['cover.gate'], mudança de estado em ['cover.gate'].
+  trigger:
+  - platform: state
+    entity_id:
+    - cover.gate
+    from: closed
+    to: open
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 2
+  - platform: state
+    entity_id:
+    - cover.gate
+    from: open
+    to: closed
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 2
+  condition:
+  - condition: state
+    entity_id: sun.sun
+    state: below_horizon
+  action:
+  - if:
+    - condition: state
+      entity_id: cover.gate
+      state: open
+    then:
+    - service: light.turn_on
+      metadata: {}
+      data: {}
+      target:
+        entity_id: light.exterior
+  - if:
+    - condition: state
+      entity_id: cover.gate
+      state: closed
+      for:
+        hours: 0
+        minutes: 5
+        seconds: 0
+    then:
+    - service: light.turn_off
+      metadata: {}
+      data: {}
+      target:
+        entity_id: light.exterior
+  mode: single
+  max_exceeded: warning
+- id: envia_notificacao_para_abrir_o_portao_quando_chega
+  alias: '[📣🏡] Envia notificação para abrir o portão quando chega a casa'
+  description: Automação ativada por valor numérico de ['sensor.home_glima_distance'], valor numérico de ['sensor.home_cmouta_distance'].
+  trigger:
+  - platform: numeric_state
+    entity_id:
+    - sensor.home_glima_distance
+    below: 50
+    id: glima1
+  - platform: numeric_state
+    entity_id:
+    - sensor.home_cmouta_distance
+    below: 50
+    id: cmouta1
+  condition: []
+  action:
+  - if:
+    - condition: trigger
+      id:
+      - glima1
+    then:
+    - service: notify.mobile_app_glphone
+      metadata: {}
+      data:
+        message: Queres abrir o portão de casa?
+        title: 🏡 🔑 Bem-Vindo a casa Guilherme!
+        data:
+          tag: open-home-gate
+          action:
+          - action: ABRIR_PORTAO
+            title: Sim
+            authenticationRequired: true
+            activationMode: background
+            icon: sfsymbols:door.garage.closed
+    - delay:
+        hours: 0
+        minutes: 10
+        seconds: 0
+        milliseconds: 0
+    - service: notify.mobile_app_glphone
+      metadata: {}
+      data:
+        data:
+          tag: open-home-gate
+        message: clear_notification
+  - if:
+    - condition: trigger
+      id:
+      - cmouta1
+    then:
+    - service: notify.mobile_app_iphone_de_cristina_3
+      metadata: {}
+      data:
+        message: Queres abrir o portão de casa?
+        title: 🏡 🔑 Bem-Vinda a casa Cristina!
+        data:
+          tag: open-home-gate
+          action:
+          - action: ABRIR_PORTAO
+            title: Sim
+            authenticationRequired: true
+            activationMode: background
+            icon: sfsymbols:door.garage.closed
+    - delay:
+        hours: 0
+        minutes: 10
+        seconds: 0
+        milliseconds: 0
+    - service: notify.mobile_app_iphone_de_cristina_3
+      metadata: {}
+      data:
+        message: clear_notification
+        data:
+          tag: open-home-gate
+  mode: single
+  max_exceeded: warning
+- id: status_portao
+  alias: Status Portão
+  description: Status do portão de casa, para resolver o flapping do sensor e o switch do shelly ter temporizador de 1 segundo.
+  trigger:
+  - platform: state
+    entity_id:
+    - switch.portao
+    from: 'off'
+    to: 'on'
+  condition: []
+  action:
+  - service: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.portao_status
+    data: {}
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 50
+      milliseconds: 0
+  - service: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.portao_status
+    data: {}
+  mode: single
+  max_exceeded: warning
+- id: botao_sala_portao
+  alias: 🏡Botão Sala Portão
+  description: Automação do Home Assistant.
+  triggers:
+  - device_id: e8a6c706997d87b98183e26e7598ae8b
+    domain: shelly
+    type: triple
+    subtype: button
+    trigger: device
+  - device_id: d686deeba13232cfa6ab008fa8c80dc0
+    domain: bthome
+    type: button_2
+    subtype: long_press
+    trigger: device
+  conditions: []
+  actions:
+  - type: turn_on
+    device_id: 2388724c80b9ea53afaf76327d603991
+    entity_id: c1d7540c34d2b8b447ad390591bee382
+    domain: switch
+  mode: single
+  max_exceeded: warning
+- id: botao_shelly_abrir_portao
+  alias: '[🏡] Botão shelly Abrir Portão'
+  description: Automação do Home Assistant.
+  triggers:
+  - device_id: f3ec058f8ec36d128a8eaf0dd7286320
+    domain: bthome
+    type: button
+    subtype: press
+    trigger: device
+  conditions: []
+  actions:
+  - action: switch.turn_on
+    metadata: {}
+    data: {}
+    target:
+      entity_id: switch.portao
+  mode: single
+  max_exceeded: warning

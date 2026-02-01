@@ -1,0 +1,1430 @@
+blueprint:
+  name: "🏊 Piscina - Controlo Solar Inteligente v2 (PT)"
+  description: >
+    ### **Controlo Inteligente da Bomba da Piscina com Previsão Solar**
+    
+    Blueprint português otimizado para maximizar o autoconsumo solar na filtragem da piscina.
+    
+    **Versão 2.0** - Agora com integração Solcast!
+    
+    
+    #### ✨ **Funcionalidades:**
+    
+    - ✅ **Previsão de importação** - Liga antes de importar da rede
+    
+    - ✅ **Hysteresis inteligente** - Critérios diferentes para ligar vs manter
+    
+    - ✅ **3 níveis de fallback** - Usa sensores alternativos se principal falhar
+    
+    - ✅ **Otimização económica** - Cálculo de break-even vs tarifa noite
+    
+    - ✅ **Controlo de tempo filtragem** - Integra com timer de filtragem
+    
+    - ✅ **Horários solares** - Só funciona durante horas de sol
+    
+    - ✅ **Override manual** - Respeita controlo manual
+    
+    - ✅ **Delays configuráveis** - Evita oscilações
+    
+    - ✅ **Diagnóstico completo** - Logs detalhados
+    
+    
+    #### 🆕 **Novidades v2.0:**
+    
+    - ☀️ **Previsão Solar Solcast** - Adapta agressividade ao sol previsto
+    
+    - 🎯 **Modos Adaptativos** - Agressivo/Normal/Conservador/Emergência
+    
+    - ⏰ **Antecipação de Quedas** - Prevê nuvens antes de chegarem
+    
+    - 🌙 **Backup Noturno** - Agenda filtragem noturna se necessário
+    
+    - 🔋 **Coordenação Bateria** - Reserva energia para bateria
+
+
+    #### 📊 **Sensores Suportados:**
+    
+    - Sensor de consumo casa (sem bomba) + PV (preferencial)
+    
+    - Sensor NET import/export (fallback 1)
+    
+    - Sensor exportação positiva (fallback 2)
+    
+    - Solcast forecast (recomendado)
+    
+    
+    #### 💡 **Baseado em:**
+    
+    Código original de **guibrazlima** (binary_sensor.piscina_excedente_fv_bomba)
+    
+    Melhorado com funcionalidades adicionais e previsão solar.
+
+    
+    ---
+    
+    *Blueprint v2.0 criado para Home Assistant - Portugal*
+    
+  domain: automation
+  author: "guibrazlima (original) + AI Assistant (blueprint)"
+  source_url: "https://github.com/guibrazlima/homeassistant"
+  
+  input:
+    # ═══════════════════════════════════════════════════════════════
+    # SENSORES DE ENERGIA (obrigatórios - pelo menos um grupo)
+    # ═══════════════════════════════════════════════════════════════
+    
+    house_power_no_pump:
+      name: "🏠 Consumo Casa (SEM bomba)"
+      description: >
+        Sensor do consumo da casa EXCLUINDO a bomba da piscina.
+        
+        Se não tiver este sensor, deixe vazio e configure o sensor NET.
+        
+        **Exemplo:** `sensor.emoncms_use_no_pool_pump`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+          
+    pv_power:
+      name: "☀️ Produção Solar (PV)"
+      description: >
+        Sensor da produção solar instantânea em Watts.
+        
+        **Exemplo:** `sensor.emoncms_solar`
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+          
+    net_power:
+      name: "📊 Potência NET (Import/Export)"
+      description: >
+        Sensor NET: positivo = importação, negativo = exportação.
+        
+        Usado como fallback se house_power_no_pump não disponível.
+        
+        **Exemplo:** `sensor.emoncms_import_export`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+          
+    export_power:
+      name: "📤 Exportação (positiva)"
+      description: >
+        Sensor de exportação para a rede (valor sempre positivo).
+        
+        Último fallback se outros sensores falharem.
+        
+        **Exemplo:** `sensor.emoncms_export_power_positive`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+          
+    pump_actual_power:
+      name: "⚡ Consumo Real da Bomba"
+      description: >
+        Sensor do consumo atual da bomba (opcional, melhora precisão).
+        
+        Se não tiver, será usado o valor nominal configurado.
+        
+        **Exemplo:** `sensor.bomba_piscina_power`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+
+    # ═══════════════════════════════════════════════════════════════
+    # 🆕 PREVISÃO SOLAR (SOLCAST)
+    # ═══════════════════════════════════════════════════════════════
+    
+    forecast_remaining_today:
+      name: "☀️ Previsão Solar Restante Hoje"
+      description: >
+        Sensor com kWh previstos para o resto do dia.
+        
+        Usado para adaptar agressividade do controlo.
+        
+        **Exemplo:** `sensor.solcast_pv_forecast_forecast_remaining_today`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+          device_class: energy
+          multiple: false
+          
+    forecast_tomorrow:
+      name: "🌅 Previsão Solar Amanhã"
+      description: >
+        Sensor com kWh previstos para amanhã.
+        
+        Usado para decidir se ativa filtragem noturna de backup.
+        
+        **Exemplo:** `sensor.solcast_pv_forecast_forecast_tomorrow`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+          device_class: energy
+          multiple: false
+          
+    power_forecast_1h:
+      name: "⏰ Potência Prevista 1 Hora"
+      description: >
+        Potência esperada daqui a 1 hora.
+        
+        Ajuda a antecipar quedas de produção.
+        
+        **Exemplo:** `sensor.solcast_pv_forecast_power_now_1hr`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+          
+    forecast_confidence:
+      name: "📊 Confiança na Previsão (%)"
+      description: >
+        Quanto confiar na previsão Solcast.
+        
+        **85%** = conservador (recomendado)
+        
+        **100%** = confia totalmente
+        
+        **70%** = muito conservador
+      default: 85
+      selector:
+        number:
+          min: 50
+          max: 100
+          step: 5
+          unit_of_measurement: "%"
+          mode: slider
+          
+    min_daily_filtration_kwh:
+      name: "⚡ Energia Mínima Filtragem Diária (kWh) - FIXO"
+      description: >
+        Energia mínima FIXA que a bomba deve consumir por dia.
+        
+        ⚠️ Só usado se "Usar Tempo Dinâmico" estiver DESLIGADO.
+        
+        **Típico:** 5-8 kWh (6-10 horas × 800W)
+      default: 6
+      selector:
+        number:
+          min: 1
+          max: 20
+          step: 0.5
+          unit_of_measurement: "kWh"
+          mode: slider
+    
+    use_dynamic_filtration_time:
+      name: "🌡️ Usar Tempo Dinâmico de Filtragem"
+      description: >
+        Se ATIVADO, usa o sensor de tempo de filtragem recomendado
+        (baseado na temperatura da água/ar).
+        
+        Se DESATIVADO, usa o valor fixo acima.
+      default: true
+      selector:
+        boolean:
+        
+    dynamic_filtration_hours_sensor:
+      name: "🌡️ Sensor Tempo Filtragem Recomendado (horas)"
+      description: >
+        Sensor que calcula dinamicamente as horas de filtragem
+        baseado na temperatura da água e ar.
+        
+        O valor deve estar em HORAS (ex: 6.5 = 6h30).
+        
+        **Exemplo:** `sensor.piscina_tempo_de_filtracao_recomendado`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+          multiple: false
+          
+    filtration_energy_today:
+      name: "📊 Energia Filtração Hoje"
+      description: >
+        Sensor com kWh já consumidos pela bomba hoje.
+        
+        Usado para calcular défice de filtragem.
+        
+        **Exemplo:** `sensor.bomba_piscina_energy_today`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+          device_class: energy
+          multiple: false
+
+    # ═══════════════════════════════════════════════════════════════
+    # 🔋 BATERIA DOMÉSTICA (OPCIONAL)
+    # ═══════════════════════════════════════════════════════════════
+    
+    battery_level:
+      name: "🔋 Nível da Bateria (%)"
+      description: >
+        Sensor do nível atual da bateria doméstica.
+        
+        Se não tiver bateria, deixe vazio.
+        
+        **Exemplo:** `sensor.battery_soc`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+          device_class: battery
+          multiple: false
+          
+    battery_target_level:
+      name: "🎯 Nível Alvo Bateria (%)"
+      description: >
+        Nível que a bateria deve atingir ao fim do dia.
+        
+        A piscina só usa excedente após garantir este nível.
+      default: 80
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 5
+          unit_of_measurement: "%"
+          mode: slider
+          
+    battery_capacity_kwh:
+      name: "🔋 Capacidade Bateria (kWh)"
+      description: >
+        Capacidade utilizável da bateria em kWh.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 50
+          step: 0.5
+          unit_of_measurement: "kWh"
+          mode: box
+
+    # ═══════════════════════════════════════════════════════════════
+    # 🆕 CONSUMO DA CASA (PREVISÃO)
+    # ═══════════════════════════════════════════════════════════════
+    
+    house_avg_power:
+      name: "🏠 Consumo Médio Casa (W)"
+      description: >
+        Consumo médio da casa durante as horas de sol (SEM piscina).
+        
+        Usado para prever quanta energia solar sobra para a piscina.
+        
+        **Como calcular:** 
+        - Energia diária da casa (kWh) ÷ Horas de sol (10h) × 1000
+        - Ex: 8 kWh/dia ÷ 10h = 800W médio
+        
+        **Típico Portugal:**
+        - Casa básica: 300-500W
+        - Com AC: 800-1500W
+        - Com EV a carregar: 2000-7000W
+      default: 600
+      selector:
+        number:
+          min: 100
+          max: 5000
+          step: 50
+          unit_of_measurement: "W"
+          mode: slider
+          
+    house_power_sensor_daily:
+      name: "📊 Sensor Consumo Diário Casa (kWh)"
+      description: >
+        Sensor opcional com o consumo diário da casa em kWh.
+        
+        Se configurado, o Blueprint calcula automaticamente
+        o consumo médio baseado no histórico recente.
+        
+        **Exemplo:** `sensor.emoncms_use_kwhd`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+          multiple: false
+          
+    house_power_avg_sensor:
+      name: "📈 Sensor Média Consumo 7 Dias (W)"
+      description: >
+        Sensor opcional com a média de consumo dos últimos 7 dias.
+        
+        Criado automaticamente se usares o sensor de estatísticas.
+        
+        **Recomendado:** `sensor.casa_consumo_medio_7d`
+        
+        Se não configurado, usa o valor manual de "Consumo Médio Casa".
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+          multiple: false
+          
+    use_dynamic_house_estimate:
+      name: "🔄 Usar Estimativa Dinâmica"
+      description: >
+        Se ativado, usa o consumo ATUAL da casa para estimar
+        o consumo futuro (multiplica pela hora restante até pôr do sol).
+        
+        Mais preciso se o padrão de consumo for estável.
+      default: true
+      selector:
+        boolean:
+
+    # ═══════════════════════════════════════════════════════════════
+    # CONTROLO DA BOMBA
+    # ═══════════════════════════════════════════════════════════════
+    
+    pump_switch:
+      name: "🔌 Switch da Bomba"
+      description: >
+        Entidade para ligar/desligar a bomba da piscina.
+        
+        **Exemplo:** `switch.bomba_piscina_switch_0`
+      selector:
+        entity:
+          domain: switch
+          multiple: false
+          
+    pump_nominal_power:
+      name: "💪 Potência Nominal da Bomba (W)"
+      description: >
+        Potência nominal da bomba em Watts.
+        
+        Usado para cálculos de previsão.
+        
+        **Típico:** 800-1500W para bomba 1.5CV
+      default: 800
+      selector:
+        number:
+          min: 100
+          max: 5000
+          step: 50
+          unit_of_measurement: "W"
+          mode: box
+
+    # ═══════════════════════════════════════════════════════════════
+    # THRESHOLDS E LIMITES
+    # ═══════════════════════════════════════════════════════════════
+    
+    import_limit:
+      name: "📈 Limite de Importação Máxima (W)"
+      description: >
+        Importação máxima permitida para MANTER a bomba ligada.
+        
+        Este valor é ajustado automaticamente pelo modo adaptativo!
+        
+        **Recomendado:** 500-800W
+      default: 700
+      selector:
+        number:
+          min: 0
+          max: 2000
+          step: 50
+          unit_of_measurement: "W"
+          mode: slider
+          
+    start_margin:
+      name: "🚀 Margem Extra para Arranque (W)"
+      description: >
+        Margem adicional exigida para LIGAR a bomba.
+        
+        Ajustado automaticamente pelo modo adaptativo.
+      default: 100
+      selector:
+        number:
+          min: 0
+          max: 500
+          step: 25
+          unit_of_measurement: "W"
+          mode: slider
+
+    # ═══════════════════════════════════════════════════════════════
+    # DELAYS (ANTI-OSCILAÇÃO)
+    # ═══════════════════════════════════════════════════════════════
+    
+    delay_on:
+      name: "⏱️ Delay para Ligar (segundos)"
+      description: >
+        Tempo de espera antes de ligar.
+        
+        Ajustado automaticamente pelo modo adaptativo.
+      default: 30
+      selector:
+        number:
+          min: 0
+          max: 300
+          step: 5
+          unit_of_measurement: "s"
+          mode: slider
+          
+    delay_off:
+      name: "⏱️ Delay para Desligar (segundos)"
+      description: >
+        Tempo de espera antes de desligar.
+        
+        Aumentado automaticamente se queda de PV prevista.
+      default: 60
+      selector:
+        number:
+          min: 0
+          max: 300
+          step: 5
+          unit_of_measurement: "s"
+          mode: slider
+          
+    min_on_time:
+      name: "⏰ Tempo Mínimo Ligada (minutos)"
+      description: >
+        Tempo mínimo que a bomba fica ligada após arranque.
+      default: 5
+      selector:
+        number:
+          min: 0
+          max: 60
+          step: 1
+          unit_of_measurement: "min"
+          mode: slider
+
+    # ═══════════════════════════════════════════════════════════════
+    # INTEGRAÇÃO COM SISTEMA EXISTENTE
+    # ═══════════════════════════════════════════════════════════════
+    
+    filtration_remaining:
+      name: "⏳ Tempo Filtragem Restante"
+      description: >
+        Sensor com tempo de filtragem restante hoje.
+        
+        Aceita formatos:
+        - Minutos numéricos (ex: 120)
+        - Formato HH:MM (ex: "02:00")
+        - Sensor com atributo 'seconds'
+        
+        Se 0, não liga a bomba (já filtrou suficiente).
+        
+        **Exemplo:** `sensor.pool_pump_remaining_time`
+      default: {}
+      selector:
+        entity:
+          domain:
+            - input_number
+            - sensor
+          multiple: false
+          
+    override_manual:
+      name: "🔧 Override Manual"
+      description: >
+        Input boolean que indica modo manual ativo.
+        
+        Quando ON, a automação não interfere.
+      default: {}
+      selector:
+        entity:
+          domain: input_boolean
+          multiple: false
+
+    # ═══════════════════════════════════════════════════════════════
+    # HORÁRIOS
+    # ═══════════════════════════════════════════════════════════════
+    
+    sun_offset_start:
+      name: "🌅 Offset Após Nascer do Sol (minutos)"
+      description: >
+        Minutos após nascer do sol para começar.
+      default: 30
+      selector:
+        number:
+          min: 0
+          max: 180
+          step: 15
+          unit_of_measurement: "min"
+          mode: slider
+          
+    sun_offset_end:
+      name: "🌇 Offset Antes do Pôr do Sol (minutos)"
+      description: >
+        Minutos antes do pôr do sol para parar.
+      default: 30
+      selector:
+        number:
+          min: 0
+          max: 180
+          step: 15
+          unit_of_measurement: "min"
+          mode: slider
+
+    # ═══════════════════════════════════════════════════════════════
+    # OTIMIZAÇÃO ECONÓMICA
+    # ═══════════════════════════════════════════════════════════════
+    
+    price_peak:
+      name: "💶 Preço Fora-Vazio (€/kWh)"
+      description: >
+        Preço da eletricidade fora de vazio.
+      default: 0.1537
+      selector:
+        number:
+          min: 0
+          max: 1
+          step: 0.01
+          unit_of_measurement: "€/kWh"
+          mode: box
+          
+    price_offpeak:
+      name: "💶 Preço Vazio (€/kWh)"
+      description: >
+        Preço da eletricidade em vazio (noite).
+      default: 0.0929
+      selector:
+        number:
+          min: 0
+          max: 1
+          step: 0.01
+          unit_of_measurement: "€/kWh"
+          mode: box
+
+    use_economic_optimization:
+      name: "📊 Usar Otimização Económica"
+      description: >
+        Calcula break-even e ajusta limites.
+      default: true
+      selector:
+        boolean:
+
+    # ═══════════════════════════════════════════════════════════════
+    # 🆕 FILTRAGEM NOTURNA BACKUP
+    # ═══════════════════════════════════════════════════════════════
+    
+    enable_night_backup:
+      name: "🌙 Ativar Backup Noturno"
+      description: >
+        Se filtragem solar insuficiente E amanhã mau tempo previsto,
+        envia notificação para agendar filtragem noturna.
+      default: false
+      selector:
+        boolean:
+        
+    night_backup_notify:
+      name: "📱 Notificação Backup Noturno"
+      description: >
+        Serviço de notificação para avisar sobre backup noturno.
+        
+        **Exemplo:** `notify.mobile_app_phone`
+      default: {}
+      selector:
+        entity:
+          domain: notify
+          multiple: false
+          
+    good_forecast_threshold:
+      name: "☀️ Limite Dia Bom (kWh)"
+      description: >
+        Previsão mínima para considerar "dia bom".
+        
+        Abaixo disto, considera filtragem noturna.
+      default: 15
+      selector:
+        number:
+          min: 5
+          max: 50
+          step: 1
+          unit_of_measurement: "kWh"
+          mode: slider
+
+    # ═══════════════════════════════════════════════════════════════
+    # 🆕 TARIFA BI-HORÁRIO (VAZIO NOTURNO)
+    # ═══════════════════════════════════════════════════════════════
+    
+    enable_night_auto:
+      name: "🌙 Ligar Automaticamente à Noite (Bi-Horário)"
+      description: >
+        Se ativado, liga a bomba automaticamente no horário de vazio
+        para completar a filtragem que faltou durante o dia solar.
+        
+        Ideal para tarifas bi-horárias!
+      default: false
+      selector:
+        boolean:
+        
+    night_start_time:
+      name: "🕙 Início Horário Vazio"
+      description: >
+        Hora de início da tarifa de vazio (mais barata).
+        
+        **Típico Portugal:** 22:00
+      default: "22:00:00"
+      selector:
+        time:
+        
+    night_end_time:
+      name: "🕗 Fim Horário Vazio"
+      description: >
+        Hora de fim da tarifa de vazio.
+        
+        **Típico Portugal:** 08:00
+      default: "08:00:00"
+      selector:
+        time:
+        
+    min_night_filtration_minutes:
+      name: "⏱️ Filtração Noturna Mínima (minutos)"
+      description: >
+        Tempo mínimo de filtragem noturna se for necessário ligar.
+        
+        Evita ligar/desligar rapidamente.
+      default: 60
+      selector:
+        number:
+          min: 15
+          max: 240
+          step: 15
+          unit_of_measurement: "min"
+          mode: slider
+
+    # ═══════════════════════════════════════════════════════════════
+    # DIAGNÓSTICO E LOGS
+    # ═══════════════════════════════════════════════════════════════
+    
+    enable_debug_logs:
+      name: "🔍 Logs de Diagnóstico"
+      description: >
+        Ativa logs detalhados para debug.
+      default: false
+      selector:
+        boolean:
+
+# ═══════════════════════════════════════════════════════════════════
+# VARIÁVEIS GLOBAIS
+# ═══════════════════════════════════════════════════════════════════
+
+variables:
+  # ─── Inputs básicos ───
+  house_power_no_pump: !input house_power_no_pump
+  pv_power: !input pv_power
+  net_power: !input net_power
+  export_power: !input export_power
+  pump_actual_power: !input pump_actual_power
+  pump_switch: !input pump_switch
+  pump_nominal_power: !input pump_nominal_power
+  import_limit: !input import_limit
+  start_margin: !input start_margin
+  delay_on: !input delay_on
+  delay_off: !input delay_off
+  min_on_time: !input min_on_time
+  filtration_remaining: !input filtration_remaining
+  override_manual: !input override_manual
+  sun_offset_start: !input sun_offset_start
+  sun_offset_end: !input sun_offset_end
+  price_peak: !input price_peak
+  price_offpeak: !input price_offpeak
+  use_economic_optimization: !input use_economic_optimization
+  enable_debug_logs: !input enable_debug_logs
+  
+  # ─── Inputs forecast ───
+  forecast_remaining_today: !input forecast_remaining_today
+  forecast_tomorrow: !input forecast_tomorrow
+  power_forecast_1h: !input power_forecast_1h
+  forecast_confidence: !input forecast_confidence
+  min_daily_filtration_kwh: !input min_daily_filtration_kwh
+  filtration_energy_today: !input filtration_energy_today
+  use_dynamic_filtration_time: !input use_dynamic_filtration_time
+  dynamic_filtration_hours_sensor: !input dynamic_filtration_hours_sensor
+  
+  # ─── Inputs bateria ───
+  battery_level: !input battery_level
+  battery_target_level: !input battery_target_level
+  battery_capacity_kwh: !input battery_capacity_kwh
+  
+  # ─── Inputs consumo casa ───
+  house_avg_power: !input house_avg_power
+  house_power_sensor_daily: !input house_power_sensor_daily
+  house_power_avg_sensor: !input house_power_avg_sensor
+  use_dynamic_house_estimate: !input use_dynamic_house_estimate
+  
+  # ─── Inputs backup noturno ───
+  enable_night_backup: !input enable_night_backup
+  night_backup_notify: !input night_backup_notify
+  good_forecast_threshold: !input good_forecast_threshold
+  
+  # ─── Inputs bi-horário noturno ───
+  enable_night_auto: !input enable_night_auto
+  night_start_time: !input night_start_time
+  night_end_time: !input night_end_time
+  min_night_filtration_minutes: !input min_night_filtration_minutes
+  
+  # ═══════════════════════════════════════════════════════════════
+  # VALORES CALCULADOS
+  # ═══════════════════════════════════════════════════════════════
+  
+  pump_power: >-
+    {% if pump_actual_power and states(pump_actual_power) not in ['unknown','unavailable',''] %}
+      {{ states(pump_actual_power)|float(pump_nominal_power) }}
+    {% else %}
+      {{ pump_nominal_power }}
+    {% endif %}
+    
+  pump_is_on: "{{ is_state(pump_switch, 'on') }}"
+  
+  # ─── Hierarquia de sensores ───
+  have_house_pv: >-
+    {{ 
+      house_power_no_pump and pv_power and 
+      states(house_power_no_pump) not in ['unknown','unavailable',''] and 
+      states(pv_power) not in ['unknown','unavailable','']
+    }}
+    
+  have_net: >-
+    {{ net_power and states(net_power) not in ['unknown','unavailable',''] }}
+    
+  have_export: >-
+    {{ export_power and states(export_power) not in ['unknown','unavailable',''] }}
+    
+  # ─── Leituras ───
+  house_w: "{{ states(house_power_no_pump)|float(0) if have_house_pv else 0 }}"
+  pv_w: "{{ states(pv_power)|float(0) if have_house_pv else 0 }}"
+  net_w: "{{ states(net_power)|float(0) if have_net else 0 }}"
+  export_w: "{{ states(export_power)|float(0) if have_export else 0 }}"
+  
+  source_used: >-
+    {% if have_house_pv %}house+pv{% elif have_net %}net{% elif have_export %}export{% else %}none{% endif %}
+    
+  # ─── Cálculos de importação ───
+  import_current: >-
+    {% if have_house_pv %}
+      {{ [house_w + (pump_power if pump_is_on else 0) - pv_w, 0]|max }}
+    {% elif have_net %}
+      {{ [net_w, 0]|max }}
+    {% else %}
+      {{ 999999 }}
+    {% endif %}
+    
+  import_predicted: >-
+    {% if have_house_pv %}
+      {{ [house_w + pump_power - pv_w, 0]|max }}
+    {% elif have_net %}
+      {{ [net_w + pump_power, 0]|max }}
+    {% elif have_export %}
+      {{ [pump_power - export_w, 0]|max }}
+    {% else %}
+      {{ 999999 }}
+    {% endif %}
+    
+  export_available: >-
+    {% if have_house_pv %}
+      {{ [pv_w - house_w, 0]|max }}
+    {% elif have_net %}
+      {{ [-net_w, 0]|max }}
+    {% elif have_export %}
+      {{ export_w }}
+    {% else %}
+      {{ 0 }}
+    {% endif %}
+    
+  # ═══════════════════════════════════════════════════════════════
+  # 🆕 CÁLCULOS DE FORECAST
+  # ═══════════════════════════════════════════════════════════════
+  
+  have_forecast: >-
+    {{ forecast_remaining_today and states(forecast_remaining_today) not in ['unknown','unavailable',''] }}
+    
+  forecast_kwh: >-
+    {{ states(forecast_remaining_today)|float(0) if have_forecast else 0 }}
+    
+  adjusted_forecast_kwh: >-
+    {{ forecast_kwh * (forecast_confidence / 100) }}
+    
+  have_forecast_tomorrow: >-
+    {{ forecast_tomorrow and states(forecast_tomorrow) not in ['unknown','unavailable',''] }}
+    
+  forecast_tomorrow_kwh: >-
+    {{ states(forecast_tomorrow)|float(0) if have_forecast_tomorrow else 999 }}
+    
+  have_power_forecast: >-
+    {{ power_forecast_1h and states(power_forecast_1h) not in ['unknown','unavailable',''] }}
+    
+  power_in_1h: >-
+    {{ states(power_forecast_1h)|float(pv_w) if have_power_forecast else pv_w }}
+    
+  # ─── Cálculos de filtragem ───
+  have_filtration_energy: >-
+    {{ filtration_energy_today and states(filtration_energy_today) not in ['unknown','unavailable',''] }}
+    
+  filtration_done_kwh: >-
+    {{ states(filtration_energy_today)|float(0) if have_filtration_energy else 0 }}
+  
+  # 🆕 Tempo dinâmico de filtragem baseado em temperatura
+  have_dynamic_filtration: >-
+    {{ use_dynamic_filtration_time and dynamic_filtration_hours_sensor and states(dynamic_filtration_hours_sensor) not in ['unknown','unavailable',''] }}
+  
+  # Horas de filtragem alvo (dinâmico ou fixo)
+  filtration_target_hours: >-
+    {% if have_dynamic_filtration %}
+      {{ states(dynamic_filtration_hours_sensor)|float(8) }}
+    {% else %}
+      {{ min_daily_filtration_kwh / (pump_nominal_power / 1000) if pump_nominal_power > 0 else 8 }}
+    {% endif %}
+  
+  # Energia alvo de filtragem (calculada a partir das horas)
+  filtration_target_kwh: >-
+    {{ filtration_target_hours * (pump_nominal_power / 1000) }}
+    
+  filtration_needed_kwh: >-
+    {{ [filtration_target_kwh - filtration_done_kwh, 0]|max }}
+    
+  # Fonte do tempo de filtragem (para debug)
+  filtration_source: >-
+    {% if have_dynamic_filtration %}
+      dinâmico ({{ states(dynamic_filtration_hours_sensor)|float(8)|round(1) }}h baseado em temperatura)
+    {% else %}
+      fixo ({{ min_daily_filtration_kwh }}kWh = {{ (min_daily_filtration_kwh / (pump_nominal_power / 1000))|round(1) if pump_nominal_power > 0 else 'N/A' }}h)
+    {% endif %}
+    
+  # ─── Energia para bateria ───
+  have_battery: >-
+    {{ battery_level and battery_capacity_kwh > 0 and states(battery_level) not in ['unknown','unavailable',''] }}
+    
+  battery_current: >-
+    {{ states(battery_level)|float(100) if have_battery else 100 }}
+    
+  battery_needed_kwh: >-
+    {% if have_battery %}
+      {{ battery_capacity_kwh * ([battery_target_level - battery_current, 0]|max) / 100 }}
+    {% else %}
+      {{ 0 }}
+    {% endif %}
+    
+  # ─────────────────────────────────────────────────────────────────
+  # 🆕 CONSUMO CASA - ESTIMATIVA DINÂMICA COM HISTÓRICO
+  # ─────────────────────────────────────────────────────────────────
+  
+  # Horas solares restantes até pôr do sol
+  hours_until_sunset: >-
+    {% set sunset = state_attr('sun.sun', 'next_setting')|as_datetime %}
+    {% if sunset %}
+      {{ [((sunset - now()).total_seconds() / 3600)|round(1), 0]|max }}
+    {% else %}
+      {{ 4 }}
+    {% endif %}
+    
+  # Consumo atual da casa (instantâneo, sem bomba)
+  house_power_now: >-
+    {% if have_house_pv %}
+      {{ house_w }}
+    {% else %}
+      {{ house_avg_power }}
+    {% endif %}
+    
+  # Média estatística dos últimos 7 dias 
+  # Prioridade: 1) Sensor estatísticas, 2) Valor configurado manual
+  house_power_avg_7d: >-
+    {% if house_power_avg_sensor and states(house_power_avg_sensor) not in ['unknown','unavailable',''] %}
+      {# Usa o sensor de estatísticas (sensor.casa_consumo_medio_7d) #}
+      {{ states(house_power_avg_sensor)|float(house_avg_power) }}
+    {% else %}
+      {# Fallback: usar valor manual configurado #}
+      {{ house_avg_power }}
+    {% endif %}
+    
+  # Estimativa dinâmica do consumo restante (kWh)
+  # Prioridade: 1) Consumo atual, 2) Média 7 dias, 3) Valor configurado
+  house_consumption_estimate: >-
+    {% if use_dynamic_house_estimate and house_power_now > 0 %}
+      {# DINÂMICO: consumo atual × horas restantes × fator segurança #}
+      {# Ajusta o fator baseado na hora do dia (tarde = maior consumo) #}
+      {% set hour = now().hour %}
+      {% set factor = 1.3 if hour >= 14 and hour <= 18 else 1.1 %}
+      {{ (house_power_now / 1000 * hours_until_sunset * factor)|round(1) }}
+    {% else %}
+      {# FIXO: consumo médio configurado × horas restantes #}
+      {{ (house_avg_power / 1000 * hours_until_sunset)|round(1) }}
+    {% endif %}
+  
+  # ─── Energia disponível para piscina ───
+  available_for_pool_kwh: >-
+    {% if have_forecast %}
+      {{ [adjusted_forecast_kwh - house_consumption_estimate - battery_needed_kwh, 0]|max }}
+    {% else %}
+      {{ 999 }}
+    {% endif %}
+    
+  # ═══════════════════════════════════════════════════════════════
+  # 🆕 MODO ADAPTATIVO
+  # ═══════════════════════════════════════════════════════════════
+  
+  operation_mode: >-
+    {% if not have_forecast %}
+      normal
+    {% elif available_for_pool_kwh >= filtration_needed_kwh * 2 %}
+      aggressive
+    {% elif available_for_pool_kwh >= filtration_needed_kwh * 1.2 %}
+      normal
+    {% elif available_for_pool_kwh >= filtration_needed_kwh * 0.5 %}
+      conservative
+    {% else %}
+      emergency
+    {% endif %}
+    
+  # ─── Parâmetros por modo ───
+  effective_import_limit: >-
+    {% if operation_mode == 'aggressive' %}
+      {{ import_limit * 1.5 }}
+    {% elif operation_mode == 'conservative' %}
+      {{ import_limit * 0.7 }}
+    {% elif operation_mode == 'emergency' %}
+      {{ import_limit * 2 }}
+    {% else %}
+      {{ import_limit }}
+    {% endif %}
+    
+  effective_start_margin: >-
+    {% if operation_mode == 'aggressive' %}
+      {{ 0 }}
+    {% elif operation_mode == 'conservative' %}
+      {{ start_margin * 2 }}
+    {% elif operation_mode == 'emergency' %}
+      {{ 0 }}
+    {% else %}
+      {{ start_margin }}
+    {% endif %}
+    
+  effective_delay_on: >-
+    {% if operation_mode == 'aggressive' %}
+      {{ (delay_on * 0.5)|int }}
+    {% elif operation_mode == 'conservative' %}
+      {{ (delay_on * 1.5)|int }}
+    {% elif operation_mode == 'emergency' %}
+      {{ 10 }}
+    {% else %}
+      {{ delay_on }}
+    {% endif %}
+    
+  # ─── Antecipação de queda ───
+  power_drop_expected: >-
+    {% if have_power_forecast and pv_w > 100 %}
+      {{ ((pv_w - power_in_1h) / pv_w * 100)|round(0) }}
+    {% else %}
+      {{ 0 }}
+    {% endif %}
+    
+  effective_delay_off: >-
+    {% if power_drop_expected > 50 %}
+      {{ delay_off * 2 }}
+    {% elif power_drop_expected > 30 %}
+      {{ (delay_off * 1.5)|int }}
+    {% else %}
+      {{ delay_off }}
+    {% endif %}
+    
+  # ═══════════════════════════════════════════════════════════════
+  # OTIMIZAÇÃO ECONÓMICA
+  # ═══════════════════════════════════════════════════════════════
+    
+  break_even_w: >-
+    {% if use_economic_optimization and price_peak > 0 %}
+      {{ (pump_power * (price_peak - price_offpeak) / price_peak)|round(0) }}
+    {% else %}
+      {{ 0 }}
+    {% endif %}
+    
+  final_import_limit: >-
+    {% if use_economic_optimization %}
+      {{ [effective_import_limit, break_even_w]|max }}
+    {% else %}
+      {{ effective_import_limit }}
+    {% endif %}
+    
+  # ═══════════════════════════════════════════════════════════════
+  # DECISÕES
+  # ═══════════════════════════════════════════════════════════════
+    
+  should_start: >-
+    {{ import_predicted <= (final_import_limit - effective_start_margin) }}
+    
+  should_stay_on: >-
+    {{ pump_is_on and import_current <= final_import_limit }}
+    
+  should_turn_on: >-
+    {{ should_start or should_stay_on }}
+    
+  # ─── Condições adicionais ───
+  filtration_ok: >-
+    {% if filtration_remaining %}
+      {{ states(filtration_remaining)|float(999) > 0 }}
+    {% else %}
+      {{ true }}
+    {% endif %}
+    
+  manual_override_off: >-
+    {% if override_manual %}
+      {{ is_state(override_manual, 'off') }}
+    {% else %}
+      {{ true }}
+    {% endif %}
+    
+  # ─── Backup noturno necessário ───
+  night_backup_needed: >-
+    {% if enable_night_backup and have_forecast_tomorrow %}
+      {% set deficit = filtration_needed_kwh %}
+      {% set tomorrow_bad = forecast_tomorrow_kwh < good_forecast_threshold %}
+      {{ deficit > 0 and tomorrow_bad }}
+    {% else %}
+      {{ false }}
+    {% endif %}
+    
+  # ─────────────────────────────────────────────────────────────────
+  # 🆕 BI-HORÁRIO: FILTRAGEM NOTURNA AUTOMÁTICA
+  # ─────────────────────────────────────────────────────────────────
+  
+  # Verifica se estamos no horário de vazio (22:00-08:00)
+  is_night_tariff: >-
+    {% if enable_night_auto %}
+      {% set now_time = now().strftime('%H:%M:%S') %}
+      {% set start = night_start_time %}
+      {% set end = night_end_time %}
+      {% if start > end %}
+        {# Horário atravessa meia-noite (22:00-08:00) #}
+        {{ now_time >= start or now_time < end }}
+      {% else %}
+        {# Horário normal #}
+        {{ now_time >= start and now_time < end }}
+      {% endif %}
+    {% else %}
+      {{ false }}
+    {% endif %}
+    
+  # Minutos de filtragem que ainda faltam
+  filtration_remaining_minutes: >-
+    {% if filtration_remaining and states(filtration_remaining) not in ['unknown','unavailable',''] %}
+      {# Tenta ler atributo 'seconds' se existir, senão converte HH:MM para minutos #}
+      {% set secs = state_attr(filtration_remaining, 'seconds') %}
+      {% if secs is not none %}
+        {{ (secs|float(0) / 60)|round(0) }}
+      {% else %}
+        {# Tenta converter HH:MM para minutos #}
+        {% set val = states(filtration_remaining) %}
+        {% if ':' in val|string %}
+          {% set parts = val.split(':') %}
+          {{ (parts[0]|int(0) * 60 + parts[1]|int(0))|round(0) }}
+        {% else %}
+          {{ val|float(0) }}
+        {% endif %}
+      {% endif %}
+    {% else %}
+      {# Calcula baseado na energia: kWh restantes ÷ potência bomba × 60 min #}
+      {{ (filtration_needed_kwh / (pump_power/1000) * 60)|round(0) if pump_power > 0 else 0 }}
+    {% endif %}
+    
+  # Decisão: Deve ligar à noite no bi-horário?
+  should_run_night: >-
+    {% if enable_night_auto and is_night_tariff and manual_override_off %}
+      {% set needs_filtration = filtration_remaining_minutes > 0 %}
+      {% set min_time = min_night_filtration_minutes %}
+      {{ needs_filtration and filtration_remaining_minutes >= min_time }}
+    {% else %}
+      {{ false }}
+    {% endif %}
+
+# ═══════════════════════════════════════════════════════════════════
+# TRIGGERS
+# ═══════════════════════════════════════════════════════════════════
+
+triggers:
+  - trigger: state
+    entity_id: !input pv_power
+    id: pv_changed
+    
+  - trigger: state
+    entity_id: !input house_power_no_pump
+    id: house_changed
+    enabled: "{{ house_power_no_pump is not none }}"
+    
+  - trigger: state
+    entity_id: !input net_power
+    id: net_changed
+    enabled: "{{ net_power is not none }}"
+    
+  - trigger: state
+    entity_id: !input export_power
+    id: export_changed
+    enabled: "{{ export_power is not none }}"
+    
+  - trigger: time_pattern
+    minutes: "/2"
+    id: periodic
+    
+  # Trigger para verificar backup noturno
+  - trigger: time
+    at: "20:30:00"
+    id: night_check
+    
+  # 🆕 Trigger para início do horário vazio (bi-horário)
+  - trigger: time
+    at: !input night_start_time
+    id: night_tariff_start
+    
+  # 🆕 Trigger periódico noturno (a cada 15 min durante horário vazio)
+  - trigger: time_pattern
+    minutes: "/15"
+    id: night_periodic
+
+# ═══════════════════════════════════════════════════════════════════
+# CONDITIONS
+# ═══════════════════════════════════════════════════════════════════
+
+conditions:
+  - condition: or
+    conditions:
+      # Condição normal (durante o dia - modo solar)
+      - condition: and
+        conditions:
+          - condition: template
+            value_template: >-
+              {# Verifica se é dia e se estamos dentro do offset configurado #}
+              {% set is_day = is_state('sun.sun', 'above_horizon') %}
+              {% if not is_day %}
+                false
+              {% else %}
+                {% set elevation = state_attr('sun.sun', 'elevation') | float(0) %}
+                {# Usa elevação como proxy - offsets maiores = elevação mínima maior #}
+                {% set min_elevation = (sun_offset_start | int / 10) %}
+                {% set sun_azimuth = state_attr('sun.sun', 'azimuth') | float(180) %}
+                {# Manhã: azimute < 180, Tarde: azimute >= 180 #}
+                {% set is_morning = sun_azimuth < 180 %}
+                {% set is_afternoon = sun_azimuth >= 180 %}
+                {# Aplica offset start na manhã, offset end na tarde #}
+                {% set start_offset_deg = (sun_offset_start | int / 60) * 5 %}
+                {% set end_offset_deg = (sun_offset_end | int / 60) * 5 %}
+                {% if is_morning %}
+                  {{ elevation >= start_offset_deg }}
+                {% else %}
+                  {{ elevation >= end_offset_deg }}
+                {% endif %}
+              {% endif %}
+          - condition: template
+            value_template: "{{ manual_override_off }}"
+          - condition: template
+            value_template: "{{ filtration_ok }}"
+          - condition: template
+            value_template: "{{ source_used != 'none' }}"
+      # Trigger noturno sempre passa (verificamos no action)
+      - condition: trigger
+        id: night_check
+      # 🆕 Trigger bi-horário noturno sempre passa
+      - condition: trigger
+        id: night_tariff_start
+      # 🆕 Trigger periódico noturno sempre passa
+      - condition: trigger
+        id: night_periodic
+
+# ═══════════════════════════════════════════════════════════════════
+# ACTIONS
+# ═══════════════════════════════════════════════════════════════════
+
+actions:
+  # ═══════════════════════════════════════════════════════════════
+  # 🆕 FILTRAGEM NOTURNA BI-HORÁRIO (22:00-08:00)
+  # ═══════════════════════════════════════════════════════════════
+  
+  - if:
+      - condition: or
+        conditions:
+          - condition: trigger
+            id: night_tariff_start
+          - condition: trigger
+            id: night_periodic
+    then:
+      - if:
+          - condition: template
+            value_template: "{{ should_run_night and not pump_is_on }}"
+        then:
+          - service: switch.turn_on
+            target:
+              entity_id: !input pump_switch
+              
+          - if:
+              - condition: template
+                value_template: "{{ enable_debug_logs }}"
+            then:
+              - service: system_log.write
+                data:
+                  message: "🌙 Bomba LIGADA [BI-HORÁRIO]: restam={{ filtration_remaining_minutes|round(0) }}min, tarifa=vazio"
+                  level: info
+                  logger: blueprints.piscina_solar
+                  
+      # Desligar quando filtragem completa durante a noite
+      - if:
+          - condition: template
+            value_template: "{{ is_night_tariff and pump_is_on and filtration_remaining_minutes <= 0 }}"
+        then:
+          - service: switch.turn_off
+            target:
+              entity_id: !input pump_switch
+              
+          - if:
+              - condition: template
+                value_template: "{{ enable_debug_logs }}"
+            then:
+              - service: system_log.write
+                data:
+                  message: "🌙 Bomba DESLIGADA [BI-HORÁRIO]: filtragem completa!"
+                  level: info
+                  logger: blueprints.piscina_solar
+      
+      - stop: "Ação noturna processada"
+  
+  # ═══════════════════════════════════════════════════════════════
+  # VERIFICAÇÃO BACKUP NOTURNO (20:30)
+  # ═══════════════════════════════════════════════════════════════
+  
+  - if:
+      - condition: trigger
+        id: night_check
+    then:
+      - if:
+          - condition: template
+            value_template: "{{ night_backup_needed and night_backup_notify }}"
+        then:
+          - service: "{{ night_backup_notify }}"
+            data:
+              title: "🌙 Filtragem Noturna Recomendada"
+              message: >-
+                Filtragem solar insuficiente hoje ({{ filtration_done_kwh|round(1) }} de {{ filtration_target_kwh|round(1) }} kWh).
+                Fonte: {{ filtration_source }}
+                Previsão amanhã: {{ forecast_tomorrow_kwh|round(0) }} kWh (fraco).
+                
+                Considere agendar filtragem noturna para compensar.
+                
+                Défice: {{ filtration_needed_kwh|round(1) }} kWh
+                Tempo necessário: {{ (filtration_needed_kwh / (pump_nominal_power/1000))|round(1) }} horas
+          - if:
+              - condition: template
+                value_template: "{{ enable_debug_logs }}"
+            then:
+              - service: system_log.write
+                data:
+                  message: "🌙 Backup noturno: défice={{ filtration_needed_kwh|round(1) }}kWh, amanhã={{ forecast_tomorrow_kwh|round(0) }}kWh"
+                  level: warning
+                  logger: blueprints.piscina_solar
+      - stop: "Night check completed"
+
+  # ═══════════════════════════════════════════════════════════════
+  # LOG DE DIAGNÓSTICO
+  # ═══════════════════════════════════════════════════════════════
+  
+  - if:
+      - condition: template
+        value_template: "{{ enable_debug_logs }}"
+    then:
+      - service: system_log.write
+        data:
+          message: >-
+            🏊 Piscina Solar v2: mode={{ operation_mode }}, 
+            source={{ source_used }}, 
+            export={{ export_available|round(0) }}W, 
+            import_pred={{ import_predicted|round(0) }}W, 
+            limit={{ final_import_limit|round(0) }}W, 
+            pump={{ 'ON' if pump_is_on else 'OFF' }}, 
+            should={{ 'ON' if should_turn_on else 'OFF' }},
+            forecast={{ forecast_kwh|round(1) }}kWh,
+            available={{ available_for_pool_kwh|round(1) }}kWh,
+            house_now={{ house_power_now|round(0) }}W,
+            house_avg7d={{ house_power_avg_7d|round(0) }}W,
+            house_est={{ house_consumption_estimate }}kWh,
+            hours_left={{ hours_until_sunset }},
+            drop_1h={{ power_drop_expected }}%
+          level: info
+          logger: blueprints.piscina_solar
+          
+  # ═══════════════════════════════════════════════════════════════
+  # DECISÃO: LIGAR
+  # ═══════════════════════════════════════════════════════════════
+  
+  - if:
+      - condition: template
+        value_template: "{{ should_turn_on and not pump_is_on }}"
+    then:
+      - delay:
+          seconds: "{{ effective_delay_on }}"
+          
+      - if:
+          - condition: template
+            value_template: >-
+              {% set imp_pred = import_predicted %}
+              {% set lim = final_import_limit - effective_start_margin %}
+              {{ imp_pred <= lim }}
+        then:
+          - service: switch.turn_on
+            target:
+              entity_id: !input pump_switch
+              
+          - if:
+              - condition: template
+                value_template: "{{ enable_debug_logs }}"
+            then:
+              - service: system_log.write
+                data:
+                  message: "🏊 Bomba LIGADA [{{ operation_mode }}]: import={{ import_predicted|round(0) }}W, limit={{ final_import_limit|round(0) }}W"
+                  level: info
+                  logger: blueprints.piscina_solar
+                  
+  # ═══════════════════════════════════════════════════════════════
+  # DECISÃO: DESLIGAR
+  # ═══════════════════════════════════════════════════════════════
+  
+  - if:
+      - condition: template
+        value_template: "{{ not should_turn_on and pump_is_on }}"
+    then:
+      - if:
+          - condition: template
+            value_template: >-
+              {% set last_on = states[pump_switch].last_changed if pump_switch in states else none %}
+              {% if last_on %}
+                {{ (now() - last_on).total_seconds() > (min_on_time * 60) }}
+              {% else %}
+                {{ true }}
+              {% endif %}
+        then:
+          - delay:
+              seconds: "{{ effective_delay_off }}"
+              
+          - if:
+              - condition: template
+                value_template: >-
+                  {% set imp_curr = import_current %}
+                  {% set lim = final_import_limit %}
+                  {{ imp_curr > lim }}
+            then:
+              - service: switch.turn_off
+                target:
+                  entity_id: !input pump_switch
+                  
+              - if:
+                  - condition: template
+                    value_template: "{{ enable_debug_logs }}"
+                then:
+                  - service: system_log.write
+                    data:
+                      message: "🏊 Bomba DESLIGADA [{{ operation_mode }}]: import={{ import_current|round(0) }}W > limit={{ final_import_limit|round(0) }}W"
+                      level: info
+                      logger: blueprints.piscina_solar
+
+mode: single
+max_exceeded: silent

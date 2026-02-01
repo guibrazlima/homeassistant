@@ -1,0 +1,143 @@
+# ============================================================================
+# BACKUP DA AUTOMAÇÃO: bomba_piscina_dia
+# ============================================================================
+# 
+# 📅 Recuperado de: Commit f0cd1c2 (Fase 2: Categorização automática)
+# 📅 Data Original: ~Janeiro 2026
+# 🔍 Status: REMOVIDA do sistema atual
+# ⚠️  Problema: Referenciada mas não existe mais
+#
+# Esta automação usava o BLUEPRINT PVExcessControl para controlar a bomba
+# da piscina baseando-se no excedente de energia solar.
+#
+# 📊 SENSORES UTILIZADOS:
+#   - sensor.emoncms_solar           → Produção solar
+#   - sensor.emoncms_export_power_positive → Exportação para rede
+#   - sensor.emoncms_use             → Consumo total
+#   - sensor.bomba_piscina_switch_0_power → Potência da bomba
+#
+# 🔌 SWITCH CONTROLADO:
+#   - switch.bomba_piscina_switch_0
+#
+# ⚙️  CONFIGURAÇÃO:
+#   - Tensão da rede: 230V
+#   - Margem de toggle: 10W
+#   - Limite inversor: 0
+#
+# ============================================================================
+
+- id: bomba_piscina_dia
+  alias: 🏊🏻Bomba Piscina Dia
+  description: Automação do Home Assistant.
+  use_blueprint:
+    path: PVExcessControl/pv_excess_control.yaml
+    input:
+      automation_id: automation.bomba_piscina_dia  # ← Corrigido (era new_automation_3)
+      grid_voltage: 230
+      pv_power: sensor.emoncms_solar
+      export_power: sensor.emoncms_export_power_positive
+      load_power: sensor.emoncms_use
+      actual_power: sensor.bomba_piscina_switch_0_power
+      power_toggle_margin: 10
+      appliance_switch: switch.bomba_piscina_switch_0
+      inverter_limit: 0
+  mode: single
+  max_exceeded: warning
+
+# ============================================================================
+# NOTA IMPORTANTE SOBRE O BLUEPRINT PVExcessControl
+# ============================================================================
+#
+# O blueprint PVExcessControl (github.com/panhans/HomeAssistant) é um sistema
+# avançado de controlo de aparelhos baseado em excedente fotovoltaico.
+#
+# 🎯 FUNCIONALIDADES:
+#   ✅ Liga aparelho quando há excedente solar suficiente
+#   ✅ Desliga quando importa energia da rede
+#   ✅ Considera potência do aparelho para evitar oscilações
+#   ✅ Margem de toggle para estabilidade
+#   ✅ Suporte para múltiplos inversores
+#   ✅ Histórico e estatísticas
+#
+# 📋 ALTERNATIVAS ATUAIS NO SISTEMA:
+#   1. automation.automacao_bomba_piscina (ID: automacao_bomba_piscina)
+#      - Sistema manual baseado em thresholds fixos
+#      - Trigger: < -750W (ON) e > +750W (OFF)
+#
+#   2. automation.piscina_arranque_com_excedente_fv
+#      - Usa binary_sensor.piscina_excedente_fv_bomba
+#      - Delay de 2 minutos
+#
+#   3. automation.piscina_watchdog_arranque_fv_2min_v2
+#      - Watchdog que verifica a cada 2 minutos
+#      - Backup do sistema de arranque FV
+#
+# ============================================================================
+# RECOMENDAÇÕES DE RESTAURAÇÃO
+# ============================================================================
+#
+# ❓ DEVE RESTAURAR?
+#
+# 🟢 SIM, se:
+#   - Deseja controlo mais sofisticado via blueprint
+#   - Quer funcionalidades avançadas (estatísticas, fine-tuning)
+#   - Pretende consolidar as 3 automações alternativas numa só
+#
+# 🔴 NÃO, se:
+#   - Sistema atual funciona bem
+#   - Prefere código simples e direto
+#   - Não quer depender de blueprint externo
+#
+# ============================================================================
+# COMO RESTAURAR
+# ============================================================================
+#
+# 1️⃣ VERIFICAR BLUEPRINT:
+#    - Confirmar se PVExcessControl está instalado
+#    - Path: /config/blueprints/automation/PVExcessControl/pv_excess_control.yaml
+#    - Se não: instalar de github.com/panhans/HomeAssistant
+#
+# 2️⃣ VERIFICAR SENSORES:
+#    - Todos os sensores emoncms_* devem estar ativos
+#    - sensor.bomba_piscina_switch_0_power deve reportar potência
+#
+# 3️⃣ ADICIONAR AO automations.yaml:
+#    - Copiar automação acima
+#    - Recarregar automações (Developer Tools > YAML)
+#
+# 4️⃣ DESATIVAR AUTOMAÇÕES REDUNDANTES:
+#    - Desativar automation.automacao_bomba_piscina
+#    - Manter watchdog como backup (opcional)
+#
+# 5️⃣ ATUALIZAR REFERÊNCIAS:
+#    Em automation.ligardesligar_automacao_piscina:
+#      - Trocar automation.bomba_piscina_dia
+#      - Por ID correto após criação
+#
+#    Em automation.hidrojet:
+#      - Trocar automation.bomba_piscina_dia
+#      - Por ID correto após criação
+#
+# ============================================================================
+# VANTAGENS vs DESVANTAGENS
+# ============================================================================
+#
+# BLUEPRINT (bomba_piscina_dia):
+#   ✅ Controlo mais inteligente e adaptativo
+#   ✅ Estatísticas e histórico integrados
+#   ✅ Fine-tuning de parâmetros
+#   ✅ Manutenção via blueprint (updates automáticos)
+#   ❌ Dependência externa
+#   ❌ Debugging mais complexo
+#   ❌ Requer sensores emoncms_*
+#
+# MANUAL (automacao_bomba_piscina):
+#   ✅ Simples e direto
+#   ✅ Fácil de debugar
+#   ✅ Sem dependências externas
+#   ✅ Código visível e editável
+#   ❌ Menos funcionalidades
+#   ❌ Thresholds fixos
+#   ❌ Sem estatísticas
+#
+# ============================================================================

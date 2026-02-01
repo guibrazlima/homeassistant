@@ -1,0 +1,87 @@
+#################################################################
+## Thermal Comfort - Groups
+## Agrupamentos para interface/dashboards
+#################################################################
+
+group:
+  # Grupo: Conforto Térmico - Exterior
+  thermal_comfort_exterior:
+    name: "Conforto Térmico - Exterior"
+    icon: mdi:home-thermometer-outline
+    entities:
+      - sensor.eira_exterior_temperature
+      - sensor.eira_exterior_humidity
+      - sensor.eira_exterior_absolute_humidity
+      - sensor.eira_exterior_heat_index
+      - sensor.eira_exterior_dew_point
+      - sensor.eira_exterior_thermal_perception
+      - sensor.eira_exterior_frost_risk
+
+  # Grupo: Conforto Térmico - Cave
+  thermal_comfort_cave:
+    name: "Conforto Térmico - Cave"
+    icon: mdi:home-floor-b
+    entities:
+      - sensor.cave_temperature
+      - sensor.cave_humidity
+      - sensor.cave_absolute_humidity
+      - sensor.cave_dew_point
+      - sensor.cave_thermal_perception
+
+  # Grupo: Conforto Térmico - Sala Superior
+  thermal_comfort_sala:
+    name: "Conforto Térmico - Sala Superior"
+    icon: mdi:sofa
+    entities:
+      - sensor.sala_superior_temperature
+      - sensor.sala_superior_humidity
+      - sensor.sala_superior_absolute_humidity
+      - sensor.sala_superior_heat_index
+      - sensor.sala_superior_dew_point
+      - sensor.sala_superior_thermal_perception
+
+  # Grupo: Conforto Térmico - Suite Principal
+  thermal_comfort_suite:
+    name: "Conforto Térmico - Suite Principal"
+    icon: mdi:bed-king
+    entities:
+      - sensor.suite_principal_temperature
+      - sensor.suite_principal_humidity
+      - sensor.suite_principal_absolute_humidity
+      - sensor.suite_principal_heat_index
+      - sensor.suite_principal_dew_point
+      - sensor.suite_principal_thermal_perception
+
+  # Grupo: Conforto Térmico - Quarto Miúdos
+  thermal_comfort_quartos_criancas:
+    name: "Conforto Térmico - Quarto Miúdos"
+    icon: mdi:account-child
+    entities:
+      - sensor.quarto_miudos_temperature
+      - sensor.quarto_miudos_humidity
+      - sensor.quarto_miudos_absolute_humidity
+      - sensor.quarto_miudos_heat_index
+      - sensor.quarto_miudos_dew_point
+      - sensor.quarto_miudos_thermal_perception
+
+  # Grupo: Resumo - Todas as Temperaturas
+  thermal_comfort_all_temperatures:
+    name: "Temperaturas - Todas as Divisões"
+    icon: mdi:thermometer
+    entities:
+      - sensor.eira_exterior_temperature
+      - sensor.cave_temperature
+      - sensor.sala_superior_temperature
+      - sensor.suite_principal_temperature
+      - sensor.quarto_miudos_temperature
+
+  # Grupo: Resumo - Todas as Humidades
+  thermal_comfort_all_humidity:
+    name: "Humidade - Todas as Divisões"
+    icon: mdi:water-percent
+    entities:
+      - sensor.eira_exterior_humidity
+      - sensor.cave_humidity
+      - sensor.sala_superior_humidity
+      - sensor.suite_principal_humidity
+      - sensor.quarto_miudos_humidity

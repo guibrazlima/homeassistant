@@ -1,0 +1,38 @@
+# ======================================================================
+# 🏊 PISCINA
+# ======================================================================
+# Ficheiro: piscina_cobertura.yaml
+# Automações: 1
+# Última atualização: 2025-11-11
+# Migrado automaticamente - Fase 2
+# ======================================================================
+
+
+- id: piscina_estado_da_cobertura_llm_vision
+  alias: Piscina — Estado da cobertura (LLM Vision)
+  description: Automação do Home Assistant.
+  triggers:
+  - entity_id: switch.bomba_piscina_switch_0
+    to: 'on'
+    for: 00:05:00
+    trigger: state
+  - minutes: /30
+    trigger: time_pattern
+  conditions:
+  - condition: state
+    entity_id: switch.bomba_piscina_switch_0
+    state: 'on'
+  actions:
+  - response_variable: llmresp
+    data:
+      provider: 01K5S60RJSW6MFMB543KEDHE23
+      model: gpt-4o-mini
+      message: 'Observa esta imagem da piscina e responde apenas com um valor booleano para atualizar o sensor alvo: "true" se a COBERTURA estiver FECHADA. "false" se a COBERTURA estiver ABERTA. Regras: - Considera fechada apenas se a cobertura visivelmente cobre totalmente a lâmina de água. - Se a cobertura estiver a meio (a mover) ou houver dúvida, responde "false" (trata como aberta). - Não expliques. Não uses outras palavras.'
+      sensor_entity: input_boolean.piscina_cobertura_fechada
+      image_entity:
+      - camera.eira_piscina_hd_stream
+      max_tokens: 24
+      target_width: 768
+      include_filename: false
+    action: llmvision.data_analyzer
+  mode: restart

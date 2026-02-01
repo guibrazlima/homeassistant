@@ -1,35 +1,26 @@
-# ============================================================================
-# 🏊 PISCINA - Automações de Gestão da Piscina
-# ============================================================================
-# Inclui: Cloro, pH, sal, cobertura, bomba (dia/noite/solar), monitorização
-# (LLM Vision, OCR), temperatura, timer, variáveis, excedente FV
-# ============================================================================
-
 - id: piscina_llmvision_sal_baixo
-  alias: Piscina — Sal baixo (LLM Vision, amostragem+debounce)
+  alias: "\U0001F3CA\U0001F3FB Piscina - Sal baixo (LLM Vision, amostragem+debounce)"
   description: Recolhe até 3 amostras rápidas (1.2s) do painel do clorador CTX com
     LLM Vision. Se alguma amostra der 'on', ativa o estado RAW. Em seguida aplica
     debounce para só desligar o estado final após N leituras 'off' consecutivas.
-  mode: restart
-  trigger:
-  - platform: time_pattern
-    seconds: /30
-  - platform: state
-    entity_id: switch.piscina_cloro_permitir_producao
+  triggers:
+  - seconds: /30
+    trigger: time_pattern
+  - entity_id: switch.piscina_cloro_permitir_producao
     to: 'on'
     for: 00:00:30
-  condition:
+    trigger: state
+  conditions:
   - condition: state
     entity_id: switch.piscina_cloro_permitir_producao
     state: 'on'
-  action:
+  actions:
   - variables:
       provider_id: 01K5S60RJSW6MFMB543KEDHE23
       camera_entity: camera.cave_hd_stream
   - repeat:
       sequence:
-      - service: llmvision.data_analyzer
-        continue_on_error: true
+      - continue_on_error: true
         data:
           provider: '{{ provider_id }}'
           model: gpt-4o-mini
@@ -44,6 +35,7 @@
             acesa OU a piscar em qualquer intensidade, responde: on Caso contrário,
             responde: off Responde apenas com ''on'' ou ''off'' — sem mais texto.'
         response_variable: response
+        action: llmvision.data_analyzer
       - delay: '00:00:01.2'
       until:
       - or:
@@ -58,33 +50,34 @@
         entity_id: input_boolean.piscina_sal_baixo_raw
         state: 'on'
       sequence:
-      - service: input_boolean.turn_on
-        target:
+      - target:
           entity_id: input_boolean.piscina_sal_baixo
-      - service: input_number.set_value
-        target:
+        action: input_boolean.turn_on
+      - target:
           entity_id: input_number.piscina_sal_baixo_off_streak
         data:
           value: 0
+        action: input_number.set_value
     - conditions:
       - condition: state
         entity_id: input_boolean.piscina_sal_baixo_raw
         state: 'off'
       sequence:
-      - service: input_number.increment
-        target:
+      - target:
           entity_id: input_number.piscina_sal_baixo_off_streak
+        action: input_number.increment
       - condition: template
         value_template: "{{ states('input_number.piscina_sal_baixo_off_streak')|int(0)\n
           \  >= states('input_number.piscina_sal_baixo_off_debounce')|int(3) }}"
-      - service: input_boolean.turn_off
-        target:
+      - target:
           entity_id: input_boolean.piscina_sal_baixo
-      - service: input_number.set_value
-        target:
+        action: input_boolean.turn_off
+      - target:
           entity_id: input_number.piscina_sal_baixo_off_streak
         data:
           value: 0
+        action: input_number.set_value
+  mode: restart
 - id: piscina_cloro_tpo_seconds
   alias: "\U0001F3CA\U0001F3FB Piscina - Cloração TPO por Cobertura (segundos)"
   trigger:
@@ -157,22 +150,21 @@
           entity_id: switch.piscina_cloro_permitir_producao
   mode: restart
 - id: piscina_llmvision_cobertura
-  alias: Piscina — Estado da cobertura (LLM Vision)
-  mode: restart
-  trigger:
-  - platform: state
-    entity_id: switch.bomba_piscina_switch_0
+  alias: "\U0001F3CA\U0001F3FB Piscina - Estado da cobertura (LLM Vision)"
+  description: ''
+  triggers:
+  - entity_id: switch.bomba_piscina_switch_0
     to: 'on'
     for: 00:05:00
-  - platform: time_pattern
-    minutes: /30
-  condition:
+    trigger: state
+  - minutes: /30
+    trigger: time_pattern
+  conditions:
   - condition: state
     entity_id: switch.bomba_piscina_switch_0
     state: 'on'
-  action:
-  - service: llmvision.data_analyzer
-    continue_on_error: true
+  actions:
+  - continue_on_error: true
     response_variable: llmresp
     data:
       provider: 01K5S60RJSW6MFMB543KEDHE23
@@ -195,19 +187,20 @@
       max_tokens: 1
       target_width: 960
       include_filename: false
-- id: piscina_cobertura_quando_bomba_para
-  alias: Piscina — Verificar cobertura ao parar da bomba
+    action: llmvision.data_analyzer
   mode: restart
-  trigger:
-  - platform: state
-    entity_id: switch.bomba_piscina_switch_0
+- id: piscina_cobertura_quando_bomba_para
+  alias: "\U0001F3CA\U0001F3FB Piscina — Verificar cobertura ao parar da bomba"
+  description: ''
+  triggers:
+  - entity_id: switch.bomba_piscina_switch_0
     to: 'off'
     for: 00:15:00
-  - platform: sun
-    event: sunset
-  action:
-  - service: llmvision.data_analyzer
-    continue_on_error: true
+    trigger: state
+  - event: sunset
+    trigger: sun
+  actions:
+  - continue_on_error: true
     response_variable: llmresp
     data:
       provider: 01K5S60RJSW6MFMB543KEDHE23
@@ -230,6 +223,7 @@
       max_tokens: 1
       target_width: 960
       include_filename: false
+    action: llmvision.data_analyzer
   - choose:
     - conditions:
       - condition: template
@@ -238,28 +232,20 @@
 
           '
       sequence:
-      - service: telegram_bot.send_message
-        data:
+      - data:
           message: "\U0001F6A8 A cobertura da piscina está ABERTA!\n"
-- id: piscina_ph_ocr
-  alias: Piscina — pH (bomba ON; hora a hora)
+        action: telegram_bot.send_message
   mode: restart
-  trigger:
-  - platform: state
-    entity_id: switch.bomba_piscina_switch_0
+- id: piscina_ph_ocr
+  alias: "\U0001F3CA\U0001F3FB Piscina - pH (bomba ON; hora a hora)"
+  description: ''
+  triggers:
+  - entity_id: switch.bomba_piscina_switch_0
     to: 'on'
     for: 00:05:00
-  variables:
-    camera_entity: camera.cave_hd_stream
-    provider: 01K5S60RJSW6MFMB543KEDHE23
-    model: gpt-4o-mini
-    ph_prompt: 'TAREFA: Ler o valor de pH no visor da bomba (dígitos 7-seg). REGRAS:
-      - Devolve apenas um número com PONTO e 1 decimal (ex.: 7.3). - Se não vires
-      o ponto mas leres dois dígitos (ex.: 73), interpreta como 7.3. RESPOSTA: apenas
-      o número.'
-  action:
-  - service: llmvision.data_analyzer
-    continue_on_error: true
+    trigger: state
+  actions:
+  - continue_on_error: true
     data:
       provider: '{{ provider }}'
       model: '{{ model }}'
@@ -272,15 +258,18 @@
       include_filename: false
       temperature: 0
     response_variable: resp_ph_now
+    action: llmvision.data_analyzer
   - choose:
-    - conditions: "{{ (states('input_number.ph_piscina_raw')|float(-1)) >= 6\n   and
-        (states('input_number.ph_piscina_raw')|float(-1)) <= 9 }}\n"
+    - conditions:
+      - condition: template
+        value_template: "{{ (states('input_number.ph_piscina_raw')|float(-1)) >= 6\n
+          \  and (states('input_number.ph_piscina_raw')|float(-1)) <= 9 }}\n"
       sequence:
-      - service: input_number.set_value
-        target:
+      - target:
           entity_id: input_number.ph_piscina
         data:
           value: '{{ states(''input_number.ph_piscina_raw'')|float }}'
+        action: input_number.set_value
     default: []
   - repeat:
       while:
@@ -292,8 +281,7 @@
       - condition: state
         entity_id: switch.bomba_piscina_switch_0
         state: 'on'
-      - service: llmvision.data_analyzer
-        continue_on_error: true
+      - continue_on_error: true
         data:
           provider: '{{ provider }}'
           model: '{{ model }}'
@@ -306,26 +294,41 @@
           include_filename: false
           temperature: 0
         response_variable: resp_ph_loop
+        action: llmvision.data_analyzer
       - choose:
-        - conditions: "{{ (states('input_number.ph_piscina_raw')|float(-1)) >= 6\n
-            \  and (states('input_number.ph_piscina_raw')|float(-1)) <= 9 }}\n"
+        - conditions:
+          - condition: template
+            value_template: "{{ (states('input_number.ph_piscina_raw')|float(-1))
+              >= 6\n   and (states('input_number.ph_piscina_raw')|float(-1)) <= 9
+              }}\n"
           sequence:
-          - service: input_number.set_value
-            target:
+          - target:
               entity_id: input_number.ph_piscina
             data:
               value: '{{ states(''input_number.ph_piscina_raw'')|float }}'
+            action: input_number.set_value
+  mode: restart
+  variables:
+    camera_entity: camera.cave_hd_stream
+    provider: 01K5S60RJSW6MFMB543KEDHE23
+    model: gpt-4o-mini
+    ph_prompt: 'TAREFA: Ler o valor de pH no visor da bomba (dígitos 7-seg). REGRAS:
+      - Devolve apenas um número com PONTO e 1 decimal (ex.: 7.3). - Se não vires
+      o ponto mas leres dois dígitos (ex.: 73), interpreta como 7.3. RESPOSTA: apenas
+      o número.'
 - id: piscina_ph_backup_on_change
-  alias: Piscina — pH (guardar backups ao mudar)
-  mode: queued
-  trigger:
-  - platform: state
-    entity_id:
+  alias: "\U0001F3CA\U0001F3FB Piscina - pH (guardar backups ao mudar)"
+  description: ''
+  triggers:
+  - entity_id:
     - input_number.ph_piscina
     - input_number.ph_piscina_raw
-  action:
+    trigger: state
+  actions:
   - choose:
-    - conditions: '{{ trigger.entity_id == ''input_number.ph_piscina'' }}'
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.entity_id == ''input_number.ph_piscina'' }}'
       sequence:
       - variables:
           v: '{{ states(''input_number.ph_piscina'') }}'
@@ -337,7 +340,9 @@
           entity_id: input_text.ph_piscina_backup
         data:
           value: '{{ ''%.2f''|format(v|float) }}'
-    - conditions: '{{ trigger.entity_id == ''input_number.ph_piscina_raw'' }}'
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.entity_id == ''input_number.ph_piscina_raw'' }}'
       sequence:
       - variables:
           r: '{{ states(''input_number.ph_piscina_raw'') }}'
@@ -348,104 +353,69 @@
           entity_id: input_text.ph_piscina_raw_backup
         data:
           value: '{{ r }}'
+  mode: queued
 - id: piscina_ph_restore_on_start
-  alias: Piscina — pH (restaurar no arranque)
-  mode: single
-  trigger:
-  - platform: homeassistant
-    event: start
-  action:
+  alias: "\U0001F3CA\U0001F3FB Piscina - pH (restaurar no arranque)"
+  description: ''
+  triggers:
+  - event: start
+    trigger: homeassistant
+  actions:
   - delay: 00:00:15
   - variables:
       ph_state: '{{ states(''input_number.ph_piscina'') }}'
       ph_backup: '{{ states(''input_text.ph_piscina_backup'') }}'
   - choose:
-    - conditions: '{{ ph_state in [''unknown'',''unavailable'',''none'',''0'',''0.0'']
-        or (ph_state|float(0) == 0) }}
+    - conditions:
+      - condition: template
+        value_template: '{{ ph_state in [''unknown'',''unavailable'',''none'',''0'',''0.0'']
+          or (ph_state|float(0) == 0) }}
 
-        '
+          '
       sequence:
       - condition: template
         value_template: '{{ ph_backup not in ['''',''unknown'',''unavailable'',''none'']
           }}'
-      - service: input_number.set_value
-        target:
+      - target:
           entity_id: input_number.ph_piscina
         data:
           value: '{{ ph_backup|float }}'
+        action: input_number.set_value
   - variables:
       ph_raw_state: '{{ states(''input_number.ph_piscina_raw'') }}'
       ph_raw_backup: '{{ states(''input_text.ph_piscina_raw_backup'') }}'
   - choose:
-    - conditions: '{{ ph_raw_state in [''unknown'',''unavailable'',''none'',''0'',''0.0'']
-        or (ph_raw_state|float(0) == 0) }}
+    - conditions:
+      - condition: template
+        value_template: '{{ ph_raw_state in [''unknown'',''unavailable'',''none'',''0'',''0.0'']
+          or (ph_raw_state|float(0) == 0) }}
 
-        '
+          '
       sequence:
       - condition: template
         value_template: '{{ ph_raw_backup not in ['''',''unknown'',''unavailable'',''none'']
           }}'
-      - service: input_number.set_value
-        target:
+      - target:
           entity_id: input_number.ph_piscina_raw
         data:
           value: '{{ ph_raw_backup|float }}'
+        action: input_number.set_value
+  mode: single
 - id: bomba_piscina_noite
-  alias: "\U0001F3CA\U0001F3FB Bomba Piscina Noite"
+  alias: "\U0001F3CA\U0001F3FB Piscina - Bomba Piscina Noite"
   description: 'Liga a bomba da piscina à noite para compensar filtragem insuficiente
     durante o dia (prioridade solar). Ajusta duração por estação. Só liga se faltar
     mais de 1 hora de filtragem.
 
     '
-  trigger:
+  triggers:
   - trigger: time
     at: 00:00:00
     id: meia_noite
   - trigger: time
     at: input_datetime.horario_piscina_noite
     id: horario_dinamico
-  variables:
-    filtragem_ontem: '{{ state_attr(''sensor.filtragem_piscina_historico_s'', ''today-1'')
-      | int(0) }}
-
-      '
-    filtragem_hoje: '{{ states(''sensor.filtragem_piscina_historico_s'') | int(0)
-      }}
-
-      '
-    threshold_verao: '{{ states(''input_number.pool_pump_duration_lower_threshold'')
-      | int(240) }}
-
-      '
-    threshold_inverno: '{{ states(''input_number.pool_pump_duration_inverno'') | int(120)
-      }}
-
-      '
-    cobertura_nuvens: '{{ states(''sensor.media_de_cobertura_de_nuvens_10_00_18_00'')
-      | float(100) }}
-
-      '
-    e_verao_primavera: '{{ states(''sensor.season'') in [''summer'', ''spring''] }}
-
-      '
-    threshold_ativo: '{{ threshold_verao if e_verao_primavera else threshold_inverno
-      }}
-
-      '
-    threshold_segundos: '{{ threshold_ativo * 60 }}
-
-      '
-    tempo_compensar: '{{ [threshold_segundos - filtragem_ontem, 0] | max }}
-
-      '
-    ultima_execucao: '{{ state_attr(''automation.bomba_piscina_noite'', ''last_triggered'')
-      }}
-
-      '
-    ja_correu_hoje: '{{ ultima_execucao is not none and ultima_execucao.date() ==
-      now().date() }}
-
-      '
+    enabled: false
   conditions:
   - alias: Ainda não correu hoje
     condition: template
@@ -460,7 +430,7 @@
       value_template: '{{ cobertura_nuvens > 35 }}'
     - condition: template
       value_template: '{{ filtragem_hoje <= 3600 }}'
-  action:
+  actions:
   - alias: Registar início da filtragem noturna
     action: system_log.write
     data:
@@ -537,16 +507,58 @@
   - action: persistent_notification.dismiss
     data:
       notification_id: bomba_piscina_noite
+  variables:
+    filtragem_ontem: '{{ state_attr(''sensor.filtragem_piscina_historico_s'', ''today-1'')
+      | int(0) }}
+
+      '
+    filtragem_hoje: '{{ states(''sensor.filtragem_piscina_historico_s'') | int(0)
+      }}
+
+      '
+    threshold_verao: '{{ states(''input_number.pool_pump_duration_lower_threshold'')
+      | int(240) }}
+
+      '
+    threshold_inverno: '{{ states(''input_number.pool_pump_duration_inverno'') | int(120)
+      }}
+
+      '
+    cobertura_nuvens: '{{ states(''sensor.media_de_cobertura_de_nuvens_10_00_18_00'')
+      | float(100) }}
+
+      '
+    e_verao_primavera: '{{ states(''sensor.season'') in [''summer'', ''spring''] }}
+
+      '
+    threshold_ativo: '{{ threshold_verao if e_verao_primavera else threshold_inverno
+      }}
+
+      '
+    threshold_segundos: '{{ threshold_ativo * 60 }}
+
+      '
+    tempo_compensar: '{{ [threshold_segundos - filtragem_ontem, 0] | max }}
+
+      '
+    ultima_execucao: '{{ state_attr(''automation.bomba_piscina_noite'', ''last_triggered'')
+      }}
+
+      '
+    ja_correu_hoje: '{{ ultima_execucao is not none and ultima_execucao.date() ==
+      now().date() }}
+
+      '
   mode: single
   max_exceeded: warning
 - id: ligardesligar_automacao_piscina
-  alias: "\U0001F3CA\U0001F3FB Ligar/Desligar Automação Piscina"
+  alias: "\U0001F3CA\U0001F3FB Piscina - Ligar/Desligar Automação Piscina"
   description: Liga e desliga a Wallbox
-  trigger:
+  triggers:
   - minutes: /5
     trigger: time_pattern
   conditions: []
-  action:
+  actions:
   - if:
     - condition:
       - condition: sun
@@ -618,13 +630,13 @@
   mode: single
   max_exceeded: warning
 - id: variable_piscina_timer
-  alias: "\U0001F3CA\U0001F3FB Variable Piscina timer"
+  alias: "\U0001F3CA\U0001F3FB Piscina - Variable Piscina timer"
   description: Automação do Home Assistant.
-  trigger:
+  triggers:
   - at: 00:00:00
     trigger: time
   conditions: []
-  action:
+  actions:
   - metadata: {}
     data:
       replace_attributes: false
@@ -655,26 +667,45 @@
     action: variable.update_sensor
   mode: single
   max_exceeded: warning
+- id: bomba_piscina_dia
+  alias: "[DESATIVADO] \U0001F3CA\U0001F3FB Piscina - Bomba Piscina Dia (PV Excess)"
+  description: Controlo inteligente da bomba durante o dia baseado em excedente solar
+    fotovoltaico usando blueprint PVExcessControl. Liga quando há excedente suficiente,
+    desliga quando importa da rede.
+  use_blueprint:
+    path: PVExcessControl/pv_excess_control.yaml
+    input:
+      automation_id: automation.bomba_piscina_dia
+      grid_voltage: 230
+      pv_power: sensor.emoncms_solar
+      export_power: sensor.emoncms_export_power_positive
+      load_power: sensor.emoncms_use
+      actual_power: sensor.bomba_piscina_switch_0_power
+      power_toggle_margin: 10
+      appliance_switch: switch.bomba_piscina_switch_0
+      inverter_limit: 0
+  mode: single
+  max_exceeded: warning
 - id: automacao_bomba_piscina
-  alias: "\U0001F3CA\U0001F3FB Automação Bomba Piscina"
+  alias: "[DESATIVADO] \U0001F3CA\U0001F3FB Piscina - Automação Bomba Piscina"
   description: Automação ativada por valor numérico de ['sensor.potencia_emonpi_import_export_media_5_minutos'],
     valor numérico de ['sensor.potencia_emonpi_import_export_media_5_minutos'].
-  trigger:
-  - platform: numeric_state
-    entity_id:
+  triggers:
+  - entity_id:
     - sensor.potencia_emonpi_import_export_media_5_minutos
     below: -750
     id: 'ON'
-  - platform: numeric_state
-    entity_id:
+    trigger: numeric_state
+  - entity_id:
     - sensor.potencia_emonpi_import_export_media_5_minutos
     id: 'OFF'
     above: 750
-  condition:
+    trigger: numeric_state
+  conditions:
   - condition: sun
     after: sunrise
     before: sunset
-  action:
+  actions:
   - if:
     - condition: trigger
       id:
@@ -704,16 +735,16 @@
   mode: single
   max_exceeded: warning
 - id: bomba_piscina_botao
-  alias: "\U0001F3CA\U0001F3FB Bomba piscina botão"
+  alias: "\U0001F3CA\U0001F3FB Piscina - Bomba piscina botão"
   description: Automação do Home Assistant.
-  trigger:
+  triggers:
   - device_id: e6ae30b2d7855ae2d2b83b4497674bfb
     domain: bthome
     type: button
     subtype: press
     trigger: device
   conditions: []
-  action:
+  actions:
   - type: toggle
     device_id: d752f893fd0bb44490ec4bfcb83c333f
     entity_id: ae742d0d2f0dc5dea53a674346911926
@@ -721,13 +752,13 @@
   mode: single
   max_exceeded: warning
 - id: openai_daily_piscina
-  alias: 'OpenAI Daily: Piscina'
+  alias: "\U0001F3CA\U0001F3FB Piscina - OpenAI Daily: Piscina"
   description: Automação do Home Assistant.
-  trigger:
+  triggers:
   - at: '20:30:00'
     trigger: time
   conditions: []
-  action:
+  actions:
   - data:
       agent_id: conversation.chatgpt
       text: Para esta tarefa, es um consultor de piscinas e queres garantir sempre
@@ -748,15 +779,15 @@
     enabled: true
     response_variable: agent
     action: conversation.process
-  - service: telegram_bot.send_message
-    metadata: {}
+  - metadata: {}
     data:
       title: Piscina
       message: '{{agent.response.speech.plain.speech}}'
+    action: telegram_bot.send_message
   mode: single
   max_exceeded: warning
 - id: piscina_-_arranque_com_excedente_fv
-  alias: "\U0001F3CA\U0001F3FB Piscina - Arranque com excedente FV"
+  alias: "[DESATIVADO] \U0001F3CA\U0001F3FB Piscina - Arranque com excedente FV"
   description: Automação do Home Assistant.
   triggers:
   - entity_id: binary_sensor.piscina_excedente_fv_bomba
@@ -782,7 +813,7 @@
   mode: single
   max_exceeded: warning
 - id: piscina_-_manual_terminou_desligar_e_sair_do_overr
-  alias: Piscina - Manual terminou (desligar e sair do override)
+  alias: "\U0001F3CA\U0001F3FB Piscina - Manual terminou (desligar e sair do override)"
   description: Automação do Home Assistant.
   triggers:
   - event_type: timer.finished
@@ -803,7 +834,8 @@
   mode: single
   max_exceeded: warning
 - id: piscina_-_watchdog_arranque_fv_2min_v2
-  alias: "\U0001F3CA\U0001F3FB Piscina - Watchdog arranque FV (*/2min) v2"
+  alias: "[DESATIVADO] \U0001F3CA\U0001F3FB Piscina - Watchdog arranque FV (*/2min)
+    v2"
   description: Automação do Home Assistant.
   triggers:
   - minutes: /2
@@ -833,24 +865,8 @@
     data: {}
   mode: single
   max_exceeded: warning
-- id: piscina_-_snapshot_5min
-  alias: Piscina - Snapshot 5min
-  description: Automação do Home Assistant.
-  triggers:
-  - trigger: time_pattern
-    minutes: /5
-  conditions: []
-  actions:
-  - action: camera.snapshot
-    metadata: {}
-    data:
-      filename: '"/config/www/piscina_latest.jpg"'
-    target:
-      entity_id: camera.eira_hd_stream
-  mode: single
-  max_exceeded: warning
 - id: actualizar_horario_bomba_piscina_noite
-  alias: "\U0001F3CA\U0001F3FB Actualizar Horario Bomba Piscina Noite"
+  alias: "\U0001F3CA\U0001F3FB Piscina - Actualizar Horario Bomba Piscina Noite"
   description: Automação do Home Assistant.
   triggers:
   - trigger: time_pattern
@@ -876,13 +892,13 @@
   mode: single
   max_exceeded: warning
 - id: atualizar_temperatura_piscina_filtrado_com_bomba_d
-  alias: "\U0001F3CA\U0001F3FBAtualizar Temperatura Piscina filtrado com bomba de
-    aquecimento ligada"
+  alias: "\U0001F3CA\U0001F3FB Piscina - Atualizar Temperatura Piscina filtrado com
+    bomba de aquecimento ligada"
   description: Automação do Home Assistant.
-  trigger:
-  - platform: time_pattern
-    minutes: /5
-  condition:
+  triggers:
+  - minutes: /5
+    trigger: time_pattern
+  conditions:
   - condition: state
     entity_id: switch.aquecimento_piscina_channel_1
     state: 'on'
@@ -893,7 +909,7 @@
   - condition: template
     value_template: '{{ states(''sensor.bomba_piscina_temperature'') not in [''unavailable'',
       ''unknown''] }}'
-  action:
+  actions:
   - target:
       entity_id:
       - input_number.temperatura_piscina_filtrado
@@ -903,7 +919,7 @@
   mode: single
   max_exceeded: warning
 - id: piscina_estado_da_cobertura_llm_vision
-  alias: Piscina — Estado da cobertura (LLM Vision)
+  alias: "\U0001F3CA\U0001F3FB Piscina — Estado da cobertura (LLM Vision)"
   description: Automação do Home Assistant.
   triggers:
   - entity_id: switch.bomba_piscina_switch_0
@@ -916,6 +932,7 @@
   - condition: state
     entity_id: switch.bomba_piscina_switch_0
     state: 'on'
+    enabled: true
   actions:
   - response_variable: llmresp
     data:
@@ -935,14 +952,6 @@
       include_filename: false
     action: llmvision.data_analyzer
   mode: restart
-
-# ============================================================================
-# 🚪 PORTÕES E PORTARIAS - Automações de Controlo de Acessos
-# ============================================================================
-# Inclui: Abrir portão (botões, callbacks, notificações), status, luzes garagem,
-# automações de chegada/proximidade
-# ============================================================================
-
 - id: callback_to_open_gate_from_action
   alias: "[\U0001F3E1] Callback to open gate from action"
   description: Automação ativada por evento mobile_app_notification_action.
@@ -1095,48 +1104,45 @@
   alias: Status Portão
   description: Status do portão de casa, para resolver o flapping do sensor e o switch
     do shelly ter temporizador de 1 segundo.
-  trigger:
-  - platform: state
-    entity_id:
-    - switch.portao
-    from: 'off'
-    to: 'on'
-  condition: []
-  action:
-  - service: input_boolean.turn_on
-    target:
+  triggers:
+  - entity_id:
+    - switch.portao_shelly
+    from:
+    - 'off'
+    to:
+    - 'on'
+    trigger: state
+  conditions: []
+  actions:
+  - target:
       entity_id: input_boolean.portao_status
     data: {}
+    action: input_boolean.turn_on
   - delay:
       hours: 0
       minutes: 0
       seconds: 50
       milliseconds: 0
-  - service: input_boolean.turn_off
-    target:
+  - target:
       entity_id: input_boolean.portao_status
     data: {}
+    action: input_boolean.turn_off
   mode: single
   max_exceeded: warning
 - id: botao_sala_portao
   alias: "\U0001F3E1Botão Sala Portão"
   description: Automação do Home Assistant.
   triggers:
-  - device_id: e8a6c706997d87b98183e26e7598ae8b
-    domain: shelly
-    type: triple
-    subtype: button
-    trigger: device
   - device_id: d686deeba13232cfa6ab008fa8c80dc0
     domain: bthome
     type: button_2
-    subtype: long_press
+    subtype: press
     trigger: device
   conditions: []
   actions:
   - type: turn_on
-    device_id: 2388724c80b9ea53afaf76327d603991
-    entity_id: c1d7540c34d2b8b447ad390591bee382
+    device_id: 28d7cd7392efa97cb35b8bed17917b04
+    entity_id: 90c40c35d39adfb3a7dbf7b57bd7dd66
     domain: switch
   mode: single
   max_exceeded: warning
@@ -1155,7 +1161,8 @@
     metadata: {}
     data: {}
     target:
-      entity_id: switch.portao
+      entity_id:
+      - switch.portao_shelly
   mode: single
   max_exceeded: warning
 - id: portao_botao_shelly_abrir
@@ -1337,13 +1344,6 @@
           title: '------------'
   mode: single
   max_exceeded: warning
-
-# ============================================================================
-# 🔔 SISTEMA E NOTIFICAÇÕES - Backups, UPS, Notificações Gerais
-# ============================================================================
-# Inclui: Backups automáticos, notificações UPS, notificações ambientais OpenAI
-# ============================================================================
-
 - id: automatic_backups
   alias: Automatic Backups
   description: Automação ativada por horário (01:00:00). Usa serviço nativo backup.create
@@ -1524,14 +1524,6 @@
     enable_yearly: false
     use_action_hourly: true
   max_exceeded: warning
-
-# ============================================================================
-# 💡 ILUMINAÇÃO - Automações de Controlo de Luzes
-# ============================================================================
-# Inclui: Luzes automáticas (exterior, corredor, escadas), candeeiros sala,
-# desligar tudo sala
-# ============================================================================
-
 - id: luz_exterior_auto
   alias: "\U0001F4A1Luz Exterior Auto"
   description: Automação do Home Assistant.
@@ -1617,24 +1609,17 @@
     enabled: true
   mode: single
   max_exceeded: warning
-
-# ============================================================================
-# 🌊 SPA E CASCATA - Automações de Equipamentos de Água
-# ============================================================================
-# Inclui: Cascata, hidrojet
-# ============================================================================
-
 - id: cascata
-  alias: "\U0001F3CA\U0001F3FB Cascata"
+  alias: "\U0001F3CA\U0001F3FB Piscina - Cascata"
   description: Inicia ou para a Cascata na piscina com 1 click no botão shelly
-  trigger:
+  triggers:
   - device_id: 50eb20ac53472c3cc1b1da733634d1c8
     domain: bthome
     type: button
     subtype: press
     trigger: device
   conditions: []
-  action:
+  actions:
   - type: toggle
     device_id: ed7ccde197e708b2a6b6cd25ef2e60c5
     entity_id: 44b25a719c3fa50cbbd4ebd6e57fcdb9
@@ -1643,16 +1628,16 @@
   mode: single
   max_exceeded: warning
 - id: hidrojet
-  alias: "\U0001F3CA\U0001F3FB Hidrojet"
+  alias: "\U0001F3CA\U0001F3FB Piscina - Hidrojet"
   description: Automação do Home Assistant.
-  trigger:
-  - platform: device
-    device_id: 50eb20ac53472c3cc1b1da733634d1c8
+  triggers:
+  - device_id: 50eb20ac53472c3cc1b1da733634d1c8
     domain: bthome
     type: button
     subtype: double_press
-  condition: []
-  action:
+    trigger: device
+  conditions: []
+  actions:
   - if:
     - condition: device
       type: is_off
@@ -1664,11 +1649,11 @@
       device_id: d752f893fd0bb44490ec4bfcb83c333f
       entity_id: ae742d0d2f0dc5dea53a674346911926
       domain: switch
-    - service: automation.turn_off
-      data:
+    - data:
         stop_actions: true
       target:
         entity_id: automation.bomba_piscina_dia
+      action: automation.turn_off
     - delay:
         hours: 0
         minutes: 0
@@ -1691,27 +1676,20 @@
           device_id: 8be4eb1cd22d4bd03d7c70c99e84930b
           entity_id: a282d1ef3a0591beb9ddf1392c8e3e42
           domain: switch
-    - service: automation.turn_on
-      data: {}
+    - data: {}
       target:
         entity_id: automation.bomba_piscina_dia
+      action: automation.turn_on
     else:
     - type: turn_off
       device_id: 8be4eb1cd22d4bd03d7c70c99e84930b
       entity_id: a282d1ef3a0591beb9ddf1392c8e3e42
       domain: switch
-    - service: automation.turn_on
-      data: {}
+    - data: {}
       target:
         entity_id: automation.bomba_piscina_dia
+      action: automation.turn_on
   mode: restart
-
-# ============================================================================
-# 🚗 VEÍCULO ELÉTRICO - Automações de Carregamento
-# ============================================================================
-# Inclui: Gestão de carregamento, horários, smart charging
-# ============================================================================
-
 - id: change_charge_completion_time
   alias: "\U0001F50B\U0001F697⚡Change charge completion time"
   description: Automação ativada por mudança de estado em ['sensor.ev_smart_charging_charging'].
@@ -1755,13 +1733,6 @@
         entity_id: switch.ev_smart_charging_continuous_charging_preferred
   mode: single
   max_exceeded: warning
-
-# ============================================================================
-# 🪟 ESTORES - Automações de Controlo de Estores
-# ============================================================================
-# Inclui: Abrir/fechar estores (automático e manual), botões de controlo
-# ============================================================================
-
 - id: sala_baixar_estores_sunset
   alias: "\U0001F6CB️ Sala: Baixar Estores Sunset"
   description: Baixar os estores quando o sol se põe
@@ -1848,14 +1819,6 @@
       include_ambient: ambient_enabled
   mode: single
   max_exceeded: warning
-
-# ============================================================================
-# 🔋 ENERGIA E CLIMA - Gestão de Energia, Solar, Bomba de Calor
-# ============================================================================
-# Inclui: Preços energia (Coopernico), MQTT publish, bomba de calor (erros,
-# água quente), nuvens/previsão solar, UPS
-# ============================================================================
-
 - id: update_coopernico_prices
   alias: Update Coopernico Prices
   description: Automação do Home Assistant.
@@ -2278,9 +2241,9 @@
   mode: single
   max_exceeded: warning
 - id: atualizar_ph_filtrado_com_bomba_ligada
-  alias: "\U0001F3CA\U0001F3FBAtualizar pH filtrado com bomba ligada"
+  alias: "\U0001F3CA\U0001F3FB Piscina - Atualizar pH filtrado com bomba ligada"
   description: Automação do Home Assistant.
-  trigger:
+  triggers:
   - entity_id:
     - switch.bomba_piscina_switch_0
     to: 'on'
@@ -2290,9 +2253,9 @@
   - entity_id: sensor.ph_corrigido
     trigger: state
     enabled: true
-  - platform: time_pattern
-    minutes: /5
-  condition:
+  - minutes: /5
+    trigger: time_pattern
+  conditions:
   - condition: state
     entity_id: switch.bomba_piscina_switch_0
     state: 'on'
@@ -2303,7 +2266,7 @@
   - condition: template
     value_template: '{{ states(''sensor.ph_corrigido'') not in [''unavailable'', ''unknown'']
       }}'
-  action:
+  actions:
   - target:
       entity_id:
       - input_number.ph_sensor_filtrado
@@ -2411,29 +2374,22 @@
       action: input_number.set_value
   mode: single
   max_exceeded: warning
-
-# ============================================================================
-# 🔧 OUTROS - Automações Diversas e Não Categorizadas
-# ============================================================================
-# Inclui: Bomba peristáltica, automações de teste, estores individuais
-# ============================================================================
-
 - id: bomba_peristaltica
-  alias: "\U0001F3CA\U0001F3FBBomba Peristaltica"
+  alias: "\U0001F3CA\U0001F3FB Piscina - Bomba Peristaltica"
   description: Automação ativada por mudança de estado em ['switch.bomba_piscina_switch_0'].
-  trigger:
-  - platform: state
-    entity_id:
+  triggers:
+  - entity_id:
     - switch.bomba_piscina_switch_0
-  - platform: time_pattern
-    minutes: /5
-  condition:
+    trigger: state
+  - minutes: /5
+    trigger: time_pattern
+  conditions:
   - condition: device
     type: is_on
     device_id: d752f893fd0bb44490ec4bfcb83c333f
     entity_id: ae742d0d2f0dc5dea53a674346911926
     domain: switch
-  action:
+  actions:
   - if:
     - condition: device
       type: is_on
@@ -2444,19 +2400,19 @@
       entity_id: sensor.ph_corrigido_filtrado
       above: 7.5
     then:
-    - service: switch.turn_on
-      metadata: {}
+    - metadata: {}
       data: {}
       target:
         entity_id:
         - switch.bomba_peristaltica_switch_0
+      action: switch.turn_on
     else:
-    - service: switch.turn_off
-      metadata: {}
+    - metadata: {}
       data: {}
       target:
         entity_id:
         - switch.bomba_peristaltica_switch_0
+      action: switch.turn_off
   mode: single
   max_exceeded: warning
 - id: abrir_estore_1
@@ -2521,16 +2477,53 @@
         entity_id: cover.estore1_cover_0
   mode: single
   max_exceeded: warning
-- id: new_automation
-  alias: New automation
-  description: Automação do Home Assistant.
-  triggers:
-  - type: changed_states
-    device_id: 1fc5080f1934f44e78187d3cef50ff60
-    entity_id: c495f1e608ba0783c370be0f0cad7c8f
-    domain: switch
-    trigger: device
-  conditions: []
-  actions: []
+- id: piscina_solar_v2
+  alias: "\U0001F3CA Piscina - Solar Inteligente v2"
+  description: 'Controlo inteligente da bomba da piscina com: - Excedente solar durante
+    o dia - Previsão Solcast para otimização - Bi-horário noturno (22:00-08:00) se
+    faltar filtragem - Tempo de filtragem dinâmico baseado em temperatura
+
+    '
+  use_blueprint:
+    path: piscina_solar/piscina_solar_control_v2.yaml
+    input:
+      house_power_no_pump: sensor.emoncms_192_168_1_250_use_no_pool_pump
+      pv_power: sensor.emoncms_solar
+      net_power: sensor.emoncms_import_export
+      export_power: sensor.emoncms_export_power_positive
+      pump_actual_power: sensor.bomba_piscina_switch_0_power
+      pump_switch: switch.bomba_piscina_switch_0
+      pump_nominal_power: 1380
+      import_limit: 700
+      start_margin: 100
+      delay_on: 30
+      delay_off: 60
+      min_on_time: 5
+      filtration_remaining: sensor.pool_pump_remaining_time
+      sun_offset_start: 30
+      sun_offset_end: 30
+      price_peak: 0.1537
+      price_offpeak: 0.0929
+      use_economic_optimization: true
+      forecast_remaining_today: sensor.solcast_pv_forecast_forecast_remaining_today
+      forecast_tomorrow: sensor.solcast_pv_forecast_forecast_tomorrow
+      power_forecast_1h: sensor.solcast_pv_forecast_power_next_hour
+      forecast_confidence: 85
+      min_daily_filtration_kwh: 8
+      use_dynamic_filtration_time: true
+      dynamic_filtration_hours_sensor: sensor.piscina_tempo_de_filtracao_recomendado
+      house_avg_power: 600
+      house_power_avg_sensor: sensor.casa_consumo_medio_7_dias
+      use_dynamic_house_estimate: true
+      enable_night_auto: true
+      night_start_time: '22:00:00'
+      night_end_time: 08:00:00
+      min_night_filtration_minutes: 60
+      enable_night_backup: false
+      good_forecast_threshold: 15
+      enable_debug_logs: true
+      filtration_energy_today: sensor.emoncms_192_168_1_250_piscina_bomba_kwhd
+      override_manual: input_boolean.piscina_override_manual
+      house_power_sensor_daily: sensor.emoncms_192_168_1_250_use_house_only_kwhd
   mode: single
-  max_exceeded: warning
+  max_exceeded: silent

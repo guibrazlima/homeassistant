@@ -1,0 +1,1108 @@
+# ======================================================================
+# ⚙️ SISTEMA
+# ======================================================================
+# Ficheiro: outros.yaml
+# Automações: 30
+# Última atualização: 2025-11-11
+# Migrado automaticamente - Fase 2
+# ======================================================================
+
+
+- id: notify_when_garage_door_was_left_open_for_too_long
+  alias: '[📣🏡] Notify when garage door was left open for too long'
+  description: Automação do Home Assistant.
+  trigger:
+  - entity_id:
+    - cover.gate
+    to: open
+    for:
+      hours: 0
+      minutes: 5
+      seconds: 0
+    from: closed
+    trigger: state
+  conditions: []
+  action:
+  - repeat:
+      sequence:
+      - service: camera.snapshot
+        metadata: {}
+        data:
+          filename: /config/www/camera_snapshots/mysnap_portao.jpg
+        target:
+          entity_id: camera.patio_exterior_hd_stream
+      - service: telegram_bot.send_message
+        metadata: {}
+        data:
+          message: Está aberto a mais de 5 minutos. Fechar?
+          title: 🚙🚨 Portão de casa aberto!🚨
+      - service: telegram_bot.send_photo
+        metadata: {}
+        data:
+          authentication: digest
+          file: /config/www/camera_snapshots/mysnap_portao.jpg
+      - data:
+          title: 🚙 Portão de casa aberto!
+          message: Está aberto a mais de 5 minutos. Fechar?
+        action: notify.notify
+        enabled: true
+      - delay:
+          hours: 0
+          minutes: 5
+          seconds: 0
+          milliseconds: 0
+      while:
+      - condition: state
+        entity_id: cover.gate
+        state: open
+  - service: camera.snapshot
+    metadata: {}
+    data:
+      filename: /config/www/camera_snapshots/mysnap_portao.jpg
+    target:
+      entity_id: camera.patio_exterior_hd_stream
+  - service: telegram_bot.send_message
+    metadata: {}
+    data:
+      message: O portão está fechado.
+      title: 🚙✅Portão de casa fechado.✅
+  - service: telegram_bot.send_photo
+    metadata: {}
+    data:
+      authentication: digest
+      file: /config/www/camera_snapshots/mysnap_portao.jpg
+  - data:
+      title: 🚙✅Portão de casa fechado.✅
+      message: O portão está fechado.
+    action: notify.notify
+    enabled: true
+  mode: single
+  max_exceeded: warning
+- id: cascata
+  alias: 🏊🏻 Cascata
+  description: Inicia ou para a Cascata na piscina com 1 click no botão shelly
+  trigger:
+  - device_id: 50eb20ac53472c3cc1b1da733634d1c8
+    domain: bthome
+    type: button
+    subtype: press
+    trigger: device
+  conditions: []
+  action:
+  - type: toggle
+    device_id: ed7ccde197e708b2a6b6cd25ef2e60c5
+    entity_id: 44b25a719c3fa50cbbd4ebd6e57fcdb9
+    domain: switch
+    enabled: true
+  mode: single
+  max_exceeded: warning
+- id: hidrojet
+  alias: 🏊🏻 Hidrojet
+  description: Automação do Home Assistant.
+  trigger:
+  - platform: device
+    device_id: 50eb20ac53472c3cc1b1da733634d1c8
+    domain: bthome
+    type: button
+    subtype: double_press
+  condition: []
+  action:
+  - if:
+    - condition: device
+      type: is_off
+      device_id: 8be4eb1cd22d4bd03d7c70c99e84930b
+      entity_id: a282d1ef3a0591beb9ddf1392c8e3e42
+      domain: switch
+    then:
+    - type: turn_off
+      device_id: d752f893fd0bb44490ec4bfcb83c333f
+      entity_id: ae742d0d2f0dc5dea53a674346911926
+      domain: switch
+    - service: automation.turn_off
+      data:
+        stop_actions: true
+      target:
+        entity_id: automation.bomba_piscina_dia
+    - delay:
+        hours: 0
+        minutes: 0
+        seconds: 5
+        milliseconds: 0
+    - type: turn_on
+      device_id: 8be4eb1cd22d4bd03d7c70c99e84930b
+      entity_id: a282d1ef3a0591beb9ddf1392c8e3e42
+      domain: switch
+    - repeat:
+        sequence:
+        - delay:
+            hours: 0
+            minutes: 0
+            seconds: 30
+            milliseconds: 0
+        while:
+        - condition: device
+          type: is_on
+          device_id: 8be4eb1cd22d4bd03d7c70c99e84930b
+          entity_id: a282d1ef3a0591beb9ddf1392c8e3e42
+          domain: switch
+    - service: automation.turn_on
+      data: {}
+      target:
+        entity_id: automation.bomba_piscina_dia
+    else:
+    - type: turn_off
+      device_id: 8be4eb1cd22d4bd03d7c70c99e84930b
+      entity_id: a282d1ef3a0591beb9ddf1392c8e3e42
+      domain: switch
+    - service: automation.turn_on
+      data: {}
+      target:
+        entity_id: automation.bomba_piscina_dia
+  mode: restart
+- id: change_charge_completion_time
+  alias: 🔋🚗⚡Change charge completion time
+  description: Automação ativada por mudança de estado em ['sensor.ev_smart_charging_charging'].
+  trigger:
+  - platform: state
+    entity_id:
+    - sensor.ev_smart_charging_charging
+    attribute: raw_two_days
+  condition: []
+  action:
+  - if:
+    - condition: time
+      after: 00:00:00
+      before: 00:00:00
+      weekday:
+      - sat
+      - fri
+    then:
+    - service: select.select_option
+      metadata: {}
+      data:
+        option: None
+      target:
+        entity_id: select.ev_smart_charging_charge_completion_time
+    - service: switch.turn_off
+      metadata: {}
+      data: {}
+      target:
+        entity_id: switch.ev_smart_charging_continuous_charging_preferred
+    else:
+    - service: select.select_option
+      metadata: {}
+      data:
+        option: 08:00
+      target:
+        entity_id: select.ev_smart_charging_charge_completion_time
+    - service: switch.turn_on
+      metadata: {}
+      data: {}
+      target:
+        entity_id: switch.ev_smart_charging_continuous_charging_preferred
+  mode: single
+  max_exceeded: warning
+- id: disable_i4_climate_if_not_home
+  alias: 🔋🚗⚡Disable i4 Climate if not home
+  description: Automação ativada por mudança de estado em ['switch.i4_edrive40_climate'].
+  trigger:
+  - platform: state
+    entity_id:
+    - switch.i4_edrive40_climate
+    from: 'off'
+    to: 'on'
+  condition:
+  - condition: device
+    device_id: 73087b9e1e3a0ceb0fc6d4024bd9ffe1
+    domain: device_tracker
+    entity_id: 17973f520f671f084cc637505d0c747d
+    type: is_not_home
+  - condition: time
+    after: 07:40:00
+    before: 08:00:00
+    weekday:
+    - mon
+    - tue
+    - wed
+    - thu
+    - fri
+  action:
+  - service: switch.turn_off
+    metadata: {}
+    data: {}
+    target:
+      entity_id: switch.i4_edrive40_climate
+  mode: single
+  max_exceeded: warning
+- id: help_for_charging_at_home
+  alias: 🔋🚗⚡Help for charging at home
+  description: Automação do Home Assistant.
+  trigger:
+  - entity_id:
+    - sensor.ev_smart_charging_charging
+    to: 'on'
+    trigger: state
+    for:
+      hours: 0
+      minutes: 5
+      seconds: 0
+    id: i4
+  - entity_id:
+    - sensor.ev_smart_charging_charging_2
+    to: 'on'
+    trigger: state
+    for:
+      hours: 0
+      minutes: 5
+      seconds: 0
+    id: x1
+  condition:
+  - condition:
+    - condition:
+      - condition: state
+        entity_id: device_tracker.i4_edrive40
+        state: home
+      - condition: state
+        entity_id: binary_sensor.i4_edrive40_connection_status
+        state: 'on'
+      - condition: numeric_state
+        entity_id: sensor.wallbox_charging_power
+        below: 2
+      - condition: trigger
+        id:
+        - i4
+    - condition:
+      - condition: state
+        entity_id: device_tracker.x1_xdrive25e
+        state: Home
+      - condition: state
+        entity_id: binary_sensor.x1_xdrive25e_connection_status
+        state: 'on'
+      - condition: numeric_state
+        entity_id: sensor.wallbox_charging_power
+        below: 2
+      - condition: trigger
+        id:
+        - x1
+  action:
+  - if:
+    - condition: trigger
+      id:
+      - i4
+    then:
+    - device_id: 73087b9e1e3a0ceb0fc6d4024bd9ffe1
+      domain: lock
+      entity_id: 4cad819e94c6b23041776358896b68a0
+      type: unlock
+    - delay:
+        hours: 0
+        minutes: 1
+        seconds: 0
+        milliseconds: 0
+    - device_id: 73087b9e1e3a0ceb0fc6d4024bd9ffe1
+      domain: lock
+      entity_id: 4cad819e94c6b23041776358896b68a0
+      type: lock
+    - delay:
+        hours: 0
+        minutes: 1
+        seconds: 0
+        milliseconds: 0
+    - service: button.press
+      metadata: {}
+      data: {}
+      target:
+        entity_id: button.ev_smart_charging_manually_start_charging
+  - if:
+    - condition: trigger
+      id:
+      - x1
+    then:
+    - device_id: d2b7376b62ba76e3cebf5d2479e76922
+      domain: lock
+      entity_id: 2574b858b69f29422a37da5a8a6db887
+      type: unlock
+    - delay:
+        hours: 0
+        minutes: 1
+        seconds: 0
+        milliseconds: 0
+    - device_id: d2b7376b62ba76e3cebf5d2479e76922
+      domain: lock
+      entity_id: 2574b858b69f29422a37da5a8a6db887
+      type: lock
+    - delay:
+        hours: 0
+        minutes: 1
+        seconds: 0
+        milliseconds: 0
+    - service: button.press
+      metadata: {}
+      data: {}
+      target:
+        entity_id: button.ev_smart_charging_manually_start_charging
+  mode: single
+  max_exceeded: warning
+- id: sala_baixar_estores_sunset
+  alias: '🛋️ Sala: Baixar Estores Sunset'
+  description: Baixar os estores quando o sol se põe
+  trigger:
+  - platform: sun
+    event: sunset
+    offset: -00:15:00
+  condition: []
+  action:
+  - if:
+    - condition: state
+      entity_id: group.alguem_em_casa
+      state: home
+    then:
+    - service: cover.close_cover
+      metadata: {}
+      data: {}
+      target:
+        entity_id:
+        - cover.estore_3_estore_3
+    - service: light.turn_on
+      metadata: {}
+      data: {}
+      target:
+        entity_id: light.candeeiros_sala_inferior
+    - delay:
+        hours: 0
+        minutes: 0
+        seconds: 5
+        milliseconds: 0
+    - service: cover.close_cover
+      metadata: {}
+      data: {}
+      target:
+        entity_id: cover.estore_2_estore_2
+    else:
+    - service: cover.close_cover
+      metadata: {}
+      data: {}
+      target:
+        entity_id:
+        - cover.estore_3_estore_3
+    - delay:
+        hours: 0
+        minutes: 0
+        seconds: 5
+        milliseconds: 0
+    - service: cover.close_cover
+      metadata: {}
+      data: {}
+      target:
+        entity_id: cover.estore_2_estore_2
+  mode: single
+  max_exceeded: warning
+- id: sala_subir_estores_manha
+  alias: '🛋️ Sala: Subir estores manhã'
+  description: Subir os estores quando as 07:45
+  trigger:
+  - at: 07:45:00
+    trigger: time
+  conditions: []
+  action:
+  - service: cover.open_cover
+    metadata: {}
+    data: {}
+    target:
+      entity_id: cover.estores
+  mode: single
+  max_exceeded: warning
+- id: luz_corredor_auto
+  alias: 💡Luz Corredor auto
+  description: Automação do Home Assistant.
+  use_blueprint:
+    path: Blackshome/sensor-light.yaml
+    input:
+      motion_trigger:
+      - binary_sensor.bthome_sensor_9179_motion
+      - binary_sensor.corredor_superior_corredor_superior_motion_alarm
+      light_switch:
+        entity_id:
+        - light.shellyplus2pm_c82e180d5f10_switch_1
+      include_sun: sun_enabled
+      ambient_light_sensor: sensor.shelly_b_0114_illuminance
+      include_ambient: ambient_enabled
+  mode: single
+  max_exceeded: warning
+- id: update_coopernico_prices
+  alias: Update Coopernico Prices
+  description: Automação do Home Assistant.
+  trigger:
+  - platform: time_pattern
+    minutes: /5
+  condition: []
+  action:
+  - service: homeassistant.update_entity
+    data: {}
+    target:
+      entity_id: sensor.coopernico_prices
+  - service: homeassistant.update_entity
+    data: {}
+    target:
+      entity_id: sensor.coopernico_injection
+  mode: single
+  max_exceeded: warning
+- id: solcast_update
+  alias: Solcast update
+  description: Automação do Home Assistant.
+  trigger:
+  - platform: template
+    value_template: "{% set nr = as_datetime(state_attr('sun.sun','next_rising')) | as_local %} {% set ns = as_datetime(state_attr('sun.sun','next_setting')) | as_local %} {% set api_request_limit = 10 %} {% if nr > ns %}\n  {% set nr = nr - timedelta(hours = 24) %} \n{% endif %} {% set hours_difference = (ns - nr) %} {% set interval_hours = hours_difference / api_request_limit %} {% set ns = namespace(match = false) %} {% for i in range(api_request_limit) %}\n  {% set start_time = nr + (i * interval_hours) %}\n  {% if ((start_time - timedelta(seconds=30)) <= now()) and (now() <= (start_time + timedelta(seconds=30))) %}\n    {% set ns.match = true %}\n  {% endif %}\n{% endfor %} {{ ns.match }}"
+  condition:
+  - condition: sun
+    before: sunset
+    after: sunrise
+  action:
+  - delay:
+      seconds: '{{ range(30, 360)|random|int }}'
+  - service: solcast_solar.update_forecasts
+    data: {}
+  mode: single
+  max_exceeded: warning
+- id: luz_escadas_superior_auto
+  alias: 💡Luz Escadas Superior Auto
+  description: Automação do Home Assistant.
+  use_blueprint:
+    path: Blackshome/sensor-light.yaml
+    input:
+      light_switch:
+        entity_id: light.luzes_sala_superior_channel_1
+      motion_trigger:
+      - binary_sensor.motion_sensor_z_wave_plus_motion_sensor_z_wave_plus_motion_alarm
+      include_sun: sun_enabled
+      include_ambient: ambient_disabled
+      ambient_light_sensor: sensor.motion_sensor_z_wave_plus_motion_sensor_z_wave_plus_luminance
+      ambient_light_options: ambient_light_option_enabled
+  mode: single
+  max_exceeded: warning
+- id: ups_-_notification
+  alias: 🔋UPS - Notification
+  description: Automação do Home Assistant.
+  trigger:
+  - entity_id:
+    - sensor.mclima_ups_informacao_do_estado
+    - sensor.net_ups_informacao_do_estado
+    id: battery
+    trigger: state
+    for:
+      hours: 0
+      minutes: 1
+      seconds: 0
+    to: OB DISCHRG
+  - entity_id:
+    - sensor.mclima_ups_informacao_do_estado
+    - sensor.net_ups_informacao_do_estado
+    to: OL CHRG
+    id: online
+    trigger: state
+  - entity_id:
+    - sensor.mclima_ups_informacao_do_estado
+    - sensor.net_ups_informacao_do_estado
+    id: replace_battery
+    trigger: state
+    for:
+      hours: 0
+      minutes: 5
+      seconds: 0
+    to: ALARM OL RB
+  - entity_id:
+    - sensor.mclima_ups_informacao_do_estado
+    - sensor.net_ups_informacao_do_estado
+    id: replace_battery
+    trigger: state
+    for:
+      hours: 0
+      minutes: 5
+      seconds: 0
+    to: ALARM OL CHRH RB
+  conditions: []
+  action:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: battery
+      sequence:
+      - service: notify.mobile_app_glphone
+        data:
+          message: A UPS está em modo de bateria!!! 🔋
+          title: 🚨Energia
+          data:
+            push:
+              interruption-level: time-sensitive
+              sound:
+                name: default
+                critical: 1
+                volume: 1
+    - conditions:
+      - condition: trigger
+        id: online
+      sequence:
+      - service: notify.mobile_app_glphone
+        data:
+          message: A UPS já está online.🔋⚡
+          title: ✅Energia
+    - conditions:
+      - condition: trigger
+        id:
+        - replace_battery
+      sequence:
+      - service: notify.mobile_app_glphone
+        data:
+          title: ❗Trocar baterias na UPS.❗
+          message: As baterias da UPS têm de ser substituías.
+  mode: single
+  max_exceeded: warning
+- id: bomba_de_calor_power_mqtt_publish
+  alias: ♨️ Bomba de Calor Power MQTT Publish
+  description: Automação do Home Assistant.
+  trigger:
+  - platform: time_pattern
+    seconds: /10
+    enabled: true
+  conditions: []
+  action:
+  - service: mqtt.publish
+    metadata: {}
+    data:
+      evaluate_payload: false
+      qos: '2'
+      topic: homeassistant/sensor/heating
+      payload: '"{{ states(''sensor.hpsu_can_heating_emoncms'') }}"'
+  - service: mqtt.publish
+    metadata: {}
+    data:
+      qos: '2'
+      topic: homeassistant/sensor/dhw
+      payload: '"{{ states(''sensor.hpsu_can_dhw_emoncms'') }}"'
+  - service: mqtt.publish
+    metadata: {}
+    data:
+      evaluate_payload: false
+      qos: '2'
+      topic: homeassistant/sensor/t_outside
+      payload: '"{{ states(''sensor.hpsu_can_outside_temperature'') }}"'
+  - service: mqtt.publish
+    metadata: {}
+    data:
+      evaluate_payload: false
+      qos: '2'
+      topic: homeassistant/sensor/target_room_temp
+      payload: '"{{ states(''sensor.hspu_can_target_room_emoncms'') }}"'
+  - service: mqtt.publish
+    metadata: {}
+    data:
+      evaluate_payload: false
+      qos: '2'
+      topic: homeassistant/sensor/bomba_de_calor_flow_rate
+      payload: '"{{ states(''sensor.hpsu_can_flow_rate'') }}"'
+  - service: mqtt.publish
+    metadata: {}
+    data:
+      evaluate_payload: false
+      qos: '2'
+      topic: homeassistant/sensor/thermal_power
+      payload: '"{{ states(''sensor.hpsu_can_thermal_power_2'') }}"'
+  - service: mqtt.publish
+    metadata: {}
+    data:
+      evaluate_payload: false
+      qos: '2'
+      topic: homeassistant/sensor/flow_temperature_tv
+      payload: '"{{ states(''sensor.hpsu_can_flow_temperature_tv'') }}"'
+  - service: mqtt.publish
+    metadata: {}
+    data:
+      evaluate_payload: false
+      qos: '2'
+      topic: homeassistant/sensor/flow_return_temperature_heating
+      payload: '"{{ states(''sensor.hpsu_can_return_temperature_heating'') }}"'
+  mode: single
+  max_exceeded: warning
+- id: mqtt_publish
+  alias: MQTT  Publish
+  description: Automação ativada por mudança de estado em ['sensor.bmw_x1_charging_w_2'], mudança de estado em ['sensor.bmw_i4_charging_w'].
+  trigger:
+  - platform: state
+    entity_id:
+    - sensor.bmw_x1_charging_w_2
+    id: '1'
+  - platform: state
+    entity_id:
+    - sensor.bmw_i4_charging_w
+    id: '2'
+  conditions: []
+  action:
+  - if:
+    - condition: trigger
+      id:
+      - '1'
+    then:
+    - service: mqtt.publish
+      metadata: {}
+      data:
+        evaluate_payload: false
+        qos: '2'
+        topic: homeassistant/sensor/ev/bmwx1_charging_w
+        payload: '"{{ states(''sensor.bmw_x1_charging_w_2'') | float(0) | round(0) }}"'
+  - if:
+    - condition: trigger
+      id:
+      - '2'
+    then:
+    - service: mqtt.publish
+      metadata: {}
+      data:
+        evaluate_payload: false
+        qos: '2'
+        topic: homeassistant/sensor/ev/bmwi4_charging_w
+        payload: '"{{ states(''sensor.bmw_i4_charging_w'') | float(0) | round(0) }}"'
+  mode: single
+  max_exceeded: warning
+- id: telegram_bot_conversation_with_assist
+  alias: 'Telegram Bot: Conversation with Assist'
+  description: Automação do Home Assistant.
+  use_blueprint:
+    path: marc-romu/telegram-bot--conversation.yaml
+    input:
+      conversation_agent: conversation.chatgpt
+  mode: single
+  max_exceeded: warning
+- id: openai_daily_environmental_notification
+  alias: 'OpenAI Daily: Environmental Notification'
+  description: Automação do Home Assistant.
+  trigger:
+  - at: 08:05:00
+    trigger: time
+  - at: '12:40:00'
+    trigger: time
+  - at: '18:30:00'
+    trigger: time
+  conditions: []
+  action:
+  - alias: 'Call a service ''Weather: Get Forecast'''
+    action: weather.get_forecasts
+    target:
+      entity_id: weather.forecast_home
+    data:
+      type: daily
+    response_variable: daily_forecast
+  - data:
+      agent_id: conversation.chatgpt
+      text: '"Para esta tarefa, es um consultor meteorológico e es responsavel por garantir a qualidade do ar no interior da casa. Please provide your thoughts on our indoor air quality as it relates to the weather outside and our current heating / cooling system settings.  Podes e deves usar um tom humorista. Podes usar emojis. Responde em portugues de portugal sem gerúndio.  \_ Current time {{now()}} Current thermostat setting {{states(''select.hpsu_can_target_room_1_temperature'')}} Current Home temperature {{states(''sensor.emoncms_home_temperature'')}} °C Current Home average temperature is {{states(''sensor.casa_temperatura_media'')}} °C Current Home average humidity is {{states(''sensor.casa_humidade_media_relativa'')}} % Exterior Weather Data Temperature is {{ states(''sensor.bthome_sensor_6a2b_temperature'') }} °C Exterior Feels like temperature is {{ states(''sensor.home_temperatura_aparente'') }} °C Exterior Weather Data Humidity is {{ states(''sensor.bthome_sensor_6a2b_humidity'') }} % Current Rain Intensity {{ states(''sensor.home_precipitacao'') }} mm/h Forecasted Conditions for Today {{states(''sensor.home_condicao_dia_0'')}} Forecasted High Tempterature for Today {{states(''sensor.home_temperatura_max_realfeel_dia_0'')}} °C Forecasted Low Temperature for Today {{states(''sensor.home_temperatura_min_realfeel_dia_0'')}} °C'
+      language: pt-pt
+    enabled: true
+    response_variable: agent
+    action: conversation.process
+  - service: telegram_bot.send_message
+    metadata: {}
+    data:
+      title: Qualidade do Ar em Casa
+      message: '{{agent.response.speech.plain.speech}}'
+  mode: single
+  max_exceeded: warning
+- id: candeeiros_ligardesligar
+  alias: 💡Candeeiros Ligar/Desligar
+  description: Automação do Home Assistant.
+  trigger:
+  - device_id: e8a6c706997d87b98183e26e7598ae8b
+    domain: shelly
+    type: single
+    subtype: button
+    trigger: device
+  - device_id: d686deeba13232cfa6ab008fa8c80dc0
+    domain: bthome
+    type: button_1
+    subtype: press
+    trigger: device
+  conditions: []
+  action:
+  - service: light.toggle
+    metadata: {}
+    data: {}
+    target:
+      entity_id: light.candeeiros_sala_inferior
+  mode: single
+  max_exceeded: warning
+- id: desligar_tudo_sala
+  alias: 'Desligar tudo Sala '
+  description: Automação do Home Assistant.
+  trigger:
+  - device_id: e8a6c706997d87b98183e26e7598ae8b
+    domain: shelly
+    type: long
+    subtype: button
+    trigger: device
+  - device_id: d686deeba13232cfa6ab008fa8c80dc0
+    domain: bthome
+    type: button_1
+    subtype: long_press
+    trigger: device
+  conditions: []
+  action:
+  - service: light.turn_off
+    metadata: {}
+    data: {}
+    target:
+      entity_id:
+      - light.sala_inferior
+  - service: media_player.turn_off
+    metadata: {}
+    data: {}
+    target:
+      device_id: a5dd3a6582b27b004323486771a64137
+  - service: light.turn_on
+    metadata: {}
+    data: {}
+    target:
+      entity_id: light.shellyplus2pm_c82e180d5f10_switch_1
+  - delay:
+      hours: 0
+      minutes: 1
+      seconds: 0
+      milliseconds: 0
+  - service: light.turn_off
+    metadata: {}
+    data: {}
+    target:
+      entity_id: light.shellyplus2pm_c82e180d5f10_switch_1
+  mode: single
+  max_exceeded: warning
+- id: heat_pump_error
+  alias: ♨️ Heat Pump Error
+  description: Automação ativada por mudança de estado em ['sensor.hpsu_can_error_code'], mudança de estado em ['sensor.hpsu_can_error_code'].
+  trigger:
+  - platform: state
+    entity_id:
+    - sensor.hpsu_can_error_code
+    from: No Error
+    id: Error
+  - platform: state
+    entity_id:
+    - sensor.hpsu_can_error_code
+    id: ok
+    to: No Error
+  conditions: []
+  action:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id:
+        - Error
+      sequence:
+      - service: telegram_bot.send_message
+        metadata: {}
+        data:
+          message: 'A bomba de calor está em Erro.
+
+            *ERROR:* {{states(''sensor.hpsu_can_error_code'') }}
+
+            '
+          title: ❌ Error Bomba de Calor ❌
+    - conditions:
+      - condition: trigger
+        id:
+        - ok
+      sequence:
+      - service: telegram_bot.send_message
+        metadata: {}
+        data:
+          message: 'A bomba de calor está em {{states(''sensor.hpsu_can_error_code'') }}
+
+            '
+          title: ✅ OK Bomba de Calor ✅
+  mode: single
+  max_exceeded: warning
+- id: hot_water_production_best_price
+  alias: ♨️ Hot Water Production Best price
+  description: Automação do Home Assistant.
+  trigger:
+  - at: sensor.aquecimento_agua_noite
+    trigger: time
+  condition:
+  - type: is_temperature
+    condition: device
+    device_id: dbbed3fc0849f129296b804033d10b74
+    entity_id: 869298e5bb3f09e40bb45c5ab1d10091
+    domain: sensor
+    below: 45
+  action:
+  - device_id: dbbed3fc0849f129296b804033d10b74
+    domain: select
+    entity_id: aa534d8176126b2ad55749fb0cc47992
+    type: select_option
+    option: 'On'
+  mode: single
+  max_exceeded: warning
+- id: botao_sala_estore1
+  alias: '🪟Botão Sala Estore1 '
+  description: Automação do Home Assistant.
+  trigger:
+  - device_id: e8a6c706997d87b98183e26e7598ae8b
+    domain: shelly
+    type: double
+    subtype: button
+    trigger: device
+  conditions: []
+  action:
+  - service: cover.toggle
+    metadata: {}
+    data: {}
+    target:
+      entity_id: cover.estore1_cover_0
+  mode: single
+  max_exceeded: warning
+- id: atualizar_ph_filtrado_com_bomba_ligada
+  alias: 🏊🏻Atualizar pH filtrado com bomba ligada
+  description: Automação do Home Assistant.
+  trigger:
+  - entity_id:
+    - switch.bomba_piscina_switch_0
+    to: 'on'
+    trigger: state
+    id: bomba
+    from: 'off'
+  - entity_id: sensor.ph_corrigido
+    trigger: state
+    enabled: true
+  - platform: time_pattern
+    minutes: /5
+  condition:
+  - condition: state
+    entity_id: switch.bomba_piscina_switch_0
+    state: 'on'
+    for:
+      hours: 0
+      minutes: 10
+      seconds: 0
+  - condition: template
+    value_template: '{{ states(''sensor.ph_corrigido'') not in [''unavailable'', ''unknown''] }}'
+  action:
+  - target:
+      entity_id:
+      - input_number.ph_sensor_filtrado
+    data:
+      value: '{{ states(''sensor.ph_sensor'') | float(2) }}'
+    action: input_number.set_value
+  - target:
+      entity_id: input_number.ph_filtrado
+    data:
+      value: '{{ states(''sensor.ph_corrigido'') | float(2) }}'
+    action: input_number.set_value
+  mode: single
+  max_exceeded: warning
+- id: atualiza_media_de_nuvens_nas_proximas_8h
+  alias: ☁️Atualiza média de nuvens nas próximas 8h
+  description: Automação do Home Assistant.
+  trigger:
+  - hours: /1
+    trigger: time_pattern
+  action:
+  - target:
+      entity_id: weather.forecast
+    data:
+      type: hourly
+    response_variable: forecast
+    action: weather.get_forecasts
+  - variables:
+      clouds: "{{ forecast['weather.forecast']['forecast'][:8]\n   | map(attribute='cloud_coverage')\n   | reject('none')\n   | list }}\n"
+      avg_clouds: "{% if clouds | length > 0 %}\n  {{ (clouds | map('float') | sum / clouds | length)\n     | round(1) }}\n{% else %}\n  0\n{% endif %}\n"
+  - data:
+      entity_id: input_number.average_cloud_cover
+      value: '{{ avg_clouds }}'
+    action: input_number.set_value
+  mode: single
+  max_exceeded: warning
+- id: atualiza_media_de_nuvens_entre_as_1000_e_as_1800
+  alias: ☁️Atualiza média de nuvens entre as 10:00 e as 18:00
+  description: Automação do Home Assistant.
+  trigger:
+  - hours: /1
+    trigger: time_pattern
+  conditions: []
+  action:
+  - if:
+    - condition: time
+      after: 00:00:00
+      before: '19:00:00'
+    then:
+    - target:
+        entity_id: weather.forecast
+      data:
+        type: hourly
+      response_variable: forecast
+      action: weather.get_forecasts
+    - variables:
+        entries: '{{ forecast[''weather.forecast''][''forecast''] }}
+
+          '
+        start: '{{ utcnow().replace(hour=10, minute=0, second=0, microsecond=0).isoformat(sep=''T'') }}
+
+          '
+        end: '{{ utcnow().replace(hour=18, minute=0, second=0, microsecond=0).isoformat(sep=''T'') }}
+
+          '
+        clouds: "{{ entries\n   | selectattr('datetime', '>=', start)\n   | selectattr('datetime', '<=', end)\n   | map(attribute='cloud_coverage')\n   | reject('none')\n   | list }}\n"
+        avg_clouds: "{% if clouds | length > 0 %}\n  {{ (clouds | map('float') | sum / clouds | length) | round(1) }}\n{% else %}\n  0\n{% endif %}\n"
+    - data:
+        entity_id: input_number.average_cloud_cover_piscina
+        value: '{{ avg_clouds }}'
+      action: input_number.set_value
+    else:
+    - target:
+        entity_id: weather.forecast
+      data:
+        type: hourly
+      response_variable: forecast
+      action: weather.get_forecasts
+    - variables:
+        entries: '{{ forecast[''weather.forecast''][''forecast''] }}
+
+          '
+        start: '{{ (utcnow() + timedelta(days=1)).replace(hour=10, minute=0, second=0, microsecond=0).isoformat(sep=''T'') }}
+
+          '
+        end: '{{ (utcnow() + timedelta(days=1)).replace(hour=18, minute=0, second=0, microsecond=0).isoformat(sep=''T'') }}
+
+          '
+        clouds: "{{ entries\n   | selectattr('datetime', '>=', start)\n   | selectattr('datetime', '<=', end)\n   | map(attribute='cloud_coverage')\n   | reject('none')\n   | list }}\n"
+        avg_clouds: "{% if clouds | length > 0 %}\n  {{ (clouds | map('float') | sum / clouds | length) | round(1) }}\n{% else %}\n  0\n{% endif %}\n"
+    - data:
+        entity_id: input_number.average_cloud_cover_piscina
+        value: '{{ avg_clouds }}'
+      action: input_number.set_value
+  mode: single
+  max_exceeded: warning
+- id: bomba_peristaltica
+  alias: 🏊🏻Bomba Peristaltica
+  description: Automação ativada por mudança de estado em ['switch.bomba_piscina_switch_0'].
+  trigger:
+  - platform: state
+    entity_id:
+    - switch.bomba_piscina_switch_0
+  - platform: time_pattern
+    minutes: /5
+  condition:
+  - condition: device
+    type: is_on
+    device_id: d752f893fd0bb44490ec4bfcb83c333f
+    entity_id: ae742d0d2f0dc5dea53a674346911926
+    domain: switch
+  action:
+  - if:
+    - condition: device
+      type: is_on
+      device_id: d752f893fd0bb44490ec4bfcb83c333f
+      entity_id: ae742d0d2f0dc5dea53a674346911926
+      domain: switch
+    - condition: numeric_state
+      entity_id: sensor.ph_corrigido_filtrado
+      above: 7.5
+    then:
+    - service: switch.turn_on
+      metadata: {}
+      data: {}
+      target:
+        entity_id:
+        - switch.bomba_peristaltica_switch_0
+    else:
+    - service: switch.turn_off
+      metadata: {}
+      data: {}
+      target:
+        entity_id:
+        - switch.bomba_peristaltica_switch_0
+  mode: single
+  max_exceeded: warning
+- id: abrir_estore_1
+  alias: 🪟Abrir Estore 1
+  description: Automação do Home Assistant.
+  trigger:
+  - device_id: d686deeba13232cfa6ab008fa8c80dc0
+    domain: bthome
+    type: button_3
+    subtype: press
+    trigger: device
+  conditions: []
+  action:
+  - if:
+    - condition: device
+      device_id: cfd18037256cb019fa29781e93e644d7
+      domain: cover
+      entity_id: 8749320a26b0fe2753d119e46c5cba27
+      type: is_opening
+    then:
+    - service: cover.stop_cover
+      metadata: {}
+      data: {}
+      target:
+        entity_id: cover.estore1_cover_0
+    else:
+    - service: cover.open_cover
+      metadata: {}
+      data: {}
+      target:
+        entity_id: cover.estore1_cover_0
+  mode: single
+  max_exceeded: warning
+- id: fechar_estore_1
+  alias: 🪟Fechar Estore 1
+  description: Automação do Home Assistant.
+  trigger:
+  - device_id: d686deeba13232cfa6ab008fa8c80dc0
+    domain: bthome
+    type: button_4
+    subtype: press
+    trigger: device
+  conditions: []
+  action:
+  - if:
+    - condition: device
+      device_id: cfd18037256cb019fa29781e93e644d7
+      domain: cover
+      entity_id: 8749320a26b0fe2753d119e46c5cba27
+      type: is_closing
+    then:
+    - service: cover.stop_cover
+      metadata: {}
+      data: {}
+      target:
+        entity_id: cover.estore1_cover_0
+    else:
+    - service: cover.close_cover
+      metadata: {}
+      data: {}
+      target:
+        entity_id: cover.estore1_cover_0
+  mode: single
+  max_exceeded: warning
+- id: teste2
+  alias: teste2
+  description: Automação do Home Assistant.
+  triggers:
+  - device_id: 2f9c9ea7fbfd91205bab02216a817afb
+    domain: button
+    entity_id: 526ce22089765dd42cdffef922d73e4f
+    type: pressed
+    trigger: device
+  conditions: []
+  actions: []
+  mode: single
+  max_exceeded: warning
+- id: new_automation
+  alias: New automation
+  description: Automação do Home Assistant.
+  triggers:
+  - type: changed_states
+    device_id: 1fc5080f1934f44e78187d3cef50ff60
+    entity_id: c495f1e608ba0783c370be0f0cad7c8f
+    domain: switch
+    trigger: device
+  conditions: []
+  actions: []
+  mode: single
+  max_exceeded: warning

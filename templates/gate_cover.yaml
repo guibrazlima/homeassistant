@@ -15,8 +15,8 @@
     open_cover:
       action: switch.turn_on
       target:
-        entity_id: switch.portao
+        entity_id: switch.portao_shelly
     close_cover:
       action: switch.turn_on
       target:
-        entity_id: switch.portao
+        entity_id: switch.portao_shelly

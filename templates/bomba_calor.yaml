@@ -20,3 +20,15 @@
             include_tomorrow=true, 
             look_ahead=true
         ) }}
+
+- sensor:
+  - name: "HPSU Mode of Operating (Merged)"
+    unique_id: hpsu_mode_of_operating_merged
+    state: >
+      {% set uart = states('sensor.hpsu_uart_mode_of_operating_uart') %}
+      {% set can = states('sensor.hpsu_uart_mode_of_operating') %}
+      {% if can == 'defrosting' %}
+        Defrosting
+      {% else %}
+        {{ uart }}
+      {% endif %}

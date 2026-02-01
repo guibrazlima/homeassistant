@@ -1,0 +1,81 @@
+# 🚗 EV (cFos) — Só depois da bomba + Vazio 22:00–08:00 (sem starvation)
+
+- id: ev_gate_sem_starvation
+  alias: "🚗 EV (cFos) — Só depois da bomba + Vazio 22:00–08:00"
+  mode: single   # já não precisamos de restart
+  trigger:
+    # Permitir no início do vazio
+    - platform: time
+      at: "22:00:00"
+    # Permitir quando a bomba ficar ON e mantiver 60s (anti-osc)
+    - platform: state
+      entity_id: switch.bomba_piscina_switch_0
+      to: "on"
+      for: "00:01:00"
+    # Permitir quando a filtração terminar
+    - platform: numeric_state
+      entity_id: input_number.piscina_filtracao_min_restantes
+      below: 1
+    # Pausar no fim do vazio
+    - platform: time
+      at: "08:00:00"
+    # Pausar se a bomba ficar OFF e ainda faltarem minutos (estável 10s)
+    - platform: state
+      entity_id: switch.bomba_piscina_switch_0
+      to: "off"
+      for: "00:00:10"
+  action:
+    - variables:
+        em_vazio: >-
+          {{ now().time() >= as_datetime(strptime('22:00:00','%H:%M:%S')).time()
+             or now().time() <  as_datetime(strptime('08:00:00','%H:%M:%S')).time() }}
+        pump_on: "{{ is_state('switch.bomba_piscina_switch_0','on') }}"
+        pool_done: >-
+          {% set m = states('input_number.piscina_filtracao_min_restantes') %}
+          {{ m not in ['unknown','unavailable',''] and (m|float(0) <= 0) }}
+    - choose:
+        # ✅ Permitir: no vazio OU bomba ON (já estabilizada) OU filtração concluída
+        - conditions: "{{ em_vazio or pump_on or pool_done }}"
+          sequence:
+            - service: switch.turn_on
+              target:
+                entity_id: switch.powerbrain_wallbox_enable_charging   # ADAPTA
+        # ❌ Pausar: fora do vazio, bomba OFF e ainda faltam minutos
+        - conditions: >-
+            {{ (not em_vazio) and (not pump_on) and (not pool_done) }}
+          sequence:
+            - service: switch.turn_off
+              target:
+                entity_id: switch.powerbrain_wallbox_enable_charging   # ADAPTA
+
+
+#Failsafes
+# 22:00 — garantir permitido
+- id: ev_allow_at_22
+  alias: "🚗 EV (cFos) — Permitir às 22:00"
+  trigger:
+    - platform: time
+      at: "22:00:00"
+  action:
+    - service: switch.turn_on
+      target:
+        entity_id: switch.wallbox_charging_enabled
+
+# 08:00 — voltar ao controlo do gate (uma avaliação imediata)
+- id: ev_reapply_gate_at_08
+  alias: "🚗 EV (cFos) — Reaplicar gate às 08:00"
+  trigger:
+    - platform: time
+      at: "08:00:00"
+  action:
+    - if:
+        - condition: template
+          value_template: >-
+            {% set pump_on = is_state('switch.bomba_piscina_switch_0','on') %}
+            {% set m = states('input_number.piscina_filtracao_min_restantes') %}
+            {% set pool_done = (m not in ['unknown','unavailable',''] and (m|float(0) <= 0)) %}
+            {{ not (pump_on or pool_done) }}
+      then:
+        - service: switch.turn_off
+          target:
+            entity_id: switch.wallbox_charging_enabled

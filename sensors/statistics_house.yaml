@@ -1,0 +1,63 @@
+# ═══════════════════════════════════════════════════════════════════
+# ESTATÍSTICAS DE CONSUMO DA CASA (para previsão solar)
+# ═══════════════════════════════════════════════════════════════════
+# Estes sensores calculam médias e estatísticas do consumo da casa
+# para melhorar a previsão de energia disponível para a piscina.
+#
+# Autor: guibrazlima
+# Criado: 2026-02-01
+# ═══════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────
+# MÉDIA 24 HORAS - Consumo médio da casa (sem bomba piscina)
+# ─────────────────────────────────────────────────────────────────────
+- platform: statistics
+  name: "Casa - Consumo Médio 24h"
+  unique_id: casa_consumo_medio_24h
+  entity_id: sensor.emoncms_192_168_1_250_use_no_pool_pump
+  state_characteristic: mean
+  sampling_size: 2880  # 24h × 60min × 2 (a cada 30s)
+  max_age:
+    hours: 24
+
+# ─────────────────────────────────────────────────────────────────────
+# MÉDIA 7 DIAS - Consumo médio da casa (sem bomba piscina)
+# ─────────────────────────────────────────────────────────────────────
+- platform: statistics
+  name: "Casa - Consumo Médio 7 Dias"
+  unique_id: casa_consumo_medio_7d
+  entity_id: sensor.emoncms_192_168_1_250_use_no_pool_pump
+  state_characteristic: mean
+  sampling_size: 20160  # 7 dias × 24h × 60min × 2
+  max_age:
+    days: 7
+
+# ─────────────────────────────────────────────────────────────────────
+# MÁXIMO 24 HORAS - Pico de consumo da casa
+# ─────────────────────────────────────────────────────────────────────
+- platform: statistics
+  name: "Casa - Consumo Máximo 24h"
+  unique_id: casa_consumo_max_24h
+  entity_id: sensor.emoncms_192_168_1_250_use_no_pool_pump
+  state_characteristic: value_max
+  sampling_size: 2880
+  max_age:
+    hours: 24
+
+# ─────────────────────────────────────────────────────────────────────
+# MÉDIA HORAS SOLARES (10h-17h) - Mais relevante para previsão
+# ─────────────────────────────────────────────────────────────────────
+# Nota: Este sensor usa history_stats + template para horas específicas
+# Para um cálculo mais preciso, considera usar SQL ou utility_meter
+
+# ─────────────────────────────────────────────────────────────────────
+# DESVIO PADRÃO - Variabilidade do consumo
+# ─────────────────────────────────────────────────────────────────────
+- platform: statistics
+  name: "Casa - Consumo Desvio Padrão 24h"
+  unique_id: casa_consumo_std_24h
+  entity_id: sensor.emoncms_192_168_1_250_use_no_pool_pump
+  state_characteristic: standard_deviation
+  sampling_size: 2880
+  max_age:
+    hours: 24

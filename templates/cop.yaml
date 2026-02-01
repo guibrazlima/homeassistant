@@ -3,25 +3,25 @@
       unique_id: "hpsu_can_delta_t"
       unit_of_measurement: '°C'
       state: >
-        {% set leavingtemp = states('sensor.hpsu_can_flow_temperature_tv') | float(0) %}
-        {% set returntemp = states('sensor.hpsu_can_return_temperature_heating') | float(0) %}
+        {% set leavingtemp = states('sensor.hpsu_uart_flow_temperature_tv') | float(0) %}
+        {% set returntemp = states('sensor.hpsu_uart_return_temperature') | float(0) %}
 
         {{ leavingtemp - returntemp }}
       attributes:
-        leavingtemp: "{{ float(states('sensor.hpsu_can_flow_temperature_tv') ) }} °C"
-        returntemp: "{{ float(states('sensor.hpsu_can_return_temperature_heating') ) }} °C"
+        leavingtemp: "{{ float(states('sensor.hpsu_uart_flow_temperature_tv') ) }} °C"
+        returntemp: "{{ float(states('sensor.hpsu_uart_return_temperature') ) }} °C"
     
     - name: "HPSU.CAN DeltaT DHW"
       unique_id: "hpsu_can_delta_t_dhw"
       unit_of_measurement: '°C'
       state: >
-        {% set leavingtemp = states('sensor.hpsu_can_flow_temperature_tv') | float(0) %}
-        {% set returntemp = states('sensor.hpsu_can_return_temperature_heating') | float(0) %}
+        {% set leavingtemp = states('sensor.hpsu_uart_flow_temperature_tv') | float(0) %}
+        {% set returntemp = states('sensor.hpsu_uart_return_temperature') | float(0) %}
 
         {{ leavingtemp - returntemp }}
       attributes:
-        leavingtemp: "{{ float(states('sensor.hpsu_can_flow_temperature_tv') ) }} °C"
-        returntemp: "{{ float(states('sensor.hpsu_can_return_temperature_heating') ) }} °C"
+        leavingtemp: "{{ float(states('sensor.hpsu_uart_flow_temperature_tv') ) }} °C"
+        returntemp: "{{ float(states('sensor.hpsu_uart_return_temperature') ) }} °C"
 
     - name: HPSU.CAN Thermal Power
       unique_id: "hpsu_can_thermal_power"
@@ -30,16 +30,15 @@
         {% set flow = states('sensor.hpsu_can_flow_rate') | float(0) %}
         {% set power = states('sensor.emoncms_heat_pump_watts') | float(0) / 1000 %}
         {% set compressor_status = states('binary_sensor.hpsu_can_compressor_status') %}
-        {% set leavingtemp = states('sensor.hpsu_can_flow_temperature_tv') | float(0) %}                     
-        {% set returntemp = states('sensor.hpsu_can_return_temperature_heating') | float(0) %}
+        {% set spread = states('sensor.hpsu_can_temperature_spread') | float(0) %}
         {% set operating = states('sensor.hpsu_uart_mode_of_operating_uart') %}
         {% set temptv = states('sensor.hpsu_can_flow_temperature_tv') | float(0) %}
         
 
         {% if compressor_status == 'on' and power > 0 and operating == 'Heating' %}
-            {{ (max(0, (leavingtemp - returntemp ) * (4.19 * flow) / 3600) | round(2)) }} 
+            {{ (max(0, spread * (4.19 * flow) / 3600) | round(2)) }} 
         {% elif compressor_status == 'on' and power > 0 and operating == 'Hot Water Production' %}
-            {{ (max(0, (leavingtemp - returntemp) * (4.19 * flow) / 3600) | round(2)) }}
+            {{ (max(0, spread * (4.19 * flow) / 3600) | round(2)) }}
         {% else %}
             0
         {% endif %}
@@ -47,7 +46,7 @@
         formula: (leavingtemp - returntemp ) * (4.19 * flow(L/h) ) / 3600
         Operating CAN: "{{ states('sensor.hpsu_can_mode_of_operating') }}"
         Operating UART: "{{ states('sensor.hpsu_uart_mode_of_operating_uart') }}"
-        deltaT Heating: "{{ float(states('sensor.hpsu_can_deltat')) }} °C"
+        deltaT Heating: "{{ float(states('sensor.hpsu_can_temperature_spread')) }} °C"
         deltaT DHW: "{{ float(states('sensor.hpsu_can_deltat_dhw')) }} °C"
         flowRate: "{{ float(states('sensor.hpsu_can_flow_rate')) }} L/h"
         Thermal Power: "{{ states('sensor.hpsu_can_thermal_power_v2') }} W"
@@ -61,12 +60,11 @@
         {% set flow = states('sensor.hpsu_can_flow_rate') | float(0) %}
         {% set power = states('sensor.emoncms_heat_pump_watts') | float(0) %}
         {% set compressor_status = states('binary_sensor.hpsu_can_compressor_status') %}
-        {% set leavingtemp = states('sensor.hpsu_can_flow_temperature_tv') | float(0) %}
-        {% set returntemp = states('sensor.hpsu_can_return_temperature_heating') | float(0) %}
+        {% set spread = states('sensor.hpsu_can_temperature_spread') | float(0) %}
         {% set operating = states('sensor.hpsu_uart_mode_of_operating_uart') %}
 
         {% if compressor_status == 'on' and power > 0 and operating != 'Standby' %}
-            {{ (1.163 * flow * (leavingtemp - returntemp)) | round(0) }}
+            {{ (1.163 * flow * spread) | round(0) }}
         {% else %}
             0
         {% endif %}
@@ -77,7 +75,7 @@
                             Calor específico da água ≈ 4186 J/kg·K ou 1.163 Wh/kg·K
                             Densidade da água ≈ 1 kg/L
                             Conversão de Wh para W
-        deltaT: "{{ float(states('sensor.hpsu_can_deltat')) }} °C"
+        deltaT: "{{ float(states('sensor.hpsu_can_temperature_spread')) }} °C"
         flowRate: "{{ float(states('sensor.hpsu_can_flow_rate')) }} L/h"
         Thermal Power: "{{ states('sensor.hpsu_can_thermal_power_2') }} kW"
         COP: "{{ states('sensor.hpsu_can_cop') }}"
@@ -88,7 +86,7 @@
     - name: HPSU.CAN COP
       unique_id: "hpsu_can_cop"
       state: >
-        {% set thermal_power = states('sensor.hpsu_can_thermal_power_2') | float(0) %}
+          {% set thermal_power = states('sensor.hpsu_can_thermal_power_2') | float(0) %}
           {% set power = states('sensor.emoncms_heat_pump_watts') | float(0) / 1000 %}
           {% set compressor_status = states('binary_sensor.hpsu_can_compressor_status') %}
           
@@ -128,7 +126,7 @@
       attributes:
         formula: thermal_power / power
         compressor status: "{{ states('binary_sensor.hpsu_can_compressor_status') }}"
-        deltaT: "{{ float(states('sensor.hpsu_can_deltat')) }} °C"
+        deltaT: "{{ float(states('sensor.hpsu_can_temperature_spread')) }} °C"
         thermal power: "{{ float(states('sensor.hpsu_can_thermal_power_2')) }}"
         Heat Pump power: "{{ float(states('sensor.emoncms_heat_pump_watts')) }}"
         cop: "{{ states('sensor.hpsu_can_cop') }}"

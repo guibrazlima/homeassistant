@@ -9,25 +9,48 @@
 
 - sensor:
     - name: "pool_pump_remaining_time"
-      availability: "{{ (states('sensor.bomba_piscina_horas_ligada_diario') | float(-1)) >= 0 }}"
+      availability: >-
+        {{ states('sensor.bomba_piscina_horas_ligada_diario') not in ['unknown','unavailable','']
+           and (states('sensor.bomba_piscina_horas_ligada_diario') | float(-1)) >= 0 }}
       unique_id: "pool_pump_remaining_time"
       state: >-
-        {% set time = (((states('input_number.pool_pump_duration_lower_threshold') | float(0))*60 - (states('sensor.bomba_piscina_horas_ligada_diario')|float(-1))*3600)| round | int, 0)|max %}
-        {% set minutes = ((time % 3600) / 60) | int %}
-        {% set hours = ((time % 86400) / 3600) | int %}
-        {%- if hours < 10 -%}
-          0{{ hours }}
-        {%- else -%}
-          {{ hours }}
-        {%- endif -%}
-        :
-        {%- if minutes < 10 -%}
-          0{{ minutes }}
-        {%- else -%}
-          {{ minutes }}
-        {%- endif -%}
-      attributes: 
-        seconds: "{{ (((states('input_number.pool_pump_duration_lower_threshold') | float(-1))*60 - (states('sensor.bomba_piscina_horas_ligada_diario')|float(-1))*3600)| round, 0)|max }}"
+        {# Usa sensor dinâmico se disponível, senão input_number como fallback #}
+        {% set horas_recomendadas = states('sensor.piscina_tempo_de_filtracao_recomendado') %}
+        {% if horas_recomendadas not in ['unknown','unavailable',''] %}
+          {% set target_seconds = (horas_recomendadas | float(8)) * 3600 %}
+        {% else %}
+          {% set target_seconds = (states('input_number.pool_pump_duration_lower_threshold') | float(480)) * 60 %}
+        {% endif %}
+        {% set worked_seconds = (states('sensor.bomba_piscina_horas_ligada_diario') | float(0)) * 3600 %}
+        {% set time = ((target_seconds - worked_seconds) | round | int, 0) | max %}
+        {% set hours = ((time / 3600) | int) %}
+        {% set minutes = (((time % 3600) / 60) | int) %}
+        {{ '%02d' | format(hours) }}:{{ '%02d' | format(minutes) }}
+      attributes:
+        seconds: >-
+          {% set horas_recomendadas = states('sensor.piscina_tempo_de_filtracao_recomendado') %}
+          {% if horas_recomendadas not in ['unknown','unavailable',''] %}
+            {% set target_seconds = (horas_recomendadas | float(8)) * 3600 %}
+          {% else %}
+            {% set target_seconds = (states('input_number.pool_pump_duration_lower_threshold') | float(480)) * 60 %}
+          {% endif %}
+          {% set worked_seconds = (states('sensor.bomba_piscina_horas_ligada_diario') | float(0)) * 3600 %}
+          {{ ((target_seconds - worked_seconds) | round, 0) | max }}
+        target_hours: >-
+          {% set horas_recomendadas = states('sensor.piscina_tempo_de_filtracao_recomendado') %}
+          {% if horas_recomendadas not in ['unknown','unavailable',''] %}
+            {{ horas_recomendadas | float(8) }}
+          {% else %}
+            {{ (states('input_number.pool_pump_duration_lower_threshold') | float(480)) / 60 }}
+          {% endif %}
+        source: >-
+          {% set horas_recomendadas = states('sensor.piscina_tempo_de_filtracao_recomendado') %}
+          {% if horas_recomendadas not in ['unknown','unavailable',''] %}
+            dynamic (temperatura)
+          {% else %}
+            manual (input_number)
+          {% endif %}
+        worked_hours: "{{ states('sensor.bomba_piscina_horas_ligada_diario') | float(0) | round(2) }}"
 
 - sensor:      
     - name: "pool_pump_time"

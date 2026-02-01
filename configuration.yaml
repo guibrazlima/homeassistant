@@ -1,4 +1,5 @@
 homeassistant:
+  customize: !include customize.yaml
   packages:
     aqs_common: !include packages/aqs_common.yaml
     aqs_hp90: !include packages/aqs_hp90_estimador_termico.yaml

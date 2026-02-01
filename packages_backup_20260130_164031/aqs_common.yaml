@@ -1,0 +1,28 @@
+#############################################
+# 📦 Package: AQS - Configurações Comuns
+# 🎯 Objetivo: Input numbers partilhados entre múltiplos packages AQS
+# 📂 Localização: /config/packages/aqs_common.yaml
+# 🔗 Usado por:
+#    - aqs_perdas.yaml
+#    - hp90_thermal_estimator_v2.yaml
+# 📅 Última atualização: 2025-11-11
+#############################################
+
+input_number:
+  dhw_volume_l:
+    name: "AQS — Volume (L)"
+    min: 50
+    max: 1000
+    step: 10
+    unit_of_measurement: "L"
+    initial: 500
+    icon: mdi:water-boiler
+
+  aqs_target_temp:
+    name: "AQS — Temperatura alvo"
+    min: 35
+    max: 60
+    step: 1
+    unit_of_measurement: "°C"
+    initial: 45
+    icon: mdi:thermometer-water
