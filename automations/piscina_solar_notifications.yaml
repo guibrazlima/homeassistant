@@ -1,0 +1,335 @@
+# ═══════════════════════════════════════════════════════════════════
+# AUTOMAÇÕES: NOTIFICAÇÕES INTELIGENTES PISCINA SOLAR
+# ═══════════════════════════════════════════════════════════════════
+#
+# Sistema de alertas proativo baseado em:
+# - Importação alta durante período solar
+# - Tempo filtragem crítico
+# - Condições instáveis
+# - Oportunidades de otimização
+#
+# ═══════════════════════════════════════════════════════════════════
+
+automation:
+  # ───────────────────────────────────────────────────────────────────
+  # ⚠️ ALERTA: Importação Alta com Bomba Ligada
+  # ───────────────────────────────────────────────────────────────────
+  - id: piscina_solar_alert_high_import
+    alias: "🏊 Piscina Solar - Alerta Importação Alta"
+    description: >
+      Notifica quando bomba está ligada mas sistema importa >1000W
+      durante período diurno (provável problema: nuvens ou consumo alto)
+    
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.emoncms_import_export
+        above: 1000
+        for:
+          minutes: 3
+          
+    condition:
+      - condition: state
+        entity_id: switch.bomba_piscina_switch_0
+        state: 'on'
+        
+      - condition: sun
+        after: sunrise
+        after_offset: "01:00:00"
+        before: sunset
+        before_offset: "-01:00:00"
+        
+      - condition: or
+        conditions:
+          - condition: state
+            entity_id: input_select.piscina_notification_level
+            state: "Alertas + Info"
+          - condition: state
+            entity_id: input_select.piscina_notification_level
+            state: "Todas"
+          - condition: state
+            entity_id: input_select.piscina_notification_level
+            state: "Só Alertas"
+            
+    action:
+      - service: notify.mobile_app_iphone_de_guilherme  # Ajustar para teu device
+        data:
+          title: "⚠️ Piscina: Importação Alta"
+          message: >-
+            Bomba ligada mas a importar {{ states('sensor.emoncms_import_export')|round(0) }}W!
+            
+            🌞 PV: {{ states('sensor.emoncms_solar')|round(0) }}W
+            🏠 Casa: {{ states('sensor.emoncms_192_168_1_250_use_no_pool_pump')|round(0) }}W
+            ⏱️ Ligada há: {{ relative_time(states.switch.bomba_piscina_switch_0.last_changed) }}
+            
+            Verificar:
+            - Nuvens passageiras?
+            - Consumo casa anormalmente alto?
+          data:
+            actions:
+              - action: "PUMP_OFF_NOW"
+                title: "❌ Desligar Bomba"
+              - action: "PUMP_IGNORE_1H"
+                title: "⏰ Ignorar 1h"
+                
+      - service: system_log.write
+        data:
+          message: "⚠️ Alerta enviado: Importação alta ({{ states('sensor.emoncms_import_export')|round(0) }}W) com bomba ligada"
+          level: warning
+          logger: automations.piscina_solar
+          
+    mode: single
+    max_exceeded: silent
+    
+  # ───────────────────────────────────────────────────────────────────
+  # ⏰ ALERTA: Tempo Filtragem Crítico
+  # ───────────────────────────────────────────────────────────────────
+  - id: piscina_solar_alert_low_time
+    alias: "🏊 Piscina Solar - Alerta Tempo Crítico"
+    description: >
+      Avisa quando restam <30min de filtragem e já passa das 16h
+      (pouco tempo + sol a acabar = risco não completar filtragem)
+    
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.pool_pump_remaining_time
+        below: 30
+        
+    condition:
+      - condition: state
+        entity_id: switch.bomba_piscina_switch_0
+        state: 'off'
+        
+      - condition: time
+        after: "16:00:00"
+        before: "21:00:00"
+        
+      - condition: or
+        conditions:
+          - condition: state
+            entity_id: input_select.piscina_notification_level
+            state: "Alertas + Info"
+          - condition: state
+            entity_id: input_select.piscina_notification_level
+            state: "Todas"
+          - condition: state
+            entity_id: input_select.piscina_notification_level
+            state: "Só Alertas"
+            
+    action:
+      - service: notify.mobile_app_iphone_de_guilherme
+        data:
+          title: "⏰ Piscina: Pouco Tempo!"
+          message: >-
+            Restam apenas {{ states('sensor.pool_pump_remaining_time') }}min de filtragem
+            e sol vai-se pôr em breve ({{ state_attr('sun.sun', 'next_setting')|timestamp_custom('%H:%M') }}).
+            
+            ☀️ Solar atual: {{ states('sensor.emoncms_solar')|round(0) }}W
+            📊 Excedente: {{ states('sensor.emoncms_export_power_positive')|round(0) }}W
+            
+            💡 Recomendação:
+            {% if states('sensor.emoncms_export_power_positive')|float(0) > 500 %}
+            Há excedente disponível! Liga manualmente.
+            {% else %}
+            Pouco excedente. Considerar vazio noturno.
+            {% endif %}
+          data:
+            actions:
+              - action: "PUMP_ON_NOW"
+                title: "✅ Ligar Agora"
+              - action: "PUMP_SCHEDULE_NIGHT"
+                title: "🌙 Agendar Noite"
+                
+      - service: system_log.write
+        data:
+          message: "⏰ Alerta enviado: Tempo crítico ({{ states('sensor.pool_pump_remaining_time') }}min restantes)"
+          level: warning
+          logger: automations.piscina_solar
+          
+    mode: single
+    max_exceeded: silent
+    
+  # ───────────────────────────────────────────────────────────────────
+  # 💡 INFO: Oportunidade de Excedente Alto
+  # ───────────────────────────────────────────────────────────────────
+  - id: piscina_solar_info_high_excess
+    alias: "🏊 Piscina Solar - Info Excedente Alto"
+    description: >
+      Notifica quando há excedente >2000W disponível
+      mas bomba está desligada (oportunidade perdida)
+    
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.emoncms_export_power_positive
+        above: 2000
+        for:
+          minutes: 5
+          
+    condition:
+      - condition: state
+        entity_id: switch.bomba_piscina_switch_0
+        state: 'off'
+        
+      - condition: numeric_state
+        entity_id: sensor.pool_pump_remaining_time
+        above: 10
+        
+      - condition: sun
+        after: sunrise
+        after_offset: "01:00:00"
+        before: sunset
+        before_offset: "-02:00:00"
+        
+      - condition: or
+        conditions:
+          - condition: state
+            entity_id: input_select.piscina_notification_level
+            state: "Alertas + Info"
+          - condition: state
+            entity_id: input_select.piscina_notification_level
+            state: "Todas"
+            
+    action:
+      - service: notify.mobile_app_iphone_de_guilherme
+        data:
+          title: "💡 Piscina: Excedente Alto!"
+          message: >-
+            Há {{ states('sensor.emoncms_export_power_positive')|round(0) }}W de excedente disponível!
+            
+            🌞 Solar: {{ states('sensor.emoncms_solar')|round(0) }}W
+            🏠 Casa: {{ states('sensor.emoncms_192_168_1_250_use_no_pool_pump')|round(0) }}W
+            ⏳ Faltam: {{ states('sensor.pool_pump_remaining_time') }}min
+            
+            💰 Energia "grátis" disponível!
+          data:
+            actions:
+              - action: "PUMP_ON_NOW"
+                title: "✅ Aproveitar!"
+                
+      - service: system_log.write
+        data:
+          message: "💡 Info enviada: Excedente alto ({{ states('sensor.emoncms_export_power_positive')|round(0) }}W) disponível"
+          level: info
+          logger: automations.piscina_solar
+          
+    mode: single
+    max_exceeded: silent
+    
+  # ───────────────────────────────────────────────────────────────────
+  # 🌤️ INFO: Condições Instáveis
+  # ───────────────────────────────────────────────────────────────────
+  - id: piscina_solar_info_unstable
+    alias: "🏊 Piscina Solar - Info Condições Instáveis"
+    description: >
+      Avisa quando condições estão muito instáveis
+      (indicador estabilidade >30%)
+    
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.solar_stability_indicator
+        above: 30
+        for:
+          minutes: 5
+          
+    condition:
+      - condition: sun
+        after: sunrise
+        before: sunset
+        
+      - condition: state
+        entity_id: input_select.piscina_notification_level
+        state: "Todas"
+        
+    action:
+      - service: notify.mobile_app_iphone_de_guilherme
+        data:
+          title: "🌤️ Piscina: Condições Instáveis"
+          message: >-
+            Produção solar muito variável ({{ states('sensor.solar_stability_indicator')|round(0) }}% variação).
+            
+            Provavelmente nuvens passageiras.
+            
+            🤖 Blueprint vai ser mais conservador automaticamente.
+            
+            {{ state_attr('sensor.solar_stability_indicator', 'recommendation') }}
+          data:
+            tag: "piscina_unstable"
+            
+      - service: system_log.write
+        data:
+          message: "🌤️ Info enviada: Condições instáveis ({{ states('sensor.solar_stability_indicator')|round(0) }}%)"
+          level: info
+          logger: automations.piscina_solar
+          
+    mode: single
+    max_exceeded: silent
+    
+  # ───────────────────────────────────────────────────────────────────
+  # 🎯 AÇÕES DOS BOTÕES DE NOTIFICAÇÃO
+  # ───────────────────────────────────────────────────────────────────
+  - id: piscina_solar_notification_actions
+    alias: "🏊 Piscina Solar - Ações Notificações"
+    description: Processa ações dos botões das notificações
+    
+    trigger:
+      - platform: event
+        event_type: mobile_app_notification_action
+        event_data:
+          action: "PUMP_OFF_NOW"
+      - platform: event
+        event_type: mobile_app_notification_action
+        event_data:
+          action: "PUMP_ON_NOW"
+      - platform: event
+        event_type: mobile_app_notification_action
+        event_data:
+          action: "PUMP_IGNORE_1H"
+      - platform: event
+        event_type: mobile_app_notification_action
+        event_data:
+          action: "PUMP_SCHEDULE_NIGHT"
+          
+    action:
+      - choose:
+          # Desligar bomba
+          - conditions:
+              - condition: template
+                value_template: "{{ trigger.event.data.action == 'PUMP_OFF_NOW' }}"
+            sequence:
+              - service: switch.turn_off
+                target:
+                  entity_id: switch.bomba_piscina_switch_0
+              - service: notify.mobile_app_iphone_de_guilherme
+                data:
+                  message: "✅ Bomba desligada"
+                  
+          # Ligar bomba
+          - conditions:
+              - condition: template
+                value_template: "{{ trigger.event.data.action == 'PUMP_ON_NOW' }}"
+            sequence:
+              - service: switch.turn_on
+                target:
+                  entity_id: switch.bomba_piscina_switch_0
+              - service: notify.mobile_app_iphone_de_guilherme
+                data:
+                  message: "✅ Bomba ligada"
+                  
+          # Ignorar 1h (desabilita automação temporariamente)
+          - conditions:
+              - condition: template
+                value_template: "{{ trigger.event.data.action == 'PUMP_IGNORE_1H' }}"
+            sequence:
+              - service: automation.turn_off
+                target:
+                  entity_id: automation.piscina_solar_alert_high_import
+              - delay:
+                  hours: 1
+              - service: automation.turn_on
+                target:
+                  entity_id: automation.piscina_solar_alert_high_import
+              - service: notify.mobile_app_iphone_de_guilherme
+                data:
+                  message: "⏰ Alertas pausados por 1h"
+                  
+    mode: queued
+    max: 10

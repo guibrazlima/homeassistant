@@ -1,0 +1,48 @@
+# ═══════════════════════════════════════════════════════════════════
+# SENSOR DE AJUSTE METEOROLÓGICO PARA PISCINA SOLAR
+# ═══════════════════════════════════════════════════════════════════
+#
+# Ajusta delays e agressividade baseado em previsão do tempo
+#
+# ═══════════════════════════════════════════════════════════════════
+
+sensor:
+  - platform: template
+    sensors:
+      piscina_weather_delay_multiplier:
+        friendly_name: "Multiplicador Delay (Meteo)"
+        unique_id: piscina_weather_delay_multiplier
+        icon_template: mdi:weather-partly-cloudy
+        value_template: >-
+          {% if not is_state('input_boolean.piscina_use_weather_forecast', 'on') %}
+            {{ 1.0 }}
+          {% else %}
+            {% set weather = states('weather.home') %}
+            {% if weather in ['cloudy', 'partlycloudy'] %}
+              {{ 1.5 }}
+            {% elif weather in ['rainy', 'pouring', 'snowy', 'snowy-rainy'] %}
+              {{ 2.0 }}
+            {% elif weather in ['fog', 'windy'] %}
+              {{ 1.3 }}
+            {% elif weather in ['sunny', 'clear-night'] %}
+              {{ 0.8 }}
+            {% else %}
+              {{ 1.0 }}
+            {% endif %}
+          {% endif %}
+        attribute_templates:
+          current_condition: >-
+            {{ states('weather.home') }}
+          recommendation: >-
+            {% set weather = states('weather.home') %}
+            {% if weather in ['rainy', 'pouring'] %}
+              Muito conservador - chuva prevista
+            {% elif weather in ['cloudy', 'partlycloudy'] %}
+              Conservador - céu nublado
+            {% elif weather in ['sunny', 'clear-night'] %}
+              Agressivo - céu limpo
+            {% else %}
+              Normal
+            {% endif %}
+          enabled: >-
+            {{ is_state('input_boolean.piscina_use_weather_forecast', 'on') }}

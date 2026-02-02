@@ -1,0 +1,580 @@
+# ═══════════════════════════════════════════════════════════════════
+# 🏊 DASHBOARD PISCINA SOLAR - VERSÃO PREMIUM
+# ═══════════════════════════════════════════════════════════════════
+#
+# Dashboard completo com todas as métricas de otimização
+# Usa: Mushroom, ApexCharts, Button Card, Power Flow Card Plus
+#
+# INSTRUÇÕES:
+# 1. Copiar este conteúdo
+# 2. Configurações > Dashboards > + Adicionar Dashboard
+# 3. Cole o YAML abaixo na vista "Piscina Solar"
+#
+# ═══════════════════════════════════════════════════════════════════
+
+views:
+  - title: Piscina Solar
+    path: piscina-solar
+    icon: mdi:solar-power-variant
+    theme: Mushroom Shadow
+    type: custom:grid-layout
+    layout:
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr))
+      grid-gap: 12px
+      mediaquery:
+        "(max-width: 800px)":
+          grid-template-columns: 100%
+    
+    cards:
+      # ═══════════════════════════════════════════════════════════════
+      # 🎯 HEADER - STATUS PRINCIPAL
+      # ═══════════════════════════════════════════════════════════════
+      - type: custom:stack-in-card
+        mode: vertical
+        cards:
+          # Título principal
+          - type: custom:mushroom-title-card
+            title: 🏊 Piscina Solar Inteligente
+            subtitle: Otimização com IA e Previsão Solar
+            
+          # Status bomba + controles principais
+          - type: horizontal-stack
+            cards:
+              # Bomba ON/OFF
+              - type: custom:mushroom-entity-card
+                entity: switch.bomba_piscina_switch_0
+                name: Bomba
+                icon: mdi:pump
+                icon_color: blue
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+                double_tap_action:
+                  action: none
+                layout: vertical
+                primary_info: name
+                secondary_info: state
+                card_mod:
+                  style: |
+                    ha-card {
+                      {% if is_state('switch.bomba_piscina_switch_0', 'on') %}
+                        background: rgba(33, 150, 243, 0.1);
+                        border: 2px solid var(--blue-color);
+                      {% endif %}
+                    }
+                    
+              # Potência atual
+              - type: custom:mushroom-entity-card
+                entity: sensor.bomba_piscina_switch_0_power
+                name: Potência
+                icon: mdi:lightning-bolt
+                icon_color: orange
+                layout: vertical
+                
+              # Energia hoje
+              - type: custom:mushroom-entity-card
+                entity: sensor.bomba_piscina_switch_0_energy
+                name: Energia Hoje
+                icon: mdi:flash
+                icon_color: yellow
+                layout: vertical
+                
+          # Progresso filtragem
+          - type: custom:mushroom-entity-card
+            entity: sensor.pool_pump_remaining_time
+            name: Filtragem
+            icon: mdi:progress-clock
+            icon_color: green
+            secondary_info: none
+            card_mod:
+              style: |
+                mushroom-shape-icon {
+                  {% set remaining = states('sensor.pool_pump_remaining_time')|int(999) %}
+                  {% if remaining == 0 %}
+                    --shape-color: rgba(76, 175, 80, 0.2) !important;
+                  {% elif remaining < 60 %}
+                    --shape-color: rgba(255, 152, 0, 0.2) !important;
+                  {% else %}
+                    --shape-color: rgba(33, 150, 243, 0.2) !important;
+                  {% endif %}
+                }
+                
+          - type: custom:bar-card
+            entity: sensor.pool_pump_remaining_time
+            name: Tempo Restante
+            icon: mdi:timer-sand
+            height: 40px
+            color: |
+              if (entity.state < 60) return '#FF9800';
+              if (entity.state < 120) return '#2196F3';
+              return '#4CAF50';
+            direction: right
+            positions:
+              icon: inside
+              name: inside
+              value: inside
+            max: "{{ states('sensor.piscina_tempo_de_filtracao_recomendado')|int(480) }}"
+            unit_of_measurement: min
+            severity:
+              - value: 0
+                color: '#4CAF50'
+              - value: 60
+                color: '#FF9800'
+              - value: 180
+                color: '#2196F3'
+                
+      # ═══════════════════════════════════════════════════════════════
+      # ⚡ FLUXO DE ENERGIA - POWER FLOW
+      # ═══════════════════════════════════════════════════════════════
+      - type: custom:power-flow-card-plus
+        entities:
+          battery:
+            entity: sensor.bateria_soc  # Ajustar se tiver
+            state_of_charge: sensor.bateria_soc
+          grid:
+            entity: sensor.emoncms_import_export
+            power_outgoing: sensor.emoncms_export_power_positive
+          solar:
+            entity: sensor.emoncms_solar
+          home:
+            entity: sensor.emoncms_192_168_1_250_use_no_pool_pump
+          individual:
+            - entity: sensor.bomba_piscina_switch_0_power
+              name: Bomba Piscina
+              icon: mdi:pool
+              color: blue
+        clickable_entities: true
+        display_zero_lines: false
+        use_new_flow_rate_model: true
+        w_decimals: 0
+        kw_decimals: 2
+        min_flow_rate: 0.5
+        max_flow_rate: 10
+        watt_threshold: 1000
+        
+      # ═══════════════════════════════════════════════════════════════
+      # 📊 GRÁFICO PRINCIPAL - ÚLTIMAS 24H
+      # ═══════════════════════════════════════════════════════════════
+      - type: custom:apexcharts-card
+        header:
+          show: true
+          title: "⚡ Energia & Decisões (24h)"
+          show_states: true
+          colorize_states: true
+        graph_span: 24h
+        span:
+          start: day
+        now:
+          show: true
+          label: Agora
+        yaxis:
+          - id: power
+            apex_config:
+              tickAmount: 5
+              title:
+                text: Potência (W)
+          - id: pump
+            opposite: true
+            min: 0
+            max: 1
+            apex_config:
+              title:
+                text: Bomba
+        series:
+          # Solar (suavizado)
+          - entity: sensor.solar_power_5min_smooth
+            yaxis_id: power
+            name: "Solar (5min)"
+            color: '#FFA726'
+            stroke_width: 3
+            type: area
+            opacity: 0.3
+            group_by:
+              func: avg
+              duration: 5min
+              
+          # Solar instantâneo (linha fina)
+          - entity: sensor.emoncms_solar
+            yaxis_id: power
+            name: "Solar (instant)"
+            color: '#FFB74D'
+            stroke_width: 1
+            opacity: 0.5
+            show:
+              in_header: false
+            group_by:
+              func: avg
+              duration: 2min
+              
+          # Casa (suavizado)
+          - entity: sensor.house_power_5min_smooth
+            yaxis_id: power
+            name: "Casa (5min)"
+            color: '#42A5F5'
+            stroke_width: 3
+            group_by:
+              func: avg
+              duration: 5min
+              
+          # Bomba (potência)
+          - entity: sensor.bomba_piscina_switch_0_power
+            yaxis_id: power
+            name: "Bomba"
+            color: '#66BB6A'
+            stroke_width: 2
+            group_by:
+              func: avg
+              duration: 2min
+              
+          # Import/Export
+          - entity: sensor.emoncms_import_export
+            yaxis_id: power
+            name: "Import/Export"
+            color: '#EF5350'
+            stroke_width: 2
+            curve: stepline
+            group_by:
+              func: avg
+              duration: 5min
+            transform: |
+              return x < 0 ? 0 : x;
+              
+          # Bomba ON/OFF (barra)
+          - entity: switch.bomba_piscina_switch_0
+            yaxis_id: pump
+            name: "Bomba Status"
+            color: '#4CAF50'
+            type: area
+            opacity: 0.2
+            stroke_width: 0
+            transform: |
+              return x === 'on' ? 1 : 0;
+            show:
+              in_header: false
+              
+      # ═══════════════════════════════════════════════════════════════
+      # 🎯 INDICADORES DE QUALIDADE
+      # ═══════════════════════════════════════════════════════════════
+      - type: custom:stack-in-card
+        mode: vertical
+        title: 🎯 Qualidade da Decisão
+        cards:
+          - type: horizontal-stack
+            cards:
+              # Estabilidade Solar
+              - type: custom:mushroom-entity-card
+                entity: sensor.solar_stability_indicator
+                name: Estabilidade
+                icon: mdi:chart-line-variant
+                icon_color: |
+                  {% set pct = states('sensor.solar_stability_indicator')|float(0) %}
+                  {% if pct < 5 %}green
+                  {% elif pct < 15 %}light-green
+                  {% elif pct < 30 %}orange
+                  {% else %}red
+                  {% endif %}
+                secondary_info: state
+                layout: vertical
+                tap_action:
+                  action: more-info
+                  
+              # Fator Dia Semana
+              - type: custom:mushroom-entity-card
+                entity: sensor.house_consumption_weekday_factor
+                name: Fator Semana
+                icon: mdi:calendar-clock
+                icon_color: blue
+                layout: vertical
+                
+              # Ajuste Meteorologia
+              - type: custom:mushroom-entity-card
+                entity: sensor.piscina_weather_delay_multiplier
+                name: Ajuste Meteo
+                icon: mdi:weather-partly-cloudy
+                icon_color: |
+                  {% set mult = states('sensor.piscina_weather_delay_multiplier')|float(1) %}
+                  {% if mult < 1 %}green
+                  {% elif mult < 1.5 %}orange
+                  {% else %}red
+                  {% endif %}
+                layout: vertical
+                
+          # Classificação textual
+          - type: markdown
+            content: >-
+              ### 📊 Status Atual
+              
+              **Solar:** {{ state_attr('sensor.solar_stability_indicator', 'classification') }}
+              
+              **Recomendação:** {{ state_attr('sensor.solar_stability_indicator', 'recommendation') }}
+              
+              **Dia:** {{ state_attr('sensor.house_consumption_weekday_factor', 'day_type') }}
+              {% if state_attr('sensor.house_consumption_weekday_factor', 'is_weekend') %}🌴 Fim de semana{% endif %}
+              
+              **Meteo:** {{ state_attr('sensor.piscina_weather_delay_multiplier', 'recommendation') }}
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(var(--rgb-primary-text-color), 0.05);
+                }
+                
+      # ═══════════════════════════════════════════════════════════════
+      # 📈 ESTATÍSTICAS DETALHADAS
+      # ═══════════════════════════════════════════════════════════════
+      - type: custom:stack-in-card
+        mode: vertical
+        title: 📈 Estatísticas & Performance
+        cards:
+          # Comparação Instantâneo vs Suavizado
+          - type: custom:mini-graph-card
+            name: Solar - Instant vs Smooth
+            icon: mdi:solar-power
+            entities:
+              - entity: sensor.emoncms_solar
+                name: Instantâneo
+                color: '#FFB74D'
+                show_state: true
+              - entity: sensor.solar_power_5min_smooth
+                name: Média 5min
+                color: '#FFA726'
+                show_state: true
+            hours_to_show: 2
+            points_per_hour: 30
+            line_width: 2
+            animate: true
+            show:
+              labels: true
+              fill: fade
+              
+          # Casa - Instant vs Smooth
+          - type: custom:mini-graph-card
+            name: Casa - Instant vs Smooth
+            icon: mdi:home-lightning-bolt
+            entities:
+              - entity: sensor.emoncms_192_168_1_250_use_no_pool_pump
+                name: Instantâneo
+                color: '#90CAF9'
+                show_state: true
+              - entity: sensor.house_power_5min_smooth
+                name: Média 5min
+                color: '#42A5F5'
+                show_state: true
+            hours_to_show: 2
+            points_per_hour: 30
+            line_width: 2
+            animate: true
+            show:
+              labels: true
+              fill: fade
+              
+          # Gauge - Energia consumida hoje
+          - type: custom:dual-gauge-card
+            title: Energia Bomba Hoje
+            min: 0
+            max: 10
+            shadeInner: true
+            cardwidth: 350
+            outer:
+              entity: sensor.bomba_piscina_switch_0_energy
+              label: Consumido
+              unit: kWh
+              colors:
+                - color: '#4CAF50'
+                  value: 0
+                - color: '#FF9800'
+                  value: 7
+                - color: '#F44336'
+                  value: 9
+            inner:
+              entity: sensor.piscina_tempo_de_filtracao_recomendado
+              label: Alvo
+              attribute: target_kwh
+              unit: kWh
+              
+      # ═══════════════════════════════════════════════════════════════
+      # ⚙️ CONFIGURAÇÕES RÁPIDAS
+      # ═══════════════════════════════════════════════════════════════
+      - type: custom:stack-in-card
+        mode: vertical
+        title: ⚙️ Otimizações
+        cards:
+          # Fator Fim-de-Semana
+          - type: custom:numberbox-card
+            entity: input_number.piscina_weekend_consumption_factor
+            name: 📅 Fator Consumo Fim-Semana
+            icon: mdi:calendar-weekend
+            unit: "×"
+            
+          # Toggle Meteorologia
+          - type: custom:mushroom-entity-card
+            entity: input_boolean.piscina_use_weather_forecast
+            name: Ajustar por Meteorologia
+            icon: mdi:weather-partly-cloudy
+            tap_action:
+              action: toggle
+            layout: horizontal
+            
+          # Nível Notificações
+          - type: custom:mushroom-select-card
+            entity: input_select.piscina_notification_level
+            name: Nível Notificações
+            icon: mdi:bell-ring
+            layout: horizontal
+            
+          # Override Manual
+          - type: custom:mushroom-entity-card
+            entity: input_boolean.piscina_override_manual
+            name: Override Manual
+            icon: mdi:hand-back-right
+            icon_color: red
+            tap_action:
+              action: toggle
+            layout: horizontal
+            
+      # ═══════════════════════════════════════════════════════════════
+      # 💰 POUPANÇA & ECONOMIA
+      # ═══════════════════════════════════════════════════════════════
+      - type: custom:stack-in-card
+        mode: vertical
+        title: 💰 Análise Económica
+        cards:
+          - type: horizontal-stack
+            cards:
+              # Custo hoje
+              - type: custom:mushroom-template-card
+                primary: Custo Hoje
+                secondary: |
+                  {{ (states('sensor.bomba_piscina_switch_0_energy')|float(0) * 0.1537)|round(2) }}€
+                icon: mdi:currency-eur
+                icon_color: green
+                layout: vertical
+                
+              # Estimativa mês
+              - type: custom:mushroom-template-card
+                primary: Est. Mês
+                secondary: |
+                  {{ (states('sensor.bomba_piscina_switch_0_energy')|float(0) * 0.1537 * 30)|round(2) }}€
+                icon: mdi:calendar-month
+                icon_color: blue
+                layout: vertical
+                
+              # Poupança vs Vazio
+              - type: custom:mushroom-template-card
+                primary: Poupança
+                secondary: |
+                  {% set day = states('sensor.bomba_piscina_switch_0_energy')|float(0) * 0.1537 %}
+                  {% set night = states('sensor.bomba_piscina_switch_0_energy')|float(0) * 0.0929 %}
+                  {{ (day - night)|round(2) }}€
+                icon: mdi:piggy-bank
+                icon_color: orange
+                layout: vertical
+                
+          # Gráfico histórico custos
+          - type: custom:apexcharts-card
+            header:
+              show: true
+              title: Histórico Energia (7 dias)
+            graph_span: 7d
+            span:
+              start: week
+            series:
+              - entity: sensor.bomba_piscina_switch_0_energy
+                name: "Energia Diária"
+                type: column
+                color: '#4CAF50'
+                group_by:
+                  func: max
+                  duration: 1d
+                show:
+                  legend_value: true
+                  in_header: true
+                  
+      # ═══════════════════════════════════════════════════════════════
+      # 🌤️ PREVISÃO SOLAR (SOLCAST)
+      # ═══════════════════════════════════════════════════════════════
+      - type: custom:apexcharts-card
+        header:
+          show: true
+          title: "☀️ Previsão Solar (Solcast)"
+          show_states: true
+        graph_span: 48h
+        span:
+          start: hour
+        now:
+          show: true
+          label: Agora
+        series:
+          - entity: sensor.solcast_pv_forecast_power_now
+            name: "Previsão Próximas Horas"
+            color: '#FFA726'
+            stroke_width: 3
+            extend_to: now
+            data_generator: |
+              return entity.attributes.detailedForecast.map((entry) => {
+                return [new Date(entry.period_start), entry.pv_estimate];
+              });
+              
+          - entity: sensor.emoncms_solar
+            name: "Real"
+            color: '#66BB6A'
+            stroke_width: 2
+            extend_to: now
+            
+      # ═══════════════════════════════════════════════════════════════
+      # 🔧 AÇÕES RÁPIDAS
+      # ═══════════════════════════════════════════════════════════════
+      - type: custom:stack-in-card
+        mode: horizontal
+        cards:
+          - type: custom:button-card
+            name: Ligar Agora
+            icon: mdi:play-circle
+            tap_action:
+              action: call-service
+              service: switch.turn_on
+              service_data:
+                entity_id: switch.bomba_piscina_switch_0
+            styles:
+              card:
+                - height: 100px
+              icon:
+                - color: '#4CAF50'
+                - width: 40px
+              name:
+                - font-size: 14px
+                
+          - type: custom:button-card
+            name: Desligar
+            icon: mdi:stop-circle
+            tap_action:
+              action: call-service
+              service: switch.turn_off
+              service_data:
+                entity_id: switch.bomba_piscina_switch_0
+            styles:
+              card:
+                - height: 100px
+              icon:
+                - color: '#F44336'
+                - width: 40px
+              name:
+                - font-size: 14px
+                
+          - type: custom:button-card
+            name: Reset Filtragem
+            icon: mdi:restart
+            tap_action:
+              action: call-service
+              service: input_number.set_value
+              service_data:
+                entity_id: input_number.pool_pump_remaining_time
+                value: "{{ states('sensor.piscina_tempo_de_filtracao_recomendado')|int(480) }}"
+            styles:
+              card:
+                - height: 100px
+              icon:
+                - color: '#FF9800'
+                - width: 40px
+              name:
+                - font-size: 14px
