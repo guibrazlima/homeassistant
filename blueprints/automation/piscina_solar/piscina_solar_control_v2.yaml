@@ -93,7 +93,10 @@ blueprint:
       description: >
         Sensor da produção solar instantânea em Watts.
         
+        Opcional se usar NET ou Export.
+        
         **Exemplo:** `sensor.emoncms_solar`
+      default: {}
       selector:
         entity:
           domain: sensor
@@ -347,12 +350,11 @@ blueprint:
           mode: slider
           
     house_power_sensor_daily:
-      name: "📊 Sensor Consumo Diário Casa (kWh)"
+      name: "📊 Sensor Consumo Diário Casa (kWh) [DEPRECATED]"
       description: >
-        Sensor opcional com o consumo diário da casa em kWh.
+        ⚠️ **DEPRECATED**: Este sensor não é usado. Use `house_power_avg_sensor` em vez disso.
         
-        Se configurado, o Blueprint calcula automaticamente
-        o consumo médio baseado no histórico recente.
+        Será removido numa versão futura.
         
         **Exemplo:** `sensor.emoncms_use_kwhd`
       default: {}
@@ -956,8 +958,8 @@ variables:
       {% set factor = 1.3 if hour >= 14 and hour <= 18 else 1.1 %}
       {{ (house_power_now / 1000 * hours_until_sunset * factor)|round(1) }}
     {% else %}
-      {# FIXO: consumo médio configurado × horas restantes #}
-      {{ (house_avg_power / 1000 * hours_until_sunset)|round(1) }}
+      {# FIXO: usa média 7 dias se disponível, senão valor manual #}
+      {{ (house_power_avg_7d / 1000 * hours_until_sunset)|round(1) }}
     {% endif %}
   
   # ─── Energia disponível para piscina ───
@@ -1149,7 +1151,7 @@ variables:
 # TRIGGERS
 # ═══════════════════════════════════════════════════════════════════
 
-triggers:
+trigger:
   - trigger: state
     entity_id: !input pv_power
     id: pv_changed
@@ -1192,7 +1194,7 @@ triggers:
 # CONDITIONS
 # ═══════════════════════════════════════════════════════════════════
 
-conditions:
+condition:
   - condition: or
     conditions:
       # Condição normal (durante o dia - modo solar)
@@ -1241,7 +1243,7 @@ conditions:
 # ACTIONS
 # ═══════════════════════════════════════════════════════════════════
 
-actions:
+action:
   # 🆕 DEBUG: Log when automation runs
   - if:
       - condition: template
