@@ -10,6 +10,7 @@ homeassistant:
     piscina_cloro_tpo: !include packages/piscina_cloro_tpo.yaml
     piscina_cobertura: !include packages/piscina_cobertura.yaml
     piscina_ph: !include packages/piscina_ph.yaml
+    piscina_solar_optimization: !include packages/piscina_solar_optimization.yaml
     thermal_comfort: !include_dir_merge_named packages/thermal_comfort/
 
 
