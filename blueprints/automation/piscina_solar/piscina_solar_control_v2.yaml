@@ -494,7 +494,11 @@ blueprint:
       name: "⏰ Tempo Mínimo Ligada (minutos)"
       description: >
         Tempo mínimo que a bomba fica ligada após arranque.
-      default: 5
+        
+        Evita ciclos ON/OFF em dias nublados.
+        
+        **Recomendado:** 10-15 minutos
+      default: 10
       selector:
         number:
           min: 0
@@ -1238,6 +1242,17 @@ conditions:
 # ═══════════════════════════════════════════════════════════════════
 
 actions:
+  # 🆕 DEBUG: Log when automation runs
+  - if:
+      - condition: template
+        value_template: "{{ enable_debug_logs }}"
+    then:
+      - service: system_log.write
+        data:
+          message: "🏊 Blueprint EXECUTOU [trigger={{ trigger.id|default('unknown') }}]: source={{ source_used }}, house={{ house_w|round(0) }}W, pv={{ pv_w|round(0) }}W, pump={{ pump_is_on }}, filtr_ok={{ filtration_ok }}, manual_off={{ manual_override_off }}"
+          level: info
+          logger: blueprints.piscina_solar
+  
   # ═══════════════════════════════════════════════════════════════
   # 🆕 FILTRAGEM NOTURNA BI-HORÁRIO (22:00-08:00)
   # ═══════════════════════════════════════════════════════════════
@@ -1395,9 +1410,15 @@ actions:
       - if:
           - condition: template
             value_template: >-
-              {% set last_on = states[pump_switch].last_changed if pump_switch in states else none %}
-              {% if last_on %}
-                {{ (now() - last_on).total_seconds() > (min_on_time * 60) }}
+              {% set entity = states[pump_switch] %}
+              {% if entity %}
+                {% set last_on_time = entity.last_changed if entity.state == 'on' else none %}
+                {% if last_on_time %}
+                  {% set minutes_on = (now() - last_on_time).total_seconds() / 60 %}
+                  {{ minutes_on >= min_on_time }}
+                {% else %}
+                  {{ true }}
+                {% endif %}
               {% else %}
                 {{ true }}
               {% endif %}
@@ -1405,6 +1426,7 @@ actions:
           - delay:
               seconds: "{{ effective_delay_off }}"
               
+          # 🆕 Re-verificar após delay se ainda deve desligar
           - if:
               - condition: template
                 value_template: >-
@@ -1425,6 +1447,34 @@ actions:
                       message: "🏊 Bomba DESLIGADA [{{ operation_mode }}]: import={{ import_current|round(0) }}W > limit={{ final_import_limit|round(0) }}W"
                       level: info
                       logger: blueprints.piscina_solar
+            else:
+              # 🆕 Log quando NÃO desliga após re-check
+              - if:
+                  - condition: template
+                    value_template: "{{ enable_debug_logs }}"
+                then:
+                  - service: system_log.write
+                    data:
+                      message: "🏊 Bomba MANTIDA [{{ operation_mode }}]: condições melhoraram após delay_off, import={{ import_current|round(0) }}W ≤ limit={{ final_import_limit|round(0) }}W"
+                      level: info
+                      logger: blueprints.piscina_solar
+        else:
+          # 🆕 Log quando min_on_time ainda não atingido
+          - if:
+              - condition: template
+                value_template: "{{ enable_debug_logs }}"
+            then:
+              - service: system_log.write
+                data:
+                  message: >-
+                    🏊 Bomba NÃO PODE DESLIGAR [{{ operation_mode }}]: min_on_time={{ min_on_time }}min não atingido
+                    {% set entity = states[pump_switch] %}
+                    {% if entity and entity.state == 'on' %}
+                      {% set minutes_on = ((now() - entity.last_changed).total_seconds() / 60)|round(1) %}
+                      , ligada há {{ minutes_on }}min
+                    {% endif %}
+                  level: info
+                  logger: blueprints.piscina_solar
 
 mode: single
 max_exceeded: silent

@@ -2496,9 +2496,9 @@
       pump_nominal_power: 1380
       import_limit: 700
       start_margin: 100
-      delay_on: 30
-      delay_off: 60
-      min_on_time: 5
+      delay_on: 300
+      delay_off: 300
+      min_on_time: 10
       filtration_remaining: sensor.pool_pump_remaining_time
       sun_offset_start: 30
       sun_offset_end: 30
