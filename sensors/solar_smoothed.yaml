@@ -8,96 +8,117 @@
 # Criado: 2026-02-02
 # ═══════════════════════════════════════════════════════════════════
 
-sensor:
-  # ───────────────────────────────────────────────────────────────────
-  # 📊 Média Móvel - Produção Solar (5 minutos)
-  # ───────────────────────────────────────────────────────────────────
-  - platform: statistics
-    name: "Solar Power 5min Smooth"
-    unique_id: solar_power_5min_smooth
-    entity_id: sensor.emoncms_solar
-    state_characteristic: mean
-    max_age:
-      minutes: 5
-    sampling_size: 60  # 1 sample a cada 5 segundos = 60 samples em 5min
-    precision: 0
-    
-  # ───────────────────────────────────────────────────────────────────
-  # 📊 Média Móvel - Consumo Casa (sem bomba, 5 minutos)
-  # ───────────────────────────────────────────────────────────────────
-  - platform: statistics
-    name: "House Power 5min Smooth"
-    unique_id: house_power_5min_smooth
-    entity_id: sensor.emoncms_192_168_1_250_use_no_pool_pump
-    state_characteristic: mean
-    max_age:
-      minutes: 5
-    sampling_size: 60
-    precision: 0
-    
-  # ───────────────────────────────────────────────────────────────────
-  # 📊 Média Móvel - Import/Export NET (5 minutos)
-  # ───────────────────────────────────────────────────────────────────
-  - platform: statistics
-    name: "Import Export 5min Smooth"
-    unique_id: import_export_5min_smooth
-    entity_id: sensor.emoncms_import_export
-    state_characteristic: mean
-    max_age:
-      minutes: 5
-    sampling_size: 60
-    precision: 0
-    
-  # ───────────────────────────────────────────────────────────────────
-  # 📊 Média Móvel - Exportação (5 minutos)
-  # ───────────────────────────────────────────────────────────────────
-  - platform: statistics
-    name: "Export Power 5min Smooth"
-    unique_id: export_power_5min_smooth
-    entity_id: sensor.emoncms_export_power_positive
-    state_characteristic: mean
-    max_age:
-      minutes: 5
-    sampling_size: 60
-    precision: 0
-    
-  # ───────────────────────────────────────────────────────────────────
-  # 🎯 Indicador de Qualidade de Decisão
-  # ───────────────────────────────────────────────────────────────────
-  # Calcula a diferença entre valor instantâneo e média móvel
-  # Valores altos = muita variação = aguardar mais tempo
-  - platform: template
-    sensors:
-      solar_stability_indicator:
-        friendly_name: "Indicador Estabilidade Solar"
-        unique_id: solar_stability_indicator
-        unit_of_measurement: "%"
-        icon_template: mdi:chart-line-variant
-        value_template: >-
+# ───────────────────────────────────────────────────────────────────
+# 📊 Média Móvel - Produção Solar (5 minutos)
+# ───────────────────────────────────────────────────────────────────
+- platform: statistics
+  name: "Solar Power 5min Smooth"
+  unique_id: solar_power_5min_smooth
+  entity_id: sensor.emoncms_solar
+  state_characteristic: mean
+  max_age:
+    minutes: 5
+  sampling_size: 60
+  precision: 0
+
+# ───────────────────────────────────────────────────────────────────
+# 📊 Média Móvel - Consumo Casa (sem bomba, 5 minutos)
+# ───────────────────────────────────────────────────────────────────
+- platform: statistics
+  name: "House Power 5min Smooth"
+  unique_id: house_power_5min_smooth
+  entity_id: sensor.emoncms_192_168_1_250_use_no_pool_pump
+  state_characteristic: mean
+  max_age:
+    minutes: 5
+  sampling_size: 60
+  precision: 0
+
+# ───────────────────────────────────────────────────────────────────
+# 📊 Média Móvel - Import/Export NET (5 minutos)
+# ───────────────────────────────────────────────────────────────────
+- platform: statistics
+  name: "Import Export 5min Smooth"
+  unique_id: import_export_5min_smooth
+  entity_id: sensor.emoncms_import_export
+  state_characteristic: mean
+  max_age:
+    minutes: 5
+  sampling_size: 60
+  precision: 0
+
+# ───────────────────────────────────────────────────────────────────
+# 📊 Média Móvel - Exportação (5 minutos)
+# ───────────────────────────────────────────────────────────────────
+- platform: statistics
+  name: "Export Power 5min Smooth"
+  unique_id: export_power_5min_smooth
+  entity_id: sensor.emoncms_export_power_positive
+  state_characteristic: mean
+  max_age:
+    minutes: 5
+  sampling_size: 60
+  precision: 0
+
+# ═══════════════════════════════════════════════════════════════════
+# 🎯 INDICADOR DE ESTABILIDADE SOLAR
+# ═══════════════════════════════════════════════════════════════════
+- platform: template
+  sensors:
+    solar_stability_indicator:
+      friendly_name: "Solar Stability Indicator"
+      unique_id: solar_stability_indicator
+      unit_of_measurement: "%"
+      icon_template: >
+        {% set pct = state_attr('sensor.solar_stability_indicator', 'variation_percent')|float(0) %}
+        {% if pct < 5 %}
+          mdi:chart-line
+        {% elif pct < 15 %}
+          mdi:chart-line-variant
+        {% elif pct < 30 %}
+          mdi:chart-timeline-variant
+        {% else %}
+          mdi:chart-scatter-plot
+        {% endif %}
+      value_template: >
+        {% set instant = states('sensor.emoncms_solar')|float(0) %}
+        {% set smooth = states('sensor.solar_power_5min_smooth')|float(0) %}
+        {% if smooth > 50 %}
+          {{ (((instant - smooth)|abs / smooth) * 100)|round(1) }}
+        {% else %}
+          0
+        {% endif %}
+      attribute_templates:
+        instant_value: "{{ states('sensor.emoncms_solar')|float(0)|round(0) }}"
+        smooth_value: "{{ states('sensor.solar_power_5min_smooth')|float(0)|round(0) }}"
+        difference: "{{ (states('sensor.emoncms_solar')|float(0) - states('sensor.solar_power_5min_smooth')|float(0))|round(0) }}"
+        variation_percent: >
           {% set instant = states('sensor.emoncms_solar')|float(0) %}
-          {% set smooth = states('sensor.solar_power_5min_smooth')|float(1) %}
-          {% if smooth > 0 %}
-            {{ ((abs(instant - smooth) / smooth) * 100)|round(1) }}
+          {% set smooth = states('sensor.solar_power_5min_smooth')|float(0) %}
+          {% if smooth > 50 %}
+            {{ (((instant - smooth)|abs / smooth) * 100)|round(1) }}
           {% else %}
-            {{ 0 }}
+            0
           {% endif %}
-        availability_template: >-
-          {{ states('sensor.emoncms_solar') not in ['unknown', 'unavailable'] and
-             states('sensor.solar_power_5min_smooth') not in ['unknown', 'unavailable'] }}
-        attribute_templates:
-          classification: >-
-            {% set pct = states('sensor.solar_stability_indicator')|float(0) %}
-            {% if pct < 5 %}Muito Estável
-            {% elif pct < 15 %}Estável
-            {% elif pct < 30 %}Variável
-            {% else %}Muito Variável
-            {% endif %}
-          recommendation: >-
-            {% set pct = states('sensor.solar_stability_indicator')|float(0) %}
-            {% if pct < 15 %}
-              Ótimo momento para decisões
-            {% elif pct < 30 %}
-              Aguardar mais 2-3 minutos
-            {% else %}
-              Condições muito instáveis, aguardar
-            {% endif %}
+        classification: >
+          {% set pct = state_attr('sensor.solar_stability_indicator', 'variation_percent')|float(0) %}
+          {% if pct < 5 %}
+            Muito Estável
+          {% elif pct < 15 %}
+            Estável
+          {% elif pct < 30 %}
+            Instável
+          {% else %}
+            Muito Instável
+          {% endif %}
+        recommendation: >
+          {% set pct = state_attr('sensor.solar_stability_indicator', 'variation_percent')|float(0) %}
+          {% if pct < 5 %}
+            ✅ Condições ótimas para decisões
+          {% elif pct < 15 %}
+            ✅ Condições boas para decisões
+          {% elif pct < 30 %}
+            ⚠️ Aguardar estabilização (2-3min)
+          {% else %}
+            🔴 Evitar decisões - alta variação
+          {% endif %}
