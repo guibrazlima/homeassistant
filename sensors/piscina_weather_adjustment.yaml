@@ -18,7 +18,7 @@
       unique_id: piscina_weather_delay_multiplier
       unit_of_measurement: "×"
       icon_template: >
-        {% set condition = states('weather.home') %}
+        {% set condition = states('sensor.realtime_condition') %}
         {% if condition in ['sunny', 'clear'] %}
           mdi:weather-sunny
         {% elif condition in ['partlycloudy', 'cloudy'] %}
@@ -32,7 +32,7 @@
         {% if is_state('input_boolean.piscina_use_weather_forecast', 'off') %}
           1.0
         {% else %}
-          {% set condition = states('weather.home') %}
+          {% set condition = states('sensor.realtime_condition') %}
           {% if condition in ['sunny', 'clear'] %}
             0.8
           {% elif condition in ['partlycloudy'] %}
@@ -46,13 +46,13 @@
           {% endif %}
         {% endif %}
       attribute_templates:
-        weather_condition: "{{ states('weather.home') }}"
+        weather_condition: "{{ states('sensor.realtime_condition') }}"
         adjustment_enabled: "{{ is_state('input_boolean.piscina_use_weather_forecast', 'on') }}"
         recommendation: >
-          {% set condition = states('weather.home') %}
+          {% set condition = states('sensor.realtime_condition') %}
           {% if is_state('input_boolean.piscina_use_weather_forecast', 'off') %}
             ⚪ Ajuste desativado
-          {% elif condition in ['sunny', 'clear'] %}
+          {% elif condition in ['sunny', 'clear'] %}s
             ✅ Solar estável - delays reduzidos (-20%)
           {% elif condition in ['partlycloudy'] %}
             ✅ Condições normais - sem ajuste
