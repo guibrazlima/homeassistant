@@ -5,7 +5,8 @@
 
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.1+-blue.svg)](https://www.home-assistant.io/)
 [![Maintenance](https://img.shields.io/badge/Maintained-Yes-green.svg)](https://github.com/guibrazlima/homeassistant)
-[![Blueprint](https://img.shields.io/badge/Blueprint-Piscina%20Solar%20v2-green.svg)](docs/BLUEPRINT_PISCINA_SOLAR_V2.md)
+[![Blueprint](https://img.shields.io/badge/Blueprint-Piscina%20Solar%20v2.1-green.svg)](docs/OTIMIZACOES_RESUMO.md)
+[![Optimized](https://img.shields.io/badge/Optimizations-v2.1-brightgreen.svg)](docs/PROXIMOS_PASSOS.md)
 
 ---
 
@@ -43,11 +44,30 @@ homeassistant/
 
 ## 📚 Documentação
 
-### 📖 Guias Principais
+### 🎉 NOVO: Otimizações Piscina Solar v2.1
+
+**Implementação completa de melhorias com sensores inteligentes, dashboard premium e notificações!**
+
+| Documento | Descrição | Status |
+|-----------|-----------|--------|
+| [📊 **Resumo Otimizações**](docs/OTIMIZACOES_RESUMO.md) | **Começar aqui!** Overview executivo com métricas | ✅ |
+| [📖 **Guia Instalação**](docs/INSTALACAO_OTIMIZACOES.md) | Passo-a-passo completo de instalação | ✅ |
+| [🎨 **Preview Dashboard**](docs/DASHBOARD_PREVIEW.md) | Visualização do dashboard premium | ✅ |
+| [� **Próximos Passos**](docs/PROXIMOS_PASSOS.md) | **Checklist urgente** e guia de validação | ⏳ |
+
+**Impacto esperado:**
+- 🎯 **-85% a -90%** eventos ON/OFF (de 95 para 5-10 por dia)
+- 📉 **-40% a -60%** oscilações nas decisões
+- 💰 **-10% a -15%** custo energia piscina
+- 📊 **+100%** visibilidade com dashboard profissional
+
+---
+
+### �📖 Guias Principais
 
 | Documento | Descrição |
 |-----------|-----------|
-| [🏊 Blueprint Piscina Solar v2](docs/BLUEPRINT_PISCINA_SOLAR_V2.md) | **🆕** Automação inteligente com Solcast e tarifa bi-horária |
+| [🏊 Blueprint Piscina Solar v2](docs/BLUEPRINT_PISCINA_SOLAR_V2.md) | Automação inteligente com Solcast e tarifa bi-horária |
 | [📋 Histórico de Reorganização](docs/historico/REORGANIZACAO.md) | Completo histórico de todas as reorganizações |
 | [📦 Análise de Packages](docs/analises/PACKAGES.md) | Análise técnica detalhada de todos os packages |
 | [🔍 Análise de Erros](docs/analises/ERROS_LOGS.md) | Diagnóstico de erros e soluções |
