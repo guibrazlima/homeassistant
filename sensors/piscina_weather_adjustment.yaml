@@ -52,7 +52,7 @@
           {% set condition = states('sensor.realtime_condition') %}
           {% if is_state('input_boolean.piscina_use_weather_forecast', 'off') %}
             ⚪ Ajuste desativado
-          {% elif condition in ['sunny', 'clear'] %}s
+          {% elif condition in ['sunny', 'clear'] %}
             ✅ Solar estável - delays reduzidos (-20%)
           {% elif condition in ['partlycloudy'] %}
             ✅ Condições normais - sem ajuste

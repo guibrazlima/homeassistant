@@ -40,6 +40,8 @@ blueprint:
     - 🌙 **Backup Noturno** - Agenda filtragem noturna se necessário
     
     - 🔋 **Coordenação Bateria** - Reserva energia para bateria
+    
+    - 🌤️ **Ajuste Meteorológico** - Adapta delays baseado no tempo (novo!)
 
 
     #### 📊 **Sensores Suportados:**

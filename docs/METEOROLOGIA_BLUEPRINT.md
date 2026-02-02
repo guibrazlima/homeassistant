@@ -1,8 +1,12 @@
 # 🌤️ METEOROLOGIA NA BLUEPRINT PISCINA SOLAR
 
+> ⚠️ **DOCUMENTO DEPRECATED**  
+> Este documento está desatualizado. A integração meteorológica foi **CONCLUÍDA**.  
+> Consulte a documentação consolidada: **`AJUSTE_METEOROLOGICO_COMPLETO.md`**
+
 **Data:** 2026-02-02  
 **Versão Blueprint:** v2.0  
-**Status Integração:** ⚠️ **NÃO INTEGRADO** (sensor criado mas blueprint não usa)
+**Status Integração:** ✅ **INTEGRADO E FUNCIONAL** (commit 77a454e)
 
 ---
 

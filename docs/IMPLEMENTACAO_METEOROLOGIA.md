@@ -1,5 +1,9 @@
 # ✅ IMPLEMENTAÇÃO CONCLUÍDA: Ajuste Meteorológico
 
+> ⚠️ **DOCUMENTO DEPRECATED**  
+> Este documento contém detalhes técnicos da implementação mas está fragmentado.  
+> Consulte a documentação consolidada: **`AJUSTE_METEOROLOGICO_COMPLETO.md`**
+
 **Data:** 2026-02-02 21:00  
 **Commit:** 77a454e  
 **Status:** ✅ **INTEGRADO E FUNCIONAL**
