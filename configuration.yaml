@@ -16,6 +16,17 @@ homeassistant:
 # Configure a default setup of Home Assistant (frontend, api, etc)
 default_config:
 
+# Dashboards personalizados
+lovelace:
+  mode: storage
+  dashboards:
+    piscina-solar:
+      mode: yaml
+      title: Piscina Solar
+      icon: mdi:solar-power-variant
+      show_in_sidebar: true
+      filename: lovelace/piscina_solar_dashboard.yaml
+
 #auth_header:
 #  username_header: X-authentik-username
 
