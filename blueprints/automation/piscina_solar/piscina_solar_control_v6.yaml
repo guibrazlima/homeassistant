@@ -539,26 +539,31 @@ blueprint:
     sun_offset_start:
       name: 🌅 Offset Após Nascer do Sol (min)
       description: |
-        Minutos após nascer do sol para começar.
+        Minutos após nascer do sol para começar monitorização solar.
+        **Nota:** Valor em minutos, convertido internamente para segundos.
+        **Recomendado:** 30 min
       default: 30
       selector:
         number:
           min: 0
           max: 180
-          step: 15
+          step: 5
           unit_of_measurement: "min"
           mode: slider
 
     sun_offset_end:
-      name: 🌇 Offset Antes do Pôr do Sol (min)
+      name: 🌇 Offset Pôr do Sol (min)
       description: |
-        Minutos antes do pôr do sol para parar.
-      default: 30
+        Minutos relativos ao pôr do sol para parar e desligar bomba.
+        **Use valor negativo** para parar ANTES do pôr do sol.
+        Exemplo: -30 = para 30 min antes do pôr do sol.
+        **Recomendado:** -30 min
+      default: -30
       selector:
         number:
-          min: 0
-          max: 180
-          step: 15
+          min: -180
+          max: 60
+          step: 5
           unit_of_measurement: "min"
           mode: slider
 
@@ -958,13 +963,15 @@ trigger:
   # 5. Nascer do sol
   - platform: sun
     event: sunrise
-    offset: !input sun_offset_start
+    offset:
+      minutes: !input sun_offset_start
     id: sunrise
   
-  # 6. Pôr do sol
+  # 6. Pôr do sol (offset negativo = antes)
   - platform: sun
     event: sunset
-    offset: -1800  # 30 min antes (em segundos)
+    offset:
+      minutes: !input sun_offset_end
     id: sunset
   
   # 7-8. Monitorização potência (DIA)
@@ -1279,6 +1286,8 @@ action:
                 id: power_change_inst
           - condition: template
             value_template: "{{ current_mode == 'day' }}"
+          - condition: template
+            value_template: "{{ not is_state(session_helper, 'on') }}"
         sequence:
           - choose:
               # ===== LIGAR BOMBA =====
@@ -1294,10 +1303,41 @@ action:
                   - delay:
                       seconds: "{{ final_delay_on }}"
                   
-                  # Re-verificar condições
+                  # Re-verificar condições com valores ATUAIS (não stale)
+                  - variables:
+                      live_net: >
+                        {% if net_5min != {} %}
+                          {{ states(net_5min) | float(0) }}
+                        {% elif house_5min != {} and pv_5min != {} %}
+                          {{ (states(house_5min) | float(0) - states(pv_5min) | float(0)) | round(0) }}
+                        {% elif export_5min != {} %}
+                          {{ (0 - states(export_5min) | float(0)) | round(0) }}
+                        {% elif net_inst != {} %}
+                          {{ states(net_inst) | float(0) }}
+                        {% elif house_inst != {} and pv_inst != {} %}
+                          {{ (states(house_inst) | float(0) - states(pv_inst) | float(0)) | round(0) }}
+                        {% elif export_inst != {} %}
+                          {{ (0 - states(export_inst) | float(0)) | round(0) }}
+                        {% else %}
+                          0
+                        {% endif %}
+                      live_import_predicted: >
+                        {{ (live_net | float(0) + pump_current_power | float(0)) | round(0) }}
+                      live_can_turn_on: >
+                        {{ live_import_predicted | float(0) <= (final_import_limit | float(0) - start_margin_val | float(0)) }}
+                      live_energy: >
+                        {% if energy_today_sensor != {} %}
+                          {{ states(energy_today_sensor) | float(0) }}
+                        {% else %}
+                          0
+                        {% endif %}
+                      live_deficit: >
+                        {{ [target_kwh | float(0) - live_energy | float(0), 0] | max | round(2) }}
+                      live_has_deficit: >
+                        {{ live_deficit | float(0) > 0.1 or ignore_limit }}
                   - if:
                       - condition: template
-                        value_template: "{{ can_turn_on and has_deficit }}"
+                        value_template: "{{ live_can_turn_on and live_has_deficit }}"
                     then:
                       - if:
                           - condition: template
@@ -1337,10 +1377,41 @@ action:
                   - delay:
                       seconds: "{{ final_delay_off }}"
                   
-                  # Re-verificar
+                  # Re-verificar com valores ATUAIS (não stale)
+                  - variables:
+                      live_net_off: >
+                        {% if net_5min != {} %}
+                          {{ states(net_5min) | float(0) }}
+                        {% elif house_5min != {} and pv_5min != {} %}
+                          {{ (states(house_5min) | float(0) - states(pv_5min) | float(0)) | round(0) }}
+                        {% elif export_5min != {} %}
+                          {{ (0 - states(export_5min) | float(0)) | round(0) }}
+                        {% elif net_inst != {} %}
+                          {{ states(net_inst) | float(0) }}
+                        {% elif house_inst != {} and pv_inst != {} %}
+                          {{ (states(house_inst) | float(0) - states(pv_inst) | float(0)) | round(0) }}
+                        {% elif export_inst != {} %}
+                          {{ (0 - states(export_inst) | float(0)) | round(0) }}
+                        {% else %}
+                          0
+                        {% endif %}
+                      live_import_off: >
+                        {{ (live_net_off | float(0) + pump_current_power | float(0)) | round(0) }}
+                      live_can_keep_on: >
+                        {{ live_import_off | float(0) <= final_import_limit | float(0) }}
+                      live_energy_off: >
+                        {% if energy_today_sensor != {} %}
+                          {{ states(energy_today_sensor) | float(0) }}
+                        {% else %}
+                          0
+                        {% endif %}
+                      live_deficit_off: >
+                        {{ [target_kwh | float(0) - live_energy_off | float(0), 0] | max | round(2) }}
+                      live_has_deficit_off: >
+                        {{ live_deficit_off | float(0) > 0.1 or ignore_limit }}
                   - if:
                       - condition: template
-                        value_template: "{{ not can_keep_on or not has_deficit }}"
+                        value_template: "{{ not live_can_keep_on or not live_has_deficit_off }}"
                     then:
                       - if:
                           - condition: template
