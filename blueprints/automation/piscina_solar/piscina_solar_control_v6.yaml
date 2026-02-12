@@ -1,0 +1,1388 @@
+blueprint:
+  name: 🏊 Piscina - Controlo Solar Inteligente v6 HÍBRIDO (PT)
+  description: |
+    ### **Controlo Inteligente COMPLETO da Bomba da Piscina**
+    Blueprint português que combina o melhor da v4 e v5!
+    **Versão 6.0** - Modo Híbrido: Solar DIA + Coopernico NOITE
+    
+    #### ✨ **Funcionalidades Principais:**
+    - ☀️ **Modo Dia:** Excedente solar com hysteresis inteligente (v4)
+    - 🌙 **Modo Noite:** Otimização Coopernico janela mais barata (v5)
+    - 🔄 **Transição Automática:** Coordenação inteligente entre modos
+    - ✅ **Previsão de importação** - Liga antes de importar da rede
+    - ✅ **6 níveis de fallback** - Prioridade para sensores com média 5min
+    - ✅ **Otimização económica** - Cálculo de break-even vs tarifa noturna
+    - ✅ **Tempo dinâmico** - Filtragem baseada em temperatura água/ar
+    - ✅ **Override manual** - Respeita controlo manual
+    - ✅ **Diagnóstico** - Logs detalhados opcionais
+    
+    #### 🆕 **NOVIDADE v6: Modo Híbrido**
+    - 🌞 **Dia (sunrise→sunset):** Liga com excedente solar (lógica v4)
+    - 💰 **Noite (22h→08h):** Liga na janela Coopernico mais barata (v5)
+    - 🔀 **Zero Conflitos:** Coordenação automática entre modos
+    - 📊 **Défice Partilhado:** Calcula défice global para ambos os modos
+    
+    #### 📊 **Hierarquia de Sensores (6 níveis):**
+    1. NET média 5min (mais estável)
+    2. Casa+PV média 5min
+    3. Export média 5min
+    4. NET instantâneo
+    5. Casa+PV instantâneo
+    6. Export instantâneo
+    
+    #### 💡 **Baseado em:**
+    Código original de **guibrazlima** (binary_sensor.piscina_excedente_fv_bomba)
+    v6 unifica v4 (solar) + v5 (Coopernico) numa blueprint híbrida.
+    
+    ---
+    *Blueprint v6.0 criado para Home Assistant - Portugal*
+
+  domain: automation
+  author: guibrazlima (original) + AI Assistant (blueprint v6 híbrido)
+  source_url: https://github.com/guibrazlima/homeassistant
+
+  input:
+    # ==========================================
+    # SECÇÃO 1: CONFIGURAÇÃO ESSENCIAL
+    # ==========================================
+    
+    pump_switch:
+      name: 🔌 Switch da Bomba
+      description: |
+        **[OBRIGATÓRIO]** Entidade para ligar/desligar a bomba da piscina.
+        **Exemplo:** `switch.bomba_piscina_switch_0`
+      selector:
+        entity:
+          domain: switch
+
+    pump_nominal_power:
+      name: 💪 Potência Nominal da Bomba (W)
+      description: |
+        Potência nominal da bomba em Watts.
+        **Como calcular:** Amperes × 230V (ex: 6A × 230V = 1380W)
+        Usado para cálculos de previsão e custos.
+      default: 1380
+      selector:
+        number:
+          min: 100
+          max: 5000
+          step: 10
+          unit_of_measurement: "W"
+          mode: box
+
+    pump_actual_power:
+      name: ⚡ Sensor Consumo Real da Bomba (opcional)
+      description: |
+        Sensor opcional do consumo atual da bomba em Watts.
+        Melhora precisão usando consumo real em vez do nominal.
+        **Exemplo:** `sensor.bomba_piscina_power`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+
+    # ==========================================
+    # SECÇÃO 2: NOVIDADE V6 - MODO HÍBRIDO
+    # ==========================================
+
+    hybrid_mode_enabled:
+      name: 🔀 Ativar Modo Híbrido
+      description: |
+        **NOVIDADE v6!** Combina solar (dia) + Coopernico (noite).
+        
+        **Como funciona:**
+        - ☀️ DIA: Liga com excedente solar (lógica v4)
+        - 🌙 NOITE: Liga na janela Coopernico mais barata (v5)
+        - 🔄 Coordenação automática sem conflitos
+        
+        **Se DESATIVADO:** Funciona apenas modo dia (como v4)
+      default: true
+      selector:
+        boolean: {}
+
+    # ==========================================
+    # SECÇÃO 3: COOPERNICO (MODO NOITE)
+    # ==========================================
+
+    use_coopernico_optimization:
+      name: 💰 Usar Otimização Coopernico (Noite)
+      description: |
+        Calcula automaticamente a janela de tempo mais barata à noite.
+        
+        **Requer:** 
+        - Modo Híbrido ativado
+        - Sensor Coopernico configurado abaixo
+        - Helpers criados (datetime, boolean, text)
+        
+        **Poupança típica:** 5-15% vs horário fixo
+      default: false
+      selector:
+        boolean: {}
+
+    coopernico_price_sensor:
+      name: 💶 Sensor Preços Coopernico
+      description: |
+        Sensor com preços dinâmicos em intervalos de 15 minutos.
+        **Exemplo:** `sensor.coopernico_base_bi_horario_ciclo_diario_all_prices`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+
+    cheapest_window_helper:
+      name: 🕐 Helper Hora Agendada
+      description: |
+        Input datetime para guardar hora calculada mais barata.
+        **Exemplo:** `input_datetime.piscina_hora_agendada_mais_barata`
+      default: input_datetime.piscina_hora_agendada_mais_barata
+      selector:
+        entity:
+          domain: input_datetime
+
+    coopernico_end_helper:
+      name: 🏁 Helper Fim Janela Coopernico
+      description: |
+        Input datetime para guardar hora calculada de FIM da janela Coopernico.
+        Preenchido automaticamente quando a janela inicia (start + duração).
+        **Exemplo:** `input_datetime.piscina_fim_janela_coopernico`
+      default: input_datetime.piscina_fim_janela_coopernico
+      selector:
+        entity:
+          domain: input_datetime
+
+    night_session_active_helper:
+      name: 🔒 Helper Sessão Noturna
+      description: |
+        Input boolean para controlar sessão noturna ativa.
+        **Exemplo:** `input_boolean.piscina_sessao_noturna_ativa`
+      default: input_boolean.piscina_sessao_noturna_ativa
+      selector:
+        entity:
+          domain: input_boolean
+
+    calculation_info_helper:
+      name: 📊 Helper Info Cálculo (opcional)
+      description: |
+        Input text para guardar info do último cálculo.
+        **Exemplo:** `input_text.piscina_ultima_janela_calculada`
+      default: input_text.piscina_ultima_janela_calculada
+      selector:
+        entity:
+          domain: input_text
+
+    calculation_time:
+      name: ⏰ Hora do Cálculo Coopernico
+      description: |
+        Hora para calcular janela mais barata (antes da noite).
+        **Recomendado:** 19:00-20:00
+      default: "19:00:00"
+      selector:
+        time: {}
+
+    # ==========================================
+    # SECÇÃO 4: SENSORES DE POTÊNCIA (6 níveis)
+    # ==========================================
+
+    net_power_5min:
+      name: 📊 Potência NET - Média 5min
+      description: |
+        **[PRIORIDADE 1]** Sensor NET com média de 5 minutos.
+        Positivo = importação, Negativo = exportação.
+        **Exemplo:** `sensor.import_export_5min_smooth`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+
+    house_power_no_pump_5min:
+      name: 🏠 Consumo Casa (SEM bomba) - Média 5min
+      description: |
+        **[PRIORIDADE 2]** Consumo casa EXCLUINDO bomba, média 5min.
+        **Exemplo:** `sensor.house_power_5min_smooth`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+
+    pv_power_5min:
+      name: ☀️ Produção Solar (PV) - Média 5min
+      description: |
+        **[PRIORIDADE 2]** Produção solar com média 5min.
+        **Exemplo:** `sensor.solar_power_5min_smooth`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+
+    export_power_5min:
+      name: 📤 Exportação - Média 5min
+      description: |
+        **[PRIORIDADE 3]** Exportação para rede, média 5min.
+        **Exemplo:** `sensor.export_power_5min_smooth`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+
+    net_power:
+      name: 📊 Potência NET - Instantâneo
+      description: |
+        **[PRIORIDADE 4]** Sensor NET instantâneo (fallback).
+        **Exemplo:** `sensor.emoncms_import_export`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+
+    house_power_no_pump:
+      name: 🏠 Consumo Casa - Instantâneo
+      description: |
+        **[PRIORIDADE 5]** Consumo casa instantâneo.
+        **Exemplo:** `sensor.emoncms_use_no_pool_pump`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+
+    pv_power:
+      name: ☀️ Produção Solar - Instantâneo
+      description: |
+        **[PRIORIDADE 5]** Produção solar instantânea.
+        **Exemplo:** `sensor.emoncms_solar`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+
+    export_power:
+      name: 📤 Exportação - Instantâneo
+      description: |
+        **[PRIORIDADE 6]** Exportação instantânea.
+        **Exemplo:** `sensor.emoncms_export_power_positive`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+
+    # ==========================================
+    # SECÇÃO 5: FILTRAÇÃO DINÂMICA
+    # ==========================================
+
+    use_dynamic_filtration_time:
+      name: 🌡️ Usar Tempo Dinâmico de Filtragem
+      description: |
+        Se ATIVADO, usa sensor de tempo baseado em temperatura.
+        Se DESATIVADO, usa valor fixo de energia.
+      default: true
+      selector:
+        boolean: {}
+
+    dynamic_filtration_hours_sensor:
+      name: 🌡️ Sensor Tempo Recomendado (horas)
+      description: |
+        Sensor que calcula horas baseado em temperatura.
+        **Exemplo:** `sensor.piscina_tempo_de_filtracao_recomendado`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+
+    min_daily_filtration_kwh:
+      name: ⚡ Energia Mínima Diária (kWh) - FIXO
+      description: |
+        Energia fixa se tempo dinâmico desativado.
+        **Exemplo:** 8h × 1.38kW = 11 kWh
+      default: 11
+      selector:
+        number:
+          min: 1
+          max: 25
+          step: 0.5
+          unit_of_measurement: "kWh"
+          mode: slider
+
+    filtration_energy_today:
+      name: 📊 Energia Filtração Hoje
+      description: |
+        Sensor com kWh já consumidos hoje.
+        **Exemplo:** `sensor.bomba_piscina_energy_today`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+          device_class: energy
+
+    filtration_remaining:
+      name: ⏳ Tempo Filtragem Restante (opcional)
+      description: |
+        Sensor com tempo restante de filtragem hoje.
+        Formatos: HH:MM, minutos numéricos, ou atributo 'seconds'
+        **Exemplo:** `sensor.pool_pump_remaining_time`
+      default: {}
+      selector:
+        entity:
+          domain:
+            - input_number
+            - sensor
+
+    ignore_filtration_limit:
+      name: ♾️ Ignorar Limite de Filtragem (Dia)
+      description: |
+        Se ATIVADO, bomba liga com excedente solar MESMO após meta cumprida.
+        ✅ **Vantagens:** Máximo autoconsumo
+        ⚠️ **Atenção:** Pode causar sobre-filtragem
+      default: false
+      selector:
+        boolean: {}
+
+    min_night_deficit_kwh:
+      name: ⚡ Défice Mínimo para Noite (kWh)
+      description: |
+        Só liga à noite se défice > este valor.
+        **Recomendado:** 1.5-2.5 kWh
+      default: 2
+      selector:
+        number:
+          min: 0.5
+          max: 8
+          step: 0.5
+          unit_of_measurement: "kWh"
+          mode: slider
+
+    # ==========================================
+    # SECÇÃO 6: FILTRAGEM NOTURNA
+    # ==========================================
+
+    enable_night_auto:
+      name: 🌙 Ligar Automaticamente à Noite
+      description: |
+        Se ativado, completa filtragem à noite.
+        - Com Coopernico: usa janela mais barata
+        - Sem Coopernico: usa horário fixo (fallback)
+      default: false
+      selector:
+        boolean: {}
+
+    night_start_time:
+      name: 🕙 Início Horário Vazio (fallback)
+      description: |
+        Hora início vazio (usado se Coopernico não configurado).
+        **Típico:** 22:00
+      default: "22:00:00"
+      selector:
+        time: {}
+
+    night_end_time:
+      name: 🕗 Fim Horário Vazio
+      description: |
+        Hora fim do vazio (failsafe desliga se ainda ligada).
+        **Típico:** 08:00
+      default: "08:00:00"
+      selector:
+        time: {}
+
+    # ==========================================
+    # SECÇÃO 7: OTIMIZAÇÃO ECONÓMICA (DIA)
+    # ==========================================
+
+    use_economic_optimization:
+      name: 📊 Usar Otimização Económica (Dia)
+      description: |
+        Calcula break-even dia vs noite.
+        **Recomendado:** Ativar para tarifas bi-horárias.
+      default: true
+      selector:
+        boolean: {}
+
+    price_peak:
+      name: 💶 Preço Fora-Vazio (€/kWh)
+      description: |
+        Preço durante o dia.
+        **Típico PT 2024:** 0.15-0.18 €/kWh
+      default: 0.1537
+      selector:
+        number:
+          min: 0
+          max: 1
+          step: 0.001
+          unit_of_measurement: "€/kWh"
+          mode: box
+
+    price_offpeak:
+      name: 💶 Preço Vazio (€/kWh)
+      description: |
+        Preço à noite.
+        **Típico PT 2024:** 0.08-0.10 €/kWh
+      default: 0.0929
+      selector:
+        number:
+          min: 0
+          max: 1
+          step: 0.001
+          unit_of_measurement: "€/kWh"
+          mode: box
+
+    import_limit:
+      name: 📈 Limite Importação Máxima (W) - Dia
+      description: |
+        Importação máxima para manter ligada de dia.
+        **Recomendado:** 500-800W
+      default: 700
+      selector:
+        number:
+          min: 0
+          max: 2000
+          step: 50
+          unit_of_measurement: "W"
+          mode: slider
+
+    start_margin:
+      name: 🚀 Margem Extra para Arranque (W) - Dia
+      description: |
+        Margem extra exigida para ligar de dia.
+        **Recomendado:** 100W
+      default: 100
+      selector:
+        number:
+          min: 0
+          max: 500
+          step: 25
+          unit_of_measurement: "W"
+          mode: slider
+
+    import_limit_strategy:
+      name: 🎯 Estratégia Limite Importação (Dia)
+      description: |
+        - **maior**: max(import_limit, break_even) → verão
+        - **menor**: min(import_limit, break_even) → primavera/outono
+        - **import_limit**: fixo → controlo manual
+        - **break_even**: só economia → inverno
+      default: "maior"
+      selector:
+        select:
+          options:
+            - label: "MAIOR (max auto-consumo)"
+              value: "maior"
+            - label: "MENOR (balanço)"
+              value: "menor"
+            - label: "IMPORT_LIMIT (fixo)"
+              value: "import_limit"
+            - label: "BREAK_EVEN (economia)"
+              value: "break_even"
+
+    # ==========================================
+    # SECÇÃO 8: DELAYS E TIMINGS
+    # ==========================================
+
+    delay_on:
+      name: ⏱️ Delay para Ligar (segundos) - Dia
+      description: |
+        Tempo de espera antes de ligar de dia.
+        **Recomendado:** 20-60s
+      default: 30
+      selector:
+        number:
+          min: 0
+          max: 300
+          step: 5
+          unit_of_measurement: "s"
+          mode: slider
+
+    delay_off:
+      name: ⏱️ Delay para Desligar (segundos) - Dia
+      description: |
+        Tempo de espera antes de desligar de dia.
+        **Recomendado:** 45-90s
+      default: 60
+      selector:
+        number:
+          min: 0
+          max: 300
+          step: 5
+          unit_of_measurement: "s"
+          mode: slider
+
+    min_on_time:
+      name: ⏰ Tempo Mínimo Ligada (minutos)
+      description: |
+        Tempo mínimo após arranque (dia e noite).
+        **Recomendado:** 10-15min
+      default: 10
+      selector:
+        number:
+          min: 0
+          max: 60
+          step: 1
+          unit_of_measurement: "min"
+          mode: slider
+
+    delay_multiplier_sensor:
+      name: 🌤️ Multiplicador de Delay (opcional)
+      description: |
+        Sensor que ajusta delays baseado no tempo.
+        - Céu limpo: 1.0× - Nublado: 1.5× - Instável: 2.0×
+        **Exemplo:** `sensor.piscina_weather_delay_multiplier`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+
+    # ==========================================
+    # SECÇÃO 9: HORÁRIOS SOLARES
+    # ==========================================
+
+    sun_offset_start:
+      name: 🌅 Offset Após Nascer do Sol (min)
+      description: |
+        Minutos após nascer do sol para começar.
+      default: 30
+      selector:
+        number:
+          min: 0
+          max: 180
+          step: 15
+          unit_of_measurement: "min"
+          mode: slider
+
+    sun_offset_end:
+      name: 🌇 Offset Antes do Pôr do Sol (min)
+      description: |
+        Minutos antes do pôr do sol para parar.
+      default: 30
+      selector:
+        number:
+          min: 0
+          max: 180
+          step: 15
+          unit_of_measurement: "min"
+          mode: slider
+
+    # ==========================================
+    # SECÇÃO 10: CONTROLO E DEBUG
+    # ==========================================
+
+    override_manual:
+      name: 🔧 Override Manual
+      description: |
+        Input boolean para modo manual.
+        **Exemplo:** `input_boolean.piscina_manual_mode`
+      default: {}
+      selector:
+        entity:
+          domain: input_boolean
+
+    enable_debug_logs:
+      name: 🔍 Logs de Diagnóstico
+      description: |
+        Ativa logs detalhados.
+        Logger: `blueprints.piscina_solar_v6`
+      default: false
+      selector:
+        boolean: {}
+
+    dry_run_mode:
+      name: 🧪 Modo Dry Run (Teste)
+      description: |
+        Testa lógica SEM controlar a bomba.
+        Útil para validar configuração.
+      default: false
+      selector:
+        boolean: {}
+
+# ==========================================
+# VARIÁVEIS GLOBAIS
+# ==========================================
+variables:
+  # Inputs base
+  pump_entity: !input pump_switch
+  pump_power: !input pump_nominal_power
+  pump_power_sensor: !input pump_actual_power
+  dry_run: !input dry_run_mode
+  debug: !input enable_debug_logs
+  
+  # Modo Híbrido
+  hybrid_mode: !input hybrid_mode_enabled
+  
+  # Coopernico
+  use_coopernico: !input use_coopernico_optimization
+  coopernico_sensor: !input coopernico_price_sensor
+  cheapest_helper: !input cheapest_window_helper
+  coopernico_end: !input coopernico_end_helper
+  session_helper: !input night_session_active_helper
+  info_helper: !input calculation_info_helper
+  
+  # Filtração
+  use_dynamic: !input use_dynamic_filtration_time
+  dynamic_sensor: !input dynamic_filtration_hours_sensor
+  fixed_kwh: !input min_daily_filtration_kwh
+  energy_today_sensor: !input filtration_energy_today
+  remaining_sensor: !input filtration_remaining
+  ignore_limit: !input ignore_filtration_limit
+  min_deficit: !input min_night_deficit_kwh
+  enable_night_auto: !input enable_night_auto
+  
+  # Horários
+  night_start: !input night_start_time
+  night_end: !input night_end_time
+  calc_time: !input calculation_time
+  
+  # Preços
+  price_peak_val: !input price_peak
+  price_offpeak_val: !input price_offpeak
+  use_econ_opt: !input use_economic_optimization
+  
+  # Limites e estratégia
+  import_limit_val: !input import_limit
+  start_margin_val: !input start_margin
+  limit_strategy: !input import_limit_strategy
+  
+  # Delays
+  delay_on_val: !input delay_on
+  delay_off_val: !input delay_off
+  min_on_time_val: !input min_on_time
+  delay_mult_sensor: !input delay_multiplier_sensor
+  
+  # Sensores potência (hierarquia 6 níveis)
+  net_5min: !input net_power_5min
+  house_5min: !input house_power_no_pump_5min
+  pv_5min: !input pv_power_5min
+  export_5min: !input export_power_5min
+  net_inst: !input net_power
+  house_inst: !input house_power_no_pump
+  pv_inst: !input pv_power
+  export_inst: !input export_power
+  
+  # Override manual
+  manual_override: !input override_manual
+
+  # ==========================================
+  # ESTADO DA BOMBA
+  # ==========================================
+  pump_is_on: "{{ is_state(pump_entity, 'on') }}"
+  
+  # Consumo real ou nominal
+  pump_current_power: >
+    {% if pump_power_sensor != {} and states(pump_power_sensor) not in ['unavailable', 'unknown', 'none'] %}
+      {{ states(pump_power_sensor) | float(pump_power) }}
+    {% else %}
+      {{ pump_power }}
+    {% endif %}
+
+  # ==========================================
+  # CÁLCULO DÉFICE FILTRAGEM
+  # ==========================================
+  
+  # Target kWh
+  target_kwh: >
+    {% if use_dynamic and dynamic_sensor != {} %}
+      {% set hours = states(dynamic_sensor) | float(8) %}
+      {{ (hours * (pump_power / 1000)) | round(2) }}
+    {% else %}
+      {{ fixed_kwh }}
+    {% endif %}
+  
+  # Energia já consumida hoje
+  energy_consumed: >
+    {% if energy_today_sensor != {} %}
+      {{ states(energy_today_sensor) | float(0) }}
+    {% else %}
+      0
+    {% endif %}
+  
+  # Défice restante em kWh
+  deficit_kwh: >
+    {{ [target_kwh - energy_consumed, 0] | max | round(2) }}
+  
+  # Horas restantes a filtrar
+  deficit_hours: >
+    {{ (deficit_kwh / (pump_power / 1000)) | round(2) }}
+  
+  # Tempo restante (do sensor ou calculado)
+  remaining_time_minutes: >
+    {% if remaining_sensor != {} %}
+      {% set state = states(remaining_sensor) %}
+      {% if ':' in state %}
+        {# Formato HH:MM #}
+        {% set parts = state.split(':') %}
+        {{ (parts[0] | int * 60) + (parts[1] | int) }}
+      {% elif state_attr(remaining_sensor, 'seconds') is not none %}
+        {{ (state_attr(remaining_sensor, 'seconds') | int / 60) | round(0) }}
+      {% else %}
+        {{ state | int }}
+      {% endif %}
+    {% else %}
+      {{ (deficit_hours * 60) | round(0) }}
+    {% endif %}
+
+  # ==========================================
+  # HIERARCHIA SENSORES (6 níveis)
+  # ==========================================
+  
+  # Nível selecionado (1-6)
+  sensor_level: >
+    {% if net_5min != {} %}
+      1
+    {% elif house_5min != {} and pv_5min != {} %}
+      2
+    {% elif export_5min != {} %}
+      3
+    {% elif net_inst != {} %}
+      4
+    {% elif house_inst != {} and pv_inst != {} %}
+      5
+    {% elif export_inst != {} %}
+      6
+    {% else %}
+      0
+    {% endif %}
+  
+  # Potência NET atual (baseado no nível)
+  current_net_power: >
+    {% set level = sensor_level | int %}
+    {% if level == 1 %}
+      {{ states(net_5min) | float(0) }}
+    {% elif level == 2 %}
+      {% set house = states(house_5min) | float(0) %}
+      {% set pv = states(pv_5min) | float(0) %}
+      {{ (house - pv) | round(0) }}
+    {% elif level == 3 %}
+      {% set export = states(export_5min) | float(0) %}
+      {{ (0 - export) | round(0) }}
+    {% elif level == 4 %}
+      {{ states(net_inst) | float(0) }}
+    {% elif level == 5 %}
+      {% set house = states(house_inst) | float(0) %}
+      {% set pv = states(pv_inst) | float(0) %}
+      {{ (house - pv) | round(0) }}
+    {% elif level == 6 %}
+      {% set export = states(export_inst) | float(0) %}
+      {{ (0 - export) | round(0) }}
+    {% else %}
+      0
+    {% endif %}
+  
+  # Previsão importação COM bomba
+  import_predicted: >
+    {{ (current_net_power + pump_current_power) | round(0) }}
+
+  # ==========================================
+  # BREAK-EVEN ECONÓMICO
+  # ==========================================
+  
+  break_even_import_w: >
+    {% if use_econ_opt %}
+      {% set cost_night = price_offpeak_val * (pump_power / 1000) %}
+      {% set cost_day_per_w = price_peak_val / 1000 %}
+      {{ ((cost_night / cost_day_per_w) - pump_power) | round(0) }}
+    {% else %}
+      {{ import_limit_val }}
+    {% endif %}
+  
+  # Limite final baseado na estratégia
+  final_import_limit: >
+    {% set break_even = break_even_import_w | int %}
+    {% set config_limit = import_limit_val | int %}
+    {% if limit_strategy == 'maior' %}
+      {{ [break_even, config_limit] | max }}
+    {% elif limit_strategy == 'menor' %}
+      {{ [break_even, config_limit] | min }}
+    {% elif limit_strategy == 'break_even' %}
+      {{ break_even }}
+    {% else %}
+      {{ config_limit }}
+    {% endif %}
+
+  # ==========================================
+  # DELAYS DINÂMICOS
+  # ==========================================
+  
+  delay_multiplier: >
+    {% if delay_mult_sensor != {} %}
+      {{ states(delay_mult_sensor) | float(1.0) }}
+    {% else %}
+      1.0
+    {% endif %}
+  
+  final_delay_on: >
+    {{ (delay_on_val * delay_multiplier) | round(0) }}
+  
+  final_delay_off: >
+    {{ (delay_off_val * delay_multiplier) | round(0) }}
+
+  # ==========================================
+  # CONDIÇÕES DE LIGAÇÃO (DIA)
+  # ==========================================
+  
+  # Pode ligar? (previsão importação OK)
+  can_turn_on: >
+    {{ import_predicted <= (final_import_limit - start_margin_val) }}
+  
+  # Pode manter? (importação atual OK)
+  can_keep_on: >
+    {{ import_predicted <= final_import_limit }}
+  
+  # Tem défice suficiente?
+  has_deficit: >
+    {{ deficit_kwh > 0.1 or ignore_limit }}
+  
+  # Tempo mínimo ligada respeitado?
+  min_time_elapsed: >
+    {% set last_changed = as_timestamp(states.switch[pump_entity.split('.')[1]].last_changed) %}
+    {% set now_ts = as_timestamp(now()) %}
+    {{ (now_ts - last_changed) >= (min_on_time_val * 60) }}
+
+  # ==========================================
+  # COOPERNICO: Cálculo janela mais barata
+  # ==========================================
+  
+  coopernico_prices: >
+    {% if coopernico_sensor != {} and use_coopernico %}
+      {{ state_attr(coopernico_sensor, 'prices') | default([]) }}
+    {% else %}
+      []
+    {% endif %}
+  
+  # Filtrar preços noturnos (22h-08h)
+  night_prices: >
+    {% set prices = coopernico_prices %}
+    {% if prices | length > 0 %}
+      {% set ns = namespace(filtered=[]) %}
+      {% for p in prices %}
+        {% set datetime_str = p.datetime | string %}
+        {% set time_part = datetime_str.split('T')[1].split('+')[0] if 'T' in datetime_str else datetime_str.split(' ')[1].split('+')[0] %}
+        {% set hour = time_part.split(':')[0] | int %}
+        {% if hour >= 22 or hour < 8 %}
+          {% set ns.filtered = ns.filtered + [p] %}
+        {% endif %}
+      {% endfor %}
+      {{ ns.filtered }}
+    {% else %}
+      []
+    {% endif %}
+  
+  # Sliding Window: encontrar slots mais baratos
+  cheapest_result: >
+    {% set prices = night_prices %}
+    {% set deficit_h = deficit_hours %}
+    
+    {% if prices | length == 0 or deficit_h <= 0 %}
+      {{ {'start_time': night_start, 'avg_price': price_offpeak_val, 'found': false} }}
+    {% else %}
+      {% set slots_needed = (deficit_h * 4) | round(0, 'ceil') | int %}
+      {% set max_slots = 40 %}
+      {% set slots_needed = [slots_needed, max_slots] | min %}
+      
+      {% if slots_needed > prices | length %}
+        {{ {'start_time': night_start, 'avg_price': price_offpeak_val, 'found': false} }}
+      {% else %}
+        {% set ns = namespace(best_start=0, best_avg=999, best_time='') %}
+        
+        {% for i in range(0, (prices | length) - slots_needed + 1) %}
+          {% set window = prices[i:i+slots_needed] %}
+          {% set avg_price = (window | map(attribute='price_w_vat') | sum) / (window | length) %}
+          
+          {% if avg_price < ns.best_avg %}
+            {% set ns.best_avg = avg_price %}
+            {% set ns.best_start = i %}
+            {% set datetime_str = window[0].datetime | string %}
+            {% set time_part = datetime_str.split('T')[1].split('+')[0] if 'T' in datetime_str else datetime_str.split(' ')[1].split('+')[0] %}
+            {% set ns.best_time = time_part %}
+          {% endif %}
+        {% endfor %}
+        
+        {{ {
+          'start_time': ns.best_time,
+          'avg_price': ns.best_avg,
+          'total_cost': (ns.best_avg * deficit_h * (pump_power / 1000)) | round(3),
+          'duration_hours': deficit_h,
+          'found': true
+        } }}
+      {% endif %}
+    {% endif %}
+
+  # ==========================================
+  # MODO ATUAL (Dia ou Noite)
+  # ==========================================
+  
+  current_mode: >
+    {% set now_hour = now().hour %}
+    {% set night_start_str = night_start | string %}
+    {% set night_end_str = night_end | string %}
+    {% set night_start_hour = night_start_str.split(':')[0] | int %}
+    {% set night_end_hour = night_end_str.split(':')[0] | int %}
+    
+    {% if now_hour >= night_start_hour or now_hour < night_end_hour %}
+      night
+    {% else %}
+      day
+    {% endif %}
+
+# ==========================================
+# TRIGGERS
+# ==========================================
+trigger:
+  # ========== TRIGGERS COOPERNICO (NOITE) ==========
+  
+  # 1. Cálculo diário janela mais barata
+  - platform: time
+    at: !input calculation_time
+    id: daily_calculation
+  
+  # 2. Hora agendada Coopernico
+  - platform: time
+    at: !input cheapest_window_helper
+    id: cheapest_scheduled_time
+  
+  # 2.5. Fim janela Coopernico (calculado automaticamente)
+  - platform: time
+    at: !input coopernico_end_helper
+    id: coopernico_window_end
+  
+  # 3. Fallback início noite
+  - platform: time
+    at: !input night_start_time
+    id: night_fallback_start
+  
+  # 4. Fim período noturno
+  - platform: time
+    at: !input night_end_time
+    id: night_end
+  
+  # ========== TRIGGERS SOLARES (DIA) ==========
+  
+  # 5. Nascer do sol
+  - platform: sun
+    event: sunrise
+    offset: !input sun_offset_start
+    id: sunrise
+  
+  # 6. Pôr do sol
+  - platform: sun
+    event: sunset
+    offset: -1800  # 30 min antes (em segundos)
+    id: sunset
+  
+  # 7-8. Monitorização potência (DIA)
+  - platform: state
+    entity_id: !input net_power_5min
+    id: power_change_5min
+  
+  - platform: state
+    entity_id: !input net_power
+    id: power_change_inst
+  
+  # 9. Mudança estado bomba (para min_on_time)
+  - platform: state
+    entity_id: !input pump_switch
+    id: pump_state_change
+
+# ==========================================
+# CONDITIONS
+# ==========================================
+condition:
+  # Respeitar override manual
+  - condition: template
+    value_template: >
+      {{ manual_override == {} or not is_state(manual_override, 'on') }}
+
+# ==========================================
+# ACTIONS
+# ==========================================
+action:
+  - choose:
+      # ==========================================
+      # ACTION 1: CÁLCULO COOPERNICO (19h)
+      # ==========================================
+      - conditions:
+          - condition: trigger
+            id: daily_calculation
+          - condition: template
+            value_template: "{{ hybrid_mode and use_coopernico }}"
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ coopernico_sensor != {} and cheapest_helper != {} }}"
+            then:
+              # Calcular e guardar hora
+              - service: input_datetime.set_datetime
+                target:
+                  entity_id: !input cheapest_window_helper
+                data:
+                  time: "{{ cheapest_result.start_time }}"
+              
+              # Guardar info cálculo
+              - if:
+                  - condition: template
+                    value_template: "{{ info_helper != {} }}"
+                then:
+                  - service: input_text.set_value
+                    target:
+                      entity_id: !input calculation_info_helper
+                    data:
+                      value: >
+                        {% set r = cheapest_result %}
+                        {% if r.found %}
+                          {{ r.start_time }} | {{ r.avg_price | round(5) }}€/kWh | {{ r.total_cost }}€ | {{ r.duration_hours }}h
+                        {% else %}
+                          Fallback: {{ night_start }} (sem dados)
+                        {% endif %}
+              
+              # Log
+              - if:
+                  - condition: template
+                    value_template: "{{ debug }}"
+                then:
+                  - service: logbook.log
+                    data:
+                      name: "Piscina v6 - Cálculo Coopernico"
+                      message: >
+                        Janela: {{ cheapest_result.start_time }}
+                        Preço: {{ cheapest_result.avg_price | round(5) }}€/kWh
+                        Custo: {{ cheapest_result.total_cost }}€
+                        Duração: {{ cheapest_result.duration_hours }}h
+                      entity_id: !input pump_switch
+
+      # ==========================================
+      # ACTION 2: LIGA NA HORA AGENDADA (NOITE)
+      # ==========================================
+      - conditions:
+          - condition: trigger
+            id: cheapest_scheduled_time
+          - condition: template
+            value_template: "{{ hybrid_mode and use_coopernico and enable_night_auto }}"
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ deficit_kwh >= min_deficit }}"
+              - condition: template
+                value_template: "{{ not is_state(session_helper, 'on') }}"
+            then:
+              # Ativar session lock
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: !input night_session_active_helper
+              
+              # Ligar bomba
+              - if:
+                  - condition: template
+                    value_template: "{{ not dry_run }}"
+                then:
+                  - service: switch.turn_on
+                    target:
+                      entity_id: !input pump_switch
+              
+              # Log
+              - if:
+                  - condition: template
+                    value_template: "{{ debug }}"
+                then:
+                  - service: logbook.log
+                    data:
+                      name: "Piscina v6 - Coopernico ON"
+                      message: >
+                        💰 NOITE: Bomba ligada na janela mais barata
+                        Défice: {{ deficit_kwh }}kWh ({{ deficit_hours }}h)
+                        {% if dry_run %}[DRY RUN]{% endif %}
+                      entity_id: !input pump_switch
+              
+              # Calcular e guardar hora de fim da janela
+              - service: input_datetime.set_datetime
+                target:
+                  entity_id: !input coopernico_end_helper
+                data:
+                  time: >
+                    {% set duration_sec = (cheapest_result.duration_hours * 3600) | int %}
+                    {% set end_time = now() + timedelta(seconds=duration_sec) %}
+                    {{ end_time.strftime('%H:%M:%S') }}
+              
+              - if:
+                  - condition: template
+                    value_template: "{{ debug }}"
+                then:
+                  - service: logbook.log
+                    data:
+                      name: "Piscina v6 - Coopernico Timer"
+                      message: >
+                        ⏱️ Fim janela agendado para {{ 
+                          (now() + timedelta(seconds=(cheapest_result.duration_hours * 3600) | int)).strftime('%H:%M') 
+                        }} ({{ cheapest_result.duration_hours }}h)
+                      entity_id: !input pump_switch
+
+      # ==========================================
+      # ACTION 3: FALLBACK HORÁRIO FIXO (NOITE)
+      # ==========================================
+      - conditions:
+          - condition: trigger
+            id: night_fallback_start
+          - condition: template
+            value_template: "{{ (not use_coopernico or not hybrid_mode) and enable_night_auto }}"
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ deficit_kwh >= min_deficit }}"
+              - condition: template
+                value_template: "{{ not is_state(session_helper, 'on') }}"
+            then:
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: !input night_session_active_helper
+              
+              - if:
+                  - condition: template
+                    value_template: "{{ not dry_run }}"
+                then:
+                  - service: switch.turn_on
+                    target:
+                      entity_id: !input pump_switch
+              
+              - if:
+                  - condition: template
+                    value_template: "{{ debug }}"
+                then:
+                  - service: logbook.log
+                    data:
+                      name: "Piscina v6 - Fallback Noite"
+                      message: >
+                        🕙 NOITE: Bomba ligada horário fixo (fallback)
+                        Défice: {{ deficit_kwh }}kWh
+                      entity_id: !input pump_switch
+
+      # ==========================================
+      # ACTION 3.5: FIM JANELA COOPERNICO (auto-stop)
+      # ==========================================
+      - conditions:
+          - condition: trigger
+            id: coopernico_window_end
+          - condition: template
+            value_template: "{{ is_state(session_helper, 'on') }}"
+        sequence:
+          # Reset session lock
+          - service: input_boolean.turn_off
+            target:
+              entity_id: !input night_session_active_helper
+          
+          # Desligar bomba
+          - if:
+              - condition: template
+                value_template: "{{ pump_is_on and not dry_run }}"
+            then:
+              - service: switch.turn_off
+                target:
+                  entity_id: !input pump_switch
+          
+          - if:
+              - condition: template
+                value_template: "{{ debug }}"
+            then:
+              - service: logbook.log
+                data:
+                  name: "Piscina v6 - Coopernico OFF"
+                  message: >
+                    ⏱️ Janela Coopernico terminada ({{ cheapest_result.duration_hours }}h)
+                    Défice restante: {{ deficit_kwh }}kWh
+                    {% if dry_run %}[DRY RUN]{% endif %}
+                  entity_id: !input pump_switch
+
+      # ==========================================
+      # ACTION 4: FIM PERÍODO NOTURNO
+      # ==========================================
+      - conditions:
+          - condition: trigger
+            id: night_end
+        sequence:
+          # Reset session lock
+          - service: input_boolean.turn_off
+            target:
+              entity_id: !input night_session_active_helper
+          
+          # Desligar bomba (failsafe)
+          - if:
+              - condition: template
+                value_template: "{{ pump_is_on and not dry_run }}"
+            then:
+              - service: switch.turn_off
+                target:
+                  entity_id: !input pump_switch
+          
+          - if:
+              - condition: template
+                value_template: "{{ debug }}"
+            then:
+              - service: logbook.log
+                data:
+                  name: "Piscina v6 - Fim Noite"
+                  message: "🕗 Fim período noturno, session resetada"
+                  entity_id: !input pump_switch
+
+      # ==========================================
+      # ACTION 5: NASCER DO SOL
+      # ==========================================
+      - conditions:
+          - condition: trigger
+            id: sunrise
+        sequence:
+          # Reset session lock
+          - service: input_boolean.turn_off
+            target:
+              entity_id: !input night_session_active_helper
+          
+          - if:
+              - condition: template
+                value_template: "{{ debug }}"
+            then:
+              - service: logbook.log
+                data:
+                  name: "Piscina v6 - Nascer Sol"
+                  message: "🌅 Session noturna resetada, modo DIA ativo"
+                  entity_id: !input pump_switch
+
+      # ==========================================
+      # ACTION 6: PÔR DO SOL
+      # ==========================================
+      - conditions:
+          - condition: trigger
+            id: sunset
+        sequence:
+          # Desligar bomba se ligada de dia
+          - if:
+              - condition: template
+                value_template: "{{ pump_is_on and not dry_run }}"
+            then:
+              - service: switch.turn_off
+                target:
+                  entity_id: !input pump_switch
+          
+          - if:
+              - condition: template
+                value_template: "{{ debug }}"
+            then:
+              - service: logbook.log
+                data:
+                  name: "Piscina v6 - Pôr Sol"
+                  message: "🌇 Bomba desligada ao pôr do sol, modo NOITE pronto"
+                  entity_id: !input pump_switch
+
+      # ==========================================
+      # ACTION 7: CONTROLO SOLAR (DIA)
+      # ==========================================
+      - conditions:
+          - condition: or
+            conditions:
+              - condition: trigger
+                id: power_change_5min
+              - condition: trigger
+                id: power_change_inst
+          - condition: template
+            value_template: "{{ current_mode == 'day' }}"
+        sequence:
+          - choose:
+              # ===== LIGAR BOMBA =====
+              - conditions:
+                  - condition: template
+                    value_template: "{{ not pump_is_on }}"
+                  - condition: template
+                    value_template: "{{ has_deficit }}"
+                  - condition: template
+                    value_template: "{{ can_turn_on }}"
+                sequence:
+                  # Delay antes de ligar
+                  - delay:
+                      seconds: "{{ final_delay_on }}"
+                  
+                  # Re-verificar condições
+                  - if:
+                      - condition: template
+                        value_template: "{{ can_turn_on and has_deficit }}"
+                    then:
+                      - if:
+                          - condition: template
+                            value_template: "{{ not dry_run }}"
+                        then:
+                          - service: switch.turn_on
+                            target:
+                              entity_id: !input pump_switch
+                      
+                      - if:
+                          - condition: template
+                            value_template: "{{ debug }}"
+                        then:
+                          - service: logbook.log
+                            data:
+                              name: "Piscina v6 - Solar ON"
+                              message: >
+                                ☀️ DIA: Bomba ligada com excedente
+                                NET: {{ current_net_power }}W
+                                Previsto: {{ import_predicted }}W
+                                Limite: {{ final_import_limit }}W
+                                Défice: {{ deficit_kwh }}kWh
+                                Sensor: Nível {{ sensor_level }}
+                                {% if dry_run %}[DRY RUN]{% endif %}
+                              entity_id: !input pump_switch
+              
+              # ===== DESLIGAR BOMBA =====
+              - conditions:
+                  - condition: template
+                    value_template: "{{ pump_is_on }}"
+                  - condition: template
+                    value_template: "{{ not can_keep_on or (not has_deficit and not ignore_limit) }}"
+                  - condition: template
+                    value_template: "{{ min_time_elapsed }}"
+                sequence:
+                  # Delay antes de desligar
+                  - delay:
+                      seconds: "{{ final_delay_off }}"
+                  
+                  # Re-verificar
+                  - if:
+                      - condition: template
+                        value_template: "{{ not can_keep_on or not has_deficit }}"
+                    then:
+                      - if:
+                          - condition: template
+                            value_template: "{{ not dry_run }}"
+                        then:
+                          - service: switch.turn_off
+                            target:
+                              entity_id: !input pump_switch
+                      
+                      - if:
+                          - condition: template
+                            value_template: "{{ debug }}"
+                        then:
+                          - service: logbook.log
+                            data:
+                              name: "Piscina v6 - Solar OFF"
+                              message: >
+                                ☀️ DIA: Bomba desligada
+                                Razão: {{ 'Sem excedente' if not can_keep_on else 'Meta cumprida' }}
+                                NET: {{ current_net_power }}W
+                                Previsto: {{ import_predicted }}W
+                                Défice: {{ deficit_kwh }}kWh
+                                {% if dry_run %}[DRY RUN]{% endif %}
+                              entity_id: !input pump_switch
+
+    # ===== DEFAULT (DEBUG) =====
+    default:
+      - if:
+          - condition: template
+            value_template: "{{ debug }}"
+        then:
+          - service: logbook.log
+            data:
+              name: "Piscina v6 - Debug"
+              message: >
+                Trigger: {{ trigger.id | default('unknown') }}
+                Modo: {{ current_mode }}
+                Bomba: {{ 'ON' if pump_is_on else 'OFF' }}
+                Défice: {{ deficit_kwh }}kWh
+                NET: {{ current_net_power }}W
+                Sensor: Nível {{ sensor_level }}
+              entity_id: !input pump_switch
+
+mode: single
+max_exceeded: silent
