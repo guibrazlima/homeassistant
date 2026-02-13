@@ -317,19 +317,6 @@ blueprint:
           domain: sensor
           device_class: energy
 
-    filtration_remaining:
-      name: ⏳ Tempo Filtragem Restante (opcional)
-      description: |
-        Sensor com tempo restante de filtragem hoje.
-        Formatos: HH:MM, minutos numéricos, ou atributo 'seconds'
-        **Exemplo:** `sensor.pool_pump_remaining_time`
-      default: {}
-      selector:
-        entity:
-          domain:
-            - input_number
-            - sensor
-
     ignore_filtration_limit:
       name: ♾️ Ignorar Limite de Filtragem (Dia)
       description: |
@@ -400,10 +387,12 @@ blueprint:
         boolean: {}
 
     price_peak:
-      name: 💶 Preço Fora-Vazio (€/kWh)
+      name: 💶 Preço Fora-Vazio FALLBACK (€/kWh)
       description: |
-        Preço durante o dia.
-        **Típico PT 2024:** 0.15-0.18 €/kWh
+        Preço durante o dia (FALLBACK).
+        **Só usado quando o sensor Coopernico não está disponível.**
+        Com tarifa indexada, o preço real é obtido automaticamente do sensor Coopernico.
+        **Típico PT:** 0.15-0.18 €/kWh
       default: 0.1537
       selector:
         number:
@@ -414,10 +403,12 @@ blueprint:
           mode: box
 
     price_offpeak:
-      name: 💶 Preço Vazio (€/kWh)
+      name: 💶 Preço Vazio FALLBACK (€/kWh)
       description: |
-        Preço à noite.
-        **Típico PT 2024:** 0.08-0.10 €/kWh
+        Preço à noite (FALLBACK).
+        **Só usado quando o sensor Coopernico não está disponível.**
+        Com tarifa indexada, o preço real é obtido automaticamente do sensor Coopernico.
+        **Típico PT:** 0.08-0.10 €/kWh
       default: 0.0929
       selector:
         number:
@@ -517,6 +508,22 @@ blueprint:
         number:
           min: 0
           max: 60
+          step: 1
+          unit_of_measurement: "min"
+          mode: slider
+
+    min_off_time:
+      name: ⏰ Tempo Mínimo Desligada (minutos)
+      description: |
+        Cooldown obrigatório após desligar antes de permitir religar.
+        Protege contra cycling excessivo em dias instáveis.
+        **Recomendado:** 5-10min
+        **0** = sem cooldown (comportamento anterior)
+      default: 5
+      selector:
+        number:
+          min: 0
+          max: 30
           step: 1
           unit_of_measurement: "min"
           mode: slider
@@ -626,7 +633,6 @@ variables:
   dynamic_sensor: !input dynamic_filtration_hours_sensor
   fixed_kwh: !input min_daily_filtration_kwh
   energy_today_sensor: !input filtration_energy_today
-  remaining_sensor: !input filtration_remaining
   ignore_limit: !input ignore_filtration_limit
   min_deficit: !input min_night_deficit_kwh
   enable_night_auto: !input enable_night_auto
@@ -650,6 +656,7 @@ variables:
   delay_on_val: !input delay_on
   delay_off_val: !input delay_off
   min_on_time_val: !input min_on_time
+  min_off_time_val: !input min_off_time
   delay_mult_sensor: !input delay_multiplier_sensor
   
   # Sensores potência (hierarquia 6 níveis)
@@ -707,23 +714,6 @@ variables:
   deficit_hours: >
     {{ (deficit_kwh / (pump_power / 1000)) | round(2) }}
   
-  # Tempo restante (do sensor ou calculado)
-  remaining_time_minutes: >
-    {% if remaining_sensor != {} %}
-      {% set state = states(remaining_sensor) %}
-      {% if ':' in state %}
-        {# Formato HH:MM #}
-        {% set parts = state.split(':') %}
-        {{ (parts[0] | int * 60) + (parts[1] | int) }}
-      {% elif state_attr(remaining_sensor, 'seconds') is not none %}
-        {{ (state_attr(remaining_sensor, 'seconds') | int / 60) | round(0) }}
-      {% else %}
-        {{ state | int }}
-      {% endif %}
-    {% else %}
-      {{ (deficit_hours * 60) | round(0) }}
-    {% endif %}
-
   # ==========================================
   # HIERARCHIA SENSORES (6 níveis)
   # ==========================================
@@ -776,14 +766,72 @@ variables:
     {{ (current_net_power + pump_current_power) | round(0) }}
 
   # ==========================================
-  # BREAK-EVEN ECONÓMICO
+  # BREAK-EVEN ECONÓMICO (DINÂMICO)
   # ==========================================
   
+  # Preço diurno REAL: Coopernico com IVA (price_w_vat) ou fallback fixo
+  price_current_day: >
+    {% if coopernico_sensor != {} %}
+      {% set prices = state_attr(coopernico_sensor, 'prices') | default([]) %}
+      {% if prices | length > 0 %}
+        {% set now_ts = now() %}
+        {% set ns = namespace(found=0) %}
+        {% for p in prices %}
+          {% set p_dt = p.datetime | as_datetime %}
+          {% if p_dt is not none %}
+            {% set diff = (now_ts - p_dt).total_seconds() %}
+            {% if diff >= 0 and diff < 900 %}
+              {% set ns.found = p.price_w_vat | float(0) %}
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+        {{ ns.found if ns.found > 0 else price_peak_val }}
+      {% else %}
+        {{ price_peak_val }}
+      {% endif %}
+    {% else %}
+      {{ price_peak_val }}
+    {% endif %}
+  
+  # Preço noturno REAL: média dos preços vazio disponíveis (22h-08h) com IVA
+  price_cheapest_night: >
+    {% if coopernico_sensor != {} %}
+      {% set prices = state_attr(coopernico_sensor, 'prices') | default([]) %}
+      {% if prices | length > 0 %}
+        {% set ns = namespace(night_prices=[]) %}
+        {% for p in prices %}
+          {% set p_dt = p.datetime | as_datetime %}
+          {% if p_dt is not none %}
+            {% set hour = p_dt.hour %}
+            {% if hour >= 22 or hour < 8 %}
+              {% set ns.night_prices = ns.night_prices + [p.price_w_vat | float(0)] %}
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+        {% if ns.night_prices | length > 0 %}
+          {{ (ns.night_prices | sum / ns.night_prices | length) | round(5) }}
+        {% else %}
+          {{ price_offpeak_val }}
+        {% endif %}
+      {% else %}
+        {{ price_offpeak_val }}
+      {% endif %}
+    {% else %}
+      {{ price_offpeak_val }}
+    {% endif %}
+  
+  # Break-even: importação máxima (W) onde custo dia = custo noite
+  # Fórmula: X = price_night * pump_power / price_day
+  # Se importar até X watts, o custo diurno ≤ custo noturno
   break_even_import_w: >
     {% if use_econ_opt %}
-      {% set cost_night = price_offpeak_val * (pump_power / 1000) %}
-      {% set cost_day_per_w = price_peak_val / 1000 %}
-      {{ ((cost_night / cost_day_per_w) - pump_power) | round(0) }}
+      {% set p_day = price_current_day | float(price_peak_val) %}
+      {% set p_night = price_cheapest_night | float(price_offpeak_val) %}
+      {% if p_day > 0 %}
+        {{ (p_night * pump_power / p_day) | round(0) }}
+      {% else %}
+        {{ import_limit_val }}
+      {% endif %}
     {% else %}
       {{ import_limit_val }}
     {% endif %}
@@ -840,6 +888,13 @@ variables:
     {% set last_changed = as_timestamp(states.switch[pump_entity.split('.')[1]].last_changed) %}
     {% set now_ts = as_timestamp(now()) %}
     {{ (now_ts - last_changed) >= (min_on_time_val * 60) }}
+
+  # Cooldown após desligar respeitado? (anti-cycling)
+  min_off_time_elapsed: >
+    {% set last_changed = as_timestamp(states.switch[pump_entity.split('.')[1]].last_changed) %}
+    {% set now_ts = as_timestamp(now()) %}
+    {% set min_off_seconds = (min_off_time_val | float(0)) * 60 * (delay_multiplier | float(1.0)) %}
+    {{ not pump_is_on and (now_ts - last_changed) >= min_off_seconds or pump_is_on or min_off_time_val == 0 }}
 
   # ==========================================
   # COOPERNICO: Cálculo janela mais barata
@@ -1298,6 +1353,8 @@ action:
                     value_template: "{{ has_deficit }}"
                   - condition: template
                     value_template: "{{ can_turn_on }}"
+                  - condition: template
+                    value_template: "{{ min_off_time_elapsed }}"
                 sequence:
                   # Delay antes de ligar
                   - delay:
@@ -1361,6 +1418,7 @@ action:
                                 Limite: {{ final_import_limit }}W
                                 Défice: {{ deficit_kwh }}kWh
                                 Sensor: Nível {{ sensor_level }}
+                                Delay ON: {{ final_delay_on }}s (base {{ delay_on_val }}s × {{ delay_multiplier }})
                                 {% if dry_run %}[DRY RUN]{% endif %}
                               entity_id: !input pump_switch
               
@@ -1434,6 +1492,8 @@ action:
                                 NET: {{ current_net_power }}W
                                 Previsto: {{ import_predicted }}W
                                 Défice: {{ deficit_kwh }}kWh
+                                Delay OFF: {{ final_delay_off }}s (base {{ delay_off_val }}s × {{ delay_multiplier }})
+                                Cooldown: {{ (min_off_time_val * delay_multiplier) | round(0) }}min
                                 {% if dry_run %}[DRY RUN]{% endif %}
                               entity_id: !input pump_switch
 

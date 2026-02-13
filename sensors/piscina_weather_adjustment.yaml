@@ -1,13 +1,26 @@
 # ═══════════════════════════════════════════════════════════════════
-# SENSOR DE AJUSTE CLIMÁTICO
+# SENSOR DE AJUSTE CLIMÁTICO (v2 - com detecção de instabilidade)
 # ═══════════════════════════════════════════════════════════════════
 #
-# Ajusta delays da blueprint baseado em previsão meteorológica
+# Ajusta delays da blueprint combinando:
+#   1. Condição meteorológica (sensor.realtime_condition)
+#   2. Instabilidade solar real (sensor.solar_stability_indicator)
 #
-# Multiplicador aplicado aos delays:
-# - Ensolarado: 0.8× (mais agressivo, solar estável)
-# - Nublado: 1.2× (mais conservador)
-# - Chuva: 2.0× (muito conservador, solar imprevisível)
+# O multiplicador final é o MAIOR entre meteo e instabilidade,
+# garantindo proteção contra cycling em dias de nuvens intermitentes.
+#
+# Multiplicadores METEO (base):
+#   ☀️ sunny/clear ........... 0.8× (solar estável)
+#   🌤 partlycloudy .......... 1.0× (normal)
+#   ☁️ cloudy ................. 1.5× (conservador)
+#   🌧 rainy/pouring ......... 2.0× (muito conservador)
+#
+# Multiplicadores INSTABILIDADE (variação FV):
+#   < 10% variação ........... 1.0× (estável)
+#   10-25% variação .......... 1.5× (ligeira instabilidade)
+#   25-40% variação .......... 2.0× (instável)
+#   40-60% variação .......... 2.5× (muito instável)
+#   > 60% variação ........... 3.0× (extremamente instável)
 #
 # ═══════════════════════════════════════════════════════════════════
 
@@ -18,8 +31,13 @@
       unique_id: piscina_weather_delay_multiplier
       unit_of_measurement: "×"
       icon_template: >
+        {% set var_pct = states('sensor.solar_stability_indicator') | float(0) %}
         {% set condition = states('sensor.realtime_condition') %}
-        {% if condition in ['sunny', 'clear'] %}
+        {% if var_pct > 40 %}
+          mdi:weather-lightning
+        {% elif var_pct > 25 %}
+          mdi:weather-partly-snowy-rainy
+        {% elif condition in ['sunny', 'clear'] %}
           mdi:weather-sunny
         {% elif condition in ['partlycloudy', 'cloudy'] %}
           mdi:weather-cloudy
@@ -32,34 +50,83 @@
         {% if is_state('input_boolean.piscina_use_weather_forecast', 'off') %}
           1.0
         {% else %}
+          {# --- Multiplicador METEO (condição do tempo) --- #}
+          {% set condition = states('sensor.realtime_condition') %}
+          {% if condition in ['sunny', 'clear'] %}
+            {% set meteo_mult = 0.8 %}
+          {% elif condition in ['partlycloudy'] %}
+            {% set meteo_mult = 1.0 %}
+          {% elif condition in ['cloudy'] %}
+            {% set meteo_mult = 1.5 %}
+          {% elif condition in ['rainy', 'pouring'] %}
+            {% set meteo_mult = 2.0 %}
+          {% else %}
+            {% set meteo_mult = 1.0 %}
+          {% endif %}
+          {# --- Multiplicador INSTABILIDADE (variação FV real) --- #}
+          {% set var_pct = states('sensor.solar_stability_indicator') | float(0) %}
+          {% if var_pct < 10 %}
+            {% set inst_mult = 1.0 %}
+          {% elif var_pct < 25 %}
+            {% set inst_mult = 1.5 %}
+          {% elif var_pct < 40 %}
+            {% set inst_mult = 2.0 %}
+          {% elif var_pct < 60 %}
+            {% set inst_mult = 2.5 %}
+          {% else %}
+            {% set inst_mult = 3.0 %}
+          {% endif %}
+          {# --- Resultado final: o MAIOR dos dois --- #}
+          {{ [meteo_mult, inst_mult] | max }}
+        {% endif %}
+      attribute_templates:
+        weather_condition: "{{ states('sensor.realtime_condition') }}"
+        solar_variation_pct: "{{ states('sensor.solar_stability_indicator') | float(0) | round(1) }}"
+        meteo_multiplier: >
           {% set condition = states('sensor.realtime_condition') %}
           {% if condition in ['sunny', 'clear'] %}
             0.8
           {% elif condition in ['partlycloudy'] %}
             1.0
           {% elif condition in ['cloudy'] %}
-            1.2
+            1.5
           {% elif condition in ['rainy', 'pouring'] %}
             2.0
           {% else %}
             1.0
           {% endif %}
-        {% endif %}
-      attribute_templates:
-        weather_condition: "{{ states('sensor.realtime_condition') }}"
+        instability_multiplier: >
+          {% set var_pct = states('sensor.solar_stability_indicator') | float(0) %}
+          {% if var_pct < 10 %}
+            1.0
+          {% elif var_pct < 25 %}
+            1.5
+          {% elif var_pct < 40 %}
+            2.0
+          {% elif var_pct < 60 %}
+            2.5
+          {% else %}
+            3.0
+          {% endif %}
         adjustment_enabled: "{{ is_state('input_boolean.piscina_use_weather_forecast', 'on') }}"
         recommendation: >
           {% set condition = states('sensor.realtime_condition') %}
+          {% set var_pct = states('sensor.solar_stability_indicator') | float(0) %}
+          {% set mult = states('sensor.piscina_weather_delay_multiplier') | float(1.0) %}
           {% if is_state('input_boolean.piscina_use_weather_forecast', 'off') %}
             ⚪ Ajuste desativado
-          {% elif condition in ['sunny', 'clear'] %}
-            ✅ Solar estável - delays reduzidos (-20%)
-          {% elif condition in ['partlycloudy'] %}
-            ✅ Condições normais - sem ajuste
-          {% elif condition in ['cloudy'] %}
-            ⚠️ Nublado - delays aumentados (+20%)
+          {% elif var_pct >= 60 %}
+            🔴 Extremamente instável (FV ±{{ var_pct | round(0) }}%) - delays ×{{ mult }}
+          {% elif var_pct >= 40 %}
+            🔴 Muito instável (FV ±{{ var_pct | round(0) }}%) - delays ×{{ mult }}
+          {% elif var_pct >= 25 %}
+            ⚠️ Instável (FV ±{{ var_pct | round(0) }}%) - delays ×{{ mult }}
           {% elif condition in ['rainy', 'pouring'] %}
-            🔴 Chuva - delays duplicados (+100%)
+            🌧 Chuva - delays ×{{ mult }}
+          {% elif condition in ['cloudy'] %}
+            ☁️ Nublado - delays ×{{ mult }}
+          {% elif condition in ['sunny', 'clear'] %}
+            ☀️ Solar estável - delays ×{{ mult }}
           {% else %}
-            ✅ Condições normais - sem ajuste
+            ✅ Normal - delays ×{{ mult }}
           {% endif %}

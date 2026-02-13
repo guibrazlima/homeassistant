@@ -1542,7 +1542,7 @@
 - id: notify_when_garage_door_was_left_open_for_too_long
   alias: "[\U0001F4E3\U0001F3E1] Notify when garage door was left open for too long"
   description: Automação do Home Assistant.
-  trigger:
+  triggers:
   - entity_id:
     - cover.gate
     to: open
@@ -1553,25 +1553,25 @@
     from: closed
     trigger: state
   conditions: []
-  action:
+  actions:
   - repeat:
       sequence:
-      - service: camera.snapshot
-        metadata: {}
+      - metadata: {}
         data:
           filename: /config/www/camera_snapshots/mysnap_portao.jpg
+        action: camera.snapshot
         target:
-          entity_id: camera.patio_exterior_hd_stream
-      - service: telegram_bot.send_message
-        metadata: {}
+          entity_id: camera.portao_hd_stream
+      - metadata: {}
         data:
           message: Está aberto a mais de 5 minutos. Fechar?
           title: "\U0001F699\U0001F6A8 Portão de casa aberto!\U0001F6A8"
-      - service: telegram_bot.send_photo
-        metadata: {}
+        action: telegram_bot.send_message
+      - metadata: {}
         data:
           authentication: digest
           file: /config/www/camera_snapshots/mysnap_portao.jpg
+        action: telegram_bot.send_photo
       - data:
           title: "\U0001F699 Portão de casa aberto!"
           message: Está aberto a mais de 5 minutos. Fechar?
@@ -1586,22 +1586,22 @@
       - condition: state
         entity_id: cover.gate
         state: open
-  - service: camera.snapshot
-    metadata: {}
+  - metadata: {}
     data:
       filename: /config/www/camera_snapshots/mysnap_portao.jpg
+    action: camera.snapshot
     target:
-      entity_id: camera.patio_exterior_hd_stream
-  - service: telegram_bot.send_message
-    metadata: {}
+      entity_id: camera.portao_hd_stream
+  - metadata: {}
     data:
       message: O portão está fechado.
       title: "\U0001F699✅Portão de casa fechado.✅"
-  - service: telegram_bot.send_photo
-    metadata: {}
+    action: telegram_bot.send_message
+  - metadata: {}
     data:
       authentication: digest
       file: /config/www/camera_snapshots/mysnap_portao.jpg
+    action: telegram_bot.send_photo
   - data:
       title: "\U0001F699✅Portão de casa fechado.✅"
       message: O portão está fechado.
@@ -2399,6 +2399,7 @@
     - condition: numeric_state
       entity_id: sensor.ph_corrigido_filtrado
       above: 7.5
+      enabled: false
     then:
     - metadata: {}
       data: {}
@@ -2477,53 +2478,139 @@
         entity_id: cover.estore1_cover_0
   mode: single
   max_exceeded: warning
-- id: piscina_solar_v2
-  alias: "\U0001F3CA Piscina - Solar Inteligente v2"
-  description: 'Controlo inteligente da bomba da piscina com: - Excedente solar durante
-    o dia - Previsão Solcast para otimização - Bi-horário noturno (22:00-08:00) se
-    faltar filtragem - Tempo de filtragem dinâmico baseado em temperatura
-
-    '
+- id: '1770157306813'
+  alias: "\U0001F3CA Piscina - Controlo Solar Inteligente v4 (PT)"
+  description: ''
   use_blueprint:
-    path: piscina_solar/piscina_solar_control_v2.yaml
+    path: piscina_solar/piscina_solar_control_v4.yaml
     input:
-      house_power_no_pump: sensor.emoncms_192_168_1_250_use_no_pool_pump
-      pv_power: sensor.emoncms_solar
-      net_power: sensor.emoncms_import_export
-      export_power: sensor.emoncms_export_power_positive
-      pump_actual_power: sensor.bomba_piscina_switch_0_power
       pump_switch: switch.bomba_piscina_switch_0
-      pump_nominal_power: 1380
-      import_limit: 700
-      start_margin: 100
-      delay_on: 300
-      delay_off: 300
-      min_on_time: 10
-      filtration_remaining: sensor.pool_pump_remaining_time
-      sun_offset_start: 30
-      sun_offset_end: 30
-      price_peak: 0.1537
-      price_offpeak: 0.0929
-      use_economic_optimization: true
-      forecast_remaining_today: sensor.solcast_pv_forecast_forecast_remaining_today
-      forecast_tomorrow: sensor.solcast_pv_forecast_forecast_tomorrow
-      power_forecast_1h: sensor.solcast_pv_forecast_power_next_hour
-      forecast_confidence: 85
-      min_daily_filtration_kwh: 8
+      pump_actual_power: sensor.bomba_piscina_switch_0_power
+      net_power_5min: sensor.import_export_5min_smooth
+      pv_power_5min: sensor.solar_power_5min_smooth
+      net_power: sensor.emoncms_import_export
+      export_power: sensor.emoncms_import_export
+      export_power_5min: sensor.energy_export_average_5_minutes
+      house_power_no_pump: sensor.bomba_piscina_switch_0_power
+      pv_power: sensor.emoncms_solar
       use_dynamic_filtration_time: true
       dynamic_filtration_hours_sensor: sensor.piscina_tempo_de_filtracao_recomendado
-      house_avg_power: 600
-      house_power_avg_sensor: sensor.casa_consumo_medio_7_dias
-      use_dynamic_house_estimate: true
+      filtration_energy_today: sensor.emoncms_192_168_1_250_piscina_bomba_kwhd
+      filtration_remaining: sensor.pool_pump_remaining_time
+      forecast_tomorrow: sensor.solcast_pv_forecast_forecast_tomorrow
+      delay_multiplier_sensor: sensor.piscina_weather_delay_multiplier
+      override_manual: input_boolean.piscina_override_manual
+      house_power_no_pump_5min: sensor.house_power_5min_smooth
+      night_session_lock: input_boolean.piscina_night_session_done
+      enable_debug_logs: true
+      ignore_filtration_limit: true
+      enable_night_auto: true
+      dry_run_mode: true
+      import_limit_strategy: break_even
+- id: '1770406940770'
+  alias: "\U0001F50B Alerta Semanal - Baterias Baixas"
+  description: Envia notificação via Telegram todas as segundas-feiras às 09:00 com
+    lista de dispositivos com bateria abaixo de 20%. Criado via MCP para manutenção
+    proativa.
+  triggers:
+  - platform: time
+    at: 09:00:00
+  conditions:
+  - condition: time
+    weekday:
+    - mon
+  - condition: template
+    value_template: '{{ states.sensor | selectattr(''attributes.device_class'', ''eq'',
+      ''battery'') | selectattr(''state'', ''is_number'') | map(attribute=''state'')
+      | map(''float'') | select(''lt'', 20) | list | count > 0 }}'
+  actions:
+  - data:
+      title: "\U0001F50B Baterias Baixas Detectadas"
+      message: "{% set low_batteries = states.sensor | selectattr('attributes.device_class',
+        'eq', 'battery') | selectattr('state', 'is_number') | map(attribute='entity_id')
+        | select('match', '^sensor\\\\..*') | list %}\n{% set batteries = namespace(items=[])
+        %}\n{% for entity in low_batteries %}\n  {% set battery_level = states(entity)
+        | float(0) %}\n  {% if battery_level < 20 and battery_level > 0 %}\n    {%
+        set device_name = state_attr(entity, 'friendly_name') | replace(' Battery',
+        '') | replace(' Bateria', '') | replace(' battery', '') %}\n    {% set batteries.items
+        = batteries.items + [(device_name, battery_level)] %}\n  {% endif %}\n{% endfor
+        %}\n{% if batteries.items | length > 0 %}\nDispositivos com bateria baixa:\n{%
+        for name, level in batteries.items | sort(attribute='1') %}\n• {{ name }}:
+        {{ level }}%\n{% endfor %}\n\nTotal: {{ batteries.items | length }} dispositivo(s)\n{%
+        else %}\nNenhum dispositivo com bateria baixa.\n{% endif %}"
+    action: telegram_bot.send_message
+  mode: single
+- id: '1770770094517'
+  alias: "\U0001F3CA Piscina - Controlo Solar Inteligente v5 (PT)"
+  description: ''
+  use_blueprint:
+    path: piscina_solar/piscina_solar_control_v5.yaml
+    input:
+      pump_switch: switch.bomba_piscina_switch_0
+      use_coopernico_optimization: true
+      coopernico_price_sensor: sensor.coopernico_base_bi_horario_ciclo_diario_all_prices
+      net_power_5min: sensor.import_export_5min_smooth
+      house_power_no_pump_5min: sensor.house_power_5min_smooth
+      pv_power_5min: sensor.solar_power_5min_smooth
+      export_power_5min: sensor.export_power_5min_smooth
+      net_power: sensor.emoncms_import_export
+      pv_power: sensor.emoncms_solar
+      export_power: sensor.emoncms_export_power_positive
+      dynamic_filtration_hours_sensor: sensor.piscina_tempo_de_filtracao_recomendado
+      filtration_energy_today: sensor.energia_bomba_piscina_hoje
+      override_manual: input_boolean.piscina_override_manual
+      enable_debug_logs: true
+      dry_run_mode: true
+      enable_night_auto: true
+      house_power_no_pump: sensor.emoncms_192_168_1_250_use_no_pool_pump
+- id: '1770771945821'
+  alias: "\U0001F3CA Piscina - Controlo Solar Inteligente v6 HÍBRIDO (PT)"
+  description: 'Modo híbrido: Solar DIA + Coopernico NOITE. Combina v4+v5 numa automação
+    completa.'
+  use_blueprint:
+    path: piscina_solar/piscina_solar_control_v6.yaml
+    input:
+      pump_switch: switch.bomba_piscina_switch_0
+      pump_nominal_power: 1380
+      hybrid_mode_enabled: true
+      use_coopernico_optimization: true
+      coopernico_price_sensor: sensor.coopernico_base_bi_horario_ciclo_diario_all_prices
+      cheapest_window_helper: input_datetime.piscina_hora_agendada_mais_barata
+      coopernico_end_helper: input_datetime.piscina_fim_janela_coopernico
+      night_session_active_helper: input_boolean.piscina_sessao_noturna_ativa
+      calculation_info_helper: input_text.piscina_ultima_janela_calculada
+      calculation_time: '19:00:00'
+      net_power_5min: sensor.import_export_5min_smooth
+      house_power_no_pump_5min: sensor.house_power_5min_smooth
+      pv_power_5min: sensor.solar_power_5min_smooth
+      export_power_5min: sensor.export_power_5min_smooth
+      net_power: sensor.emoncms_import_export
+      house_power_no_pump: sensor.emoncms_192_168_1_250_use_no_pool_pump
+      pv_power: sensor.emoncms_solar
+      export_power: sensor.emoncms_export_power_positive
+      use_dynamic_filtration_time: true
+      dynamic_filtration_hours_sensor: sensor.piscina_tempo_de_filtracao_recomendado
+      filtration_energy_today: sensor.energia_bomba_piscina_hoje
+      ignore_filtration_limit: true
+      min_night_deficit_kwh: 2
       enable_night_auto: true
       night_start_time: '22:00:00'
       night_end_time: 08:00:00
-      min_night_filtration_minutes: 60
-      enable_night_backup: false
-      good_forecast_threshold: 15
-      enable_debug_logs: true
-      filtration_energy_today: sensor.emoncms_192_168_1_250_piscina_bomba_kwhd
+      use_economic_optimization: true
+      price_peak: 0.1537
+      price_offpeak: 0.0929
+      import_limit: 700
+      start_margin: 100
+      import_limit_strategy: maior
+      delay_on: 60
+      delay_off: 120
+      min_on_time: 15
+      min_off_time: 5
+      sun_offset_start: 30
+      sun_offset_end: -30
       override_manual: input_boolean.piscina_override_manual
-      house_power_sensor_daily: sensor.emoncms_192_168_1_250_use_house_only_kwhd
-  mode: single
-  max_exceeded: silent
+      enable_debug_logs: true
+      dry_run_mode: false
+      pump_actual_power: sensor.bomba_piscina_switch_0_power
+      filtration_remaining: sensor.pool_pump_remaining_time
+      delay_multiplier_sensor: sensor.piscina_weather_delay_multiplier
