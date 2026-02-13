@@ -317,6 +317,18 @@ blueprint:
           domain: sensor
           device_class: energy
 
+    filtration_hours_today_sensor:
+      name: ⏱️ Horas Filtração Hoje (08-08)
+      description: |
+        Sensor com horas ON no período 08:00-08:00.
+        Usado para calcular défice CORRETO excluindo sessões noturnas.
+        Se configurado, tem prioridade sobre o sensor de energia para cálculo do défice.
+        **Exemplo:** `sensor.piscina_horas_on_08_08`
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+
     ignore_filtration_limit:
       name: ♾️ Ignorar Limite de Filtragem (Dia)
       description: |
@@ -633,6 +645,7 @@ variables:
   dynamic_sensor: !input dynamic_filtration_hours_sensor
   fixed_kwh: !input min_daily_filtration_kwh
   energy_today_sensor: !input filtration_energy_today
+  hours_today_sensor: !input filtration_hours_today_sensor
   ignore_limit: !input ignore_filtration_limit
   min_deficit: !input min_night_deficit_kwh
   enable_night_auto: !input enable_night_auto
@@ -699,8 +712,13 @@ variables:
     {% endif %}
   
   # Energia já consumida hoje
+  # PRIORIDADE: horas_today_sensor (08-08) > energy_today_sensor (00-24)
+  # O sensor de horas 08-08 exclui sessões noturnas, evitando falsos "sem défice"
   energy_consumed: >
-    {% if energy_today_sensor != {} %}
+    {% if hours_today_sensor != {} %}
+      {% set hours_done = states(hours_today_sensor) | float(0) %}
+      {{ (hours_done * (pump_power / 1000)) | round(2) }}
+    {% elif energy_today_sensor != {} %}
       {{ states(energy_today_sensor) | float(0) }}
     {% else %}
       0
@@ -1393,7 +1411,10 @@ action:
                       live_can_turn_on: >
                         {{ live_import_predicted | float(0) <= (final_import_limit | float(0) - start_margin_val | float(0)) }}
                       live_energy: >
-                        {% if energy_today_sensor != {} %}
+                        {% if hours_today_sensor != {} %}
+                          {% set hours_done = states(hours_today_sensor) | float(0) %}
+                          {{ (hours_done * (pump_power / 1000)) | round(2) }}
+                        {% elif energy_today_sensor != {} %}
                           {{ states(energy_today_sensor) | float(0) }}
                         {% else %}
                           0
@@ -1468,7 +1489,10 @@ action:
                       live_can_keep_on: >
                         {{ live_import_off | float(0) <= final_import_limit | float(0) }}
                       live_energy_off: >
-                        {% if energy_today_sensor != {} %}
+                        {% if hours_today_sensor != {} %}
+                          {% set hours_done = states(hours_today_sensor) | float(0) %}
+                          {{ (hours_done * (pump_power / 1000)) | round(2) }}
+                        {% elif energy_today_sensor != {} %}
                           {{ states(energy_today_sensor) | float(0) }}
                         {% else %}
                           0

@@ -2591,6 +2591,7 @@
       use_dynamic_filtration_time: true
       dynamic_filtration_hours_sensor: sensor.piscina_tempo_de_filtracao_recomendado
       filtration_energy_today: sensor.energia_bomba_piscina_hoje
+      filtration_hours_today_sensor: sensor.piscina_horas_on_08_08
       ignore_filtration_limit: true
       min_night_deficit_kwh: 2
       enable_night_auto: true
