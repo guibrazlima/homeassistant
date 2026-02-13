@@ -10,7 +10,72 @@
 # 2. Configurações > Dashboards > + Adicionar Dashboard
 # 3. Cole o YAML abaixo na vista "Piscina Solar"
 #
-# ═══════════════════════════════════════════════════════════════════
+# ════════════════════════════════════════════════════════════════      # ════════════════════════════════════════════════════════════
+      # 🔮 PREVISÃO JANELAS SOLARES (Planeamento)
+      # ════════════════════════════════════════════════════════════
+      - type: custom:stack-in-card
+        mode: vertical
+        cards:
+          - type: custom:mushroom-title-card
+            title: 🔮 Planeamento Solar
+            subtitle: >
+              {{ states('sensor.piscina_solar_forecast_analysis') }}
+              {% if is_state('input_boolean.piscina_prefer_night_filtering', 'on') %}
+               → 🌙 Noite Coopernico
+              {% endif %}
+
+          - type: horizontal-stack
+            cards:
+              - type: custom:mushroom-entity-card
+                entity: sensor.piscina_solar_forecast_analysis
+                name: Análise
+                icon: mdi:crystal-ball
+                layout: vertical
+
+              - type: custom:mushroom-template-card
+                primary: "{{ state_attr('sensor.piscina_solar_forecast_analysis', 'best_window_minutes') | int(0) }}min"
+                secondary: Melhor Janela
+                icon: mdi:clock-check-outline
+                icon_color: >
+                  {% set w = state_attr('sensor.piscina_solar_forecast_analysis', 'best_window_minutes') | int(0) %}
+                  {% if w >= 180 %}green{% elif w >= 60 %}orange{% else %}red{% endif %}
+                layout: vertical
+
+              - type: custom:mushroom-template-card
+                primary: "{{ state_attr('sensor.piscina_solar_forecast_analysis', 'viable_hours') | int(0) }}h"
+                secondary: Horas Viáveis
+                icon: mdi:solar-power
+                icon_color: >
+                  {% set h = state_attr('sensor.piscina_solar_forecast_analysis', 'viable_hours') | int(0) %}
+                  {% if h >= 4 %}green{% elif h >= 2 %}orange{% else %}red{% endif %}
+                layout: vertical
+
+              - type: custom:mushroom-template-card
+                primary: "{{ states('sensor.solcast_pv_forecast_forecast_today') | float(0) | round(1) }}kWh"
+                secondary: Previsão Total
+                icon: mdi:white-balance-sunny
+                icon_color: amber
+                layout: vertical
+
+          - type: horizontal-stack
+            cards:
+              - type: custom:mushroom-entity-card
+                entity: input_boolean.piscina_prefer_night_filtering
+                name: Noite Prioritária
+                icon: mdi:weather-night
+
+              - type: custom:mushroom-entity-card
+                entity: input_boolean.piscina_forecast_planning_enabled
+                name: Planeamento Activo
+                icon: mdi:crystal-ball
+
+          - type: markdown
+            content: >
+              **Detalhe hora-a-hora:**
+              {{ state_attr('sensor.piscina_solar_forecast_analysis', 'hourly_detail') | default('Sem dados') }}
+
+      # ════════════════════════════════════════════════════════════
+      # 🔧 AÇÕES RÁPIDAS═
 
 views:
   - title: Piscina Solar

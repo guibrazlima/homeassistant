@@ -1,0 +1,317 @@
+# ══════════════════════════════════════════════════════════════════
+# SENSOR DE JANELAS DE FILTRAGEM SOLAR PREVISTAS
+# ══════════════════════════════════════════════════════════════════
+#
+# Combina previsão solar (Solcast) com previsão meteorológica (IPMA)
+# para identificar janelas contínuas durante o dia onde a produção
+# FV prevista excede o consumo da bomba (1380W).
+#
+# FONTES:
+#   1. sensor.solcast_pv_forecast_forecast_today → detailedHourly attr
+#   2. sensor.solcast_pv_forecast_forecast_this_hour → potência actual
+#   3. sensor.solcast_pv_forecast_forecast_next_hour → próxima hora
+#   4. weather.forecast (OpenWeatherMap) → condição meteo previsão
+#
+# OUTPUT:
+#   - Nº de janelas viáveis (≥30min contínuos com FV > bomba)
+#   - Melhor janela (maior duração contínua)
+#   - Total de horas solares viáveis
+#   - Recomendação: solar_diurno / noite_coopernico / misto
+#
+# NOTA: O sensor usa os atributos detailedHourly do Solcast
+#       que contém previsão hora-a-hora em kWh.
+#       Conversão: kWh × 1000 = Wh por hora ≈ W médios nessa hora.
+#
+# ══════════════════════════════════════════════════════════════════
+
+- platform: template
+  sensors:
+    # ──────────────────────────────────────────────────────────────
+    # Sensor principal: análise de janelas de filtragem solar
+    # ──────────────────────────────────────────────────────────────
+    piscina_solar_forecast_analysis:
+      friendly_name: "Previsão Janelas Solares Piscina"
+      unique_id: piscina_solar_forecast_analysis
+      icon_template: >
+        {% set rec = state_attr('sensor.piscina_solar_forecast_analysis', 'recommendation_code') | default('unknown') %}
+        {% if rec == 'solar_diurno' %}
+          mdi:white-balance-sunny
+        {% elif rec == 'misto' %}
+          mdi:weather-partly-cloudy
+        {% elif rec == 'noite_coopernico' %}
+          mdi:weather-night
+        {% else %}
+          mdi:crystal-ball
+        {% endif %}
+      value_template: >
+        {# ─── Configuração ─── #}
+        {% set pump_power_w = 1380 %}
+        {% set min_window_minutes = 30 %}
+        {% set safety_margin = 1.2 %}
+        {% set pump_threshold_w = pump_power_w * safety_margin %}
+        
+        {# ─── Ler previsão Solcast hora-a-hora dos atributos ─── #}
+        {% set forecast_today = state_attr('sensor.solcast_pv_forecast_forecast_today', 'detailedHourly') %}
+        
+        {% if forecast_today is none or forecast_today | length == 0 %}
+          Sem dados Solcast
+        {% else %}
+          {# ─── Analisar cada hora ─── #}
+          {% set ns = namespace(
+            viable_hours = 0,
+            current_window = 0,
+            best_window = 0,
+            windows_count = 0,
+            best_start = '',
+            best_end = '',
+            current_start = '',
+            total_solar_kwh = 0,
+            hours_data = []
+          ) %}
+          
+          {# forecast_today é lista de dicts com period_start e pv_estimate (kWh) #}
+          {% for hour in forecast_today %}
+            {% set power_w = (hour.pv_estimate | default(0) | float(0)) * 1000 %}
+            {% set period = hour.period_start | default('') %}
+            
+            {% if power_w >= pump_threshold_w %}
+              {% set ns.viable_hours = ns.viable_hours + 1 %}
+              {% set ns.total_solar_kwh = ns.total_solar_kwh + (hour.pv_estimate | default(0) | float(0)) %}
+              {% set ns.current_window = ns.current_window + 60 %}
+              {% if ns.current_start == '' %}
+                {% set ns.current_start = period %}
+              {% endif %}
+            {% else %}
+              {# Fim de janela? #}
+              {% if ns.current_window >= min_window_minutes %}
+                {% set ns.windows_count = ns.windows_count + 1 %}
+                {% if ns.current_window > ns.best_window %}
+                  {% set ns.best_window = ns.current_window %}
+                  {% set ns.best_start = ns.current_start %}
+                  {% set ns.best_end = period %}
+                {% endif %}
+              {% endif %}
+              {% set ns.current_window = 0 %}
+              {% set ns.current_start = '' %}
+            {% endif %}
+          {% endfor %}
+          
+          {# Fechar última janela se estava aberta #}
+          {% if ns.current_window >= min_window_minutes %}
+            {% set ns.windows_count = ns.windows_count + 1 %}
+            {% if ns.current_window > ns.best_window %}
+              {% set ns.best_window = ns.current_window %}
+              {% set ns.best_start = ns.current_start %}
+            {% endif %}
+          {% endif %}
+          
+          {# ─── Recomendação ─── #}
+          {% if ns.best_window >= 180 %}
+            Bom dia solar ({{ ns.viable_hours }}h viáveis)
+          {% elif ns.best_window >= 60 %}
+            Dia misto ({{ ns.viable_hours }}h viáveis)
+          {% elif ns.best_window >= 30 %}
+            Pouco solar ({{ ns.viable_hours }}h viáveis)
+          {% else %}
+            Sem janela solar (filtrar à noite)
+          {% endif %}
+        {% endif %}
+      
+      attribute_templates:
+        # ── Número de janelas viáveis (≥30min) ──
+        viable_windows: >
+          {% set pump_threshold_w = 1380 * 1.2 %}
+          {% set min_window_minutes = 30 %}
+          {% set forecast = state_attr('sensor.solcast_pv_forecast_forecast_today', 'detailedHourly') %}
+          {% if forecast is none %}0
+          {% else %}
+            {% set ns = namespace(current=0, count=0) %}
+            {% for hour in forecast %}
+              {% set power_w = (hour.pv_estimate | default(0) | float(0)) * 1000 %}
+              {% if power_w >= pump_threshold_w %}
+                {% set ns.current = ns.current + 60 %}
+              {% else %}
+                {% if ns.current >= min_window_minutes %}
+                  {% set ns.count = ns.count + 1 %}
+                {% endif %}
+                {% set ns.current = 0 %}
+              {% endif %}
+            {% endfor %}
+            {% if ns.current >= min_window_minutes %}
+              {% set ns.count = ns.count + 1 %}
+            {% endif %}
+            {{ ns.count }}
+          {% endif %}
+
+        # ── Duração da melhor janela (minutos) ──
+        best_window_minutes: >
+          {% set pump_threshold_w = 1380 * 1.2 %}
+          {% set forecast = state_attr('sensor.solcast_pv_forecast_forecast_today', 'detailedHourly') %}
+          {% if forecast is none %}0
+          {% else %}
+            {% set ns = namespace(current=0, best=0) %}
+            {% for hour in forecast %}
+              {% set power_w = (hour.pv_estimate | default(0) | float(0)) * 1000 %}
+              {% if power_w >= pump_threshold_w %}
+                {% set ns.current = ns.current + 60 %}
+                {% if ns.current > ns.best %}{% set ns.best = ns.current %}{% endif %}
+              {% else %}
+                {% set ns.current = 0 %}
+              {% endif %}
+            {% endfor %}
+            {{ ns.best }}
+          {% endif %}
+
+        # ── Total de horas com excesso solar ──
+        viable_hours: >
+          {% set pump_threshold_w = 1380 * 1.2 %}
+          {% set forecast = state_attr('sensor.solcast_pv_forecast_forecast_today', 'detailedHourly') %}
+          {% if forecast is none %}0
+          {% else %}
+            {% set ns = namespace(count=0) %}
+            {% for hour in forecast %}
+              {% if (hour.pv_estimate | default(0) | float(0)) * 1000 >= pump_threshold_w %}
+                {% set ns.count = ns.count + 1 %}
+              {% endif %}
+            {% endfor %}
+            {{ ns.count }}
+          {% endif %}
+
+        # ── Energia solar prevista total viável (kWh) ──
+        viable_solar_kwh: >
+          {% set pump_threshold_w = 1380 * 1.2 %}
+          {% set forecast = state_attr('sensor.solcast_pv_forecast_forecast_today', 'detailedHourly') %}
+          {% if forecast is none %}0
+          {% else %}
+            {% set ns = namespace(total=0) %}
+            {% for hour in forecast %}
+              {% if (hour.pv_estimate | default(0) | float(0)) * 1000 >= pump_threshold_w %}
+                {% set ns.total = ns.total + (hour.pv_estimate | default(0) | float(0)) %}
+              {% endif %}
+            {% endfor %}
+            {{ ns.total | round(2) }}
+          {% endif %}
+
+        # ── Previsão de produção total do dia (kWh) ──
+        forecast_total_kwh: "{{ states('sensor.solcast_pv_forecast_forecast_today') | float(0) | round(2) }}"
+
+        # ── Previsão para esta hora (W) ──
+        forecast_this_hour_w: "{{ (states('sensor.solcast_pv_forecast_forecast_this_hour') | float(0) * 1000) | round(0) }}"
+
+        # ── Previsão próxima hora (W) ──
+        forecast_next_hour_w: "{{ (states('sensor.solcast_pv_forecast_forecast_next_hour') | float(0) * 1000) | round(0) }}"
+
+        # ── Potência pico prevista hoje (W) ──
+        peak_forecast_w: "{{ (states('sensor.solcast_pv_forecast_peak_forecast_today') | float(0) * 1000) | round(0) }}"
+
+        # ── Hora do pico ──
+        peak_time: "{{ states('sensor.solcast_pv_forecast_peak_time_today') }}"
+
+        # ── Threshold usado (W) ──
+        pump_threshold_w: "{{ (1380 * 1.2) | round(0) }}"
+
+        # ── Código de recomendação (para automação) ──
+        recommendation_code: >
+          {% set pump_threshold_w = 1380 * 1.2 %}
+          {% set forecast = state_attr('sensor.solcast_pv_forecast_forecast_today', 'detailedHourly') %}
+          {% if forecast is none %}
+            unknown
+          {% else %}
+            {% set ns = namespace(current=0, best=0) %}
+            {% for hour in forecast %}
+              {% set power_w = (hour.pv_estimate | default(0) | float(0)) * 1000 %}
+              {% if power_w >= pump_threshold_w %}
+                {% set ns.current = ns.current + 60 %}
+                {% if ns.current > ns.best %}{% set ns.best = ns.current %}{% endif %}
+              {% else %}
+                {% set ns.current = 0 %}
+              {% endif %}
+            {% endfor %}
+            {% if ns.best >= 180 %}
+              solar_diurno
+            {% elif ns.best >= 60 %}
+              misto
+            {% elif ns.best >= 30 %}
+              pouco_solar
+            {% else %}
+              noite_coopernico
+            {% endif %}
+          {% endif %}
+
+        # ── Detalhes hora-a-hora (debug) ──
+        hourly_detail: >
+          {% set pump_threshold_w = 1380 * 1.2 %}
+          {% set forecast = state_attr('sensor.solcast_pv_forecast_forecast_today', 'detailedHourly') %}
+          {% if forecast is none %}[]
+          {% else %}
+            {% set ns = namespace(items=[]) %}
+            {% for hour in forecast %}
+              {% set power_w = (hour.pv_estimate | default(0) | float(0)) * 1000 %}
+              {% set viable = '✅' if power_w >= pump_threshold_w else '❌' %}
+              {% set time = hour.period_start | default('?') %}
+              {% if power_w > 0 %}
+                {% set ns.items = ns.items + [time ~ ': ' ~ power_w | round(0) ~ 'W ' ~ viable] %}
+              {% endif %}
+            {% endfor %}
+            {{ ns.items | join(' | ') }}
+          {% endif %}
+
+    # ──────────────────────────────────────────────────────────────
+    # Sensor de previsão meteo para a tarde (condição dominante)
+    # ──────────────────────────────────────────────────────────────
+    piscina_forecast_weather_afternoon:
+      friendly_name: "Previsão Meteo Tarde (Piscina)"
+      unique_id: piscina_forecast_weather_afternoon
+      icon_template: >
+        {% set cond = states('sensor.piscina_forecast_weather_afternoon') %}
+        {% if cond in ['sunny', 'clear'] %}
+          mdi:weather-sunny
+        {% elif cond in ['partlycloudy'] %}
+          mdi:weather-partly-cloudy
+        {% elif cond in ['cloudy'] %}
+          mdi:weather-cloudy
+        {% elif cond in ['rainy', 'pouring', 'lightning-rainy'] %}
+          mdi:weather-rainy
+        {% else %}
+          mdi:weather-cloudy
+        {% endif %}
+      value_template: >
+        {# 
+          Usa o forecast do weather.forecast (OpenWeatherMap) ou weather.matosinhos (IPMA)
+          para determinar a condição meteo dominante entre 10h-17h.
+          
+          NOTA: Os atributos forecast do weather.* foram descontinuados em 2024.
+          Agora usa-se o service weather.get_forecasts que retorna response_data.
+          Como template sensors não podem chamar services, usamos
+          os sensores Solcast + condição actual como proxy.
+        #}
+        {% set condition = states('sensor.realtime_condition') | default('unknown') %}
+        {% set forecast_kwh = states('sensor.solcast_pv_forecast_forecast_today') | float(0) %}
+        {% set peak_w = (states('sensor.solcast_pv_forecast_peak_forecast_today') | float(0)) * 1000 %}
+        
+        {# Inferir condição meteo a partir da previsão solar #}
+        {# Num dia claro de verão: ~40-60 kWh; inverno: ~15-25 kWh #}
+        {# Capacidade instalada: ~10 kWp → pico teórico ~10kW #}
+        {% set capacity_kw = 10.0 %}
+        {% set peak_ratio = peak_w / (capacity_kw * 1000) if capacity_kw > 0 else 0 %}
+        
+        {% if peak_ratio >= 0.7 %}
+          sunny
+        {% elif peak_ratio >= 0.5 %}
+          partlycloudy
+        {% elif peak_ratio >= 0.3 %}
+          cloudy
+        {% elif peak_ratio >= 0.1 %}
+          rainy
+        {% else %}
+          {{ condition }}
+        {% endif %}
+
+      attribute_templates:
+        forecast_total_kwh: "{{ states('sensor.solcast_pv_forecast_forecast_today') | float(0) | round(1) }}"
+        peak_w: "{{ (states('sensor.solcast_pv_forecast_peak_forecast_today') | float(0) * 1000) | round(0) }}"
+        peak_ratio: >
+          {% set peak_w = states('sensor.solcast_pv_forecast_peak_forecast_today') | float(0) * 1000 %}
+          {{ (peak_w / 10000 * 100) | round(1) }}%
+        current_condition: "{{ states('sensor.realtime_condition') }}"
+        source: "Solcast + condição actual"

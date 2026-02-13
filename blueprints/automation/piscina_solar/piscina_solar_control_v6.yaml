@@ -896,6 +896,14 @@ variables:
     {% set min_off_seconds = (min_off_time_val | float(0)) * 60 * (delay_multiplier | float(1.0)) %}
     {{ not pump_is_on and (now_ts - last_changed) >= min_off_seconds or pump_is_on or min_off_time_val == 0 }}
 
+  # Previsão solar bloqueia filtragem diurna?
+  # Se input_boolean.piscina_prefer_night_filtering = ON,
+  # a previsão Solcast indicou que hoje não há janela solar viável.
+  # → Não tentar ligar a bomba de dia (evita cycling inútil).
+  forecast_allows_solar: >
+    {{ not is_state('input_boolean.piscina_prefer_night_filtering', 'on')
+       or not is_state('input_boolean.piscina_forecast_planning_enabled', 'on') }}
+
   # ==========================================
   # COOPERNICO: Cálculo janela mais barata
   # ==========================================
@@ -1355,6 +1363,8 @@ action:
                     value_template: "{{ can_turn_on }}"
                   - condition: template
                     value_template: "{{ min_off_time_elapsed }}"
+                  - condition: template
+                    value_template: "{{ forecast_allows_solar }}"
                 sequence:
                   # Delay antes de ligar
                   - delay:
@@ -1513,6 +1523,7 @@ action:
                 Défice: {{ deficit_kwh }}kWh
                 NET: {{ current_net_power }}W
                 Sensor: Nível {{ sensor_level }}
+                Previsão: {{ 'bloqueada (noite)' if not forecast_allows_solar else 'OK' }}
               entity_id: !input pump_switch
 
 mode: single

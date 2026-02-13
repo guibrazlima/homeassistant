@@ -2603,8 +2603,8 @@
       start_margin: 100
       import_limit_strategy: maior
       delay_on: 60
-      delay_off: 120
-      min_on_time: 15
+      delay_off: 90
+      min_on_time: 10
       min_off_time: 5
       sun_offset_start: 30
       sun_offset_end: -30

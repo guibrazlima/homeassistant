@@ -28,13 +28,30 @@ input_boolean:
     name: "🌤️ Ajustar por Meteorologia"
     icon: mdi:weather-partly-cloudy
     initial: true
-  
-  # ───────────────────────────────────────────────────────────────────
-  # ✋ Override Manual
-  # ───────────────────────────────────────────────────────────────────
-  piscina_override_manual:
-    name: "✋ Override Manual"
-    icon: mdi:hand-back-right
+
+  piscina_night_session_done:
+    name: "Piscina - Sessão Noturna Completa"
+    icon: mdi:moon-waning-crescent
+    initial: false
+
+  # ────────────────────────────────────────────────────────────────
+  # 🔮 Usar Previsão Solar para Planeamento Diário
+  # ────────────────────────────────────────────────────────────────
+  piscina_forecast_planning_enabled:
+    name: "🔮 Planeamento Solar (Previsão Solcast)"
+    icon: mdi:crystal-ball
+    initial: true
+
+  # ────────────────────────────────────────────────────────────────
+  # 🌙 Dia Previsto Sem Solar → Preferir Noite Coopernico
+  # Ligado automaticamente pela automação de planeamento matinal
+  # quando a previsão Solcast indica <30min contínuos de excesso solar.
+  # A blueprint v6 pode usar este flag para decidir não tentar
+  # filtragem solar nesse dia (evitando cycling inútil).
+  # ────────────────────────────────────────────────────────────────
+  piscina_prefer_night_filtering:
+    name: "🌙 Dia Sem Solar (Filtrar à Noite)"
+    icon: mdi:weather-night
     initial: false
 
 input_select:
@@ -59,7 +76,215 @@ utility_meter:
     source: sensor.bomba_piscina_total_energy
     name: "Energia Bomba Piscina Hoje"
     cycle: daily
-    cron: "0 0 * * *"
     offset:
       hours: 0
       minutes: 0
+
+# ══════════════════════════════════════════════════════════════════
+# AUTOMAÇÕES: PLANEAMENTO SOLAR COM PREVISÃO
+# ══════════════════════════════════════════════════════════════════
+#
+# Usa Solcast (previsão solar hora-a-hora) para decidir de manhã:
+#   - Se vale a pena tentar filtragem solar durante o dia
+#   - Ou se é melhor filtrar à noite com Coopernico (mais barato)
+#
+# Evita cycling inútil em dias nublados → bomba liga/desliga
+# constantemente gastando electricidade cara da rede.
+#
+# ══════════════════════════════════════════════════════════════════
+
+automation:
+  # ────────────────────────────────────────────────────────────────
+  # 🔮 Planeamento Matinal: Analisar Previsão Solar
+  # ────────────────────────────────────────────────────────────────
+  - id: piscina_forecast_morning_planning
+    alias: "🏊 Piscina - Planeamento Solar Matinal"
+    description: >
+      Analisa previsão Solcast às 07:00 para decidir se vale a pena
+      tentar filtragem solar ou se é melhor filtrar à noite com
+      Coopernico (mais barato que importar da rede de dia).
+
+    trigger:
+      # Disparar às 07:00 (antes do sol forte)
+      - platform: time
+        at: "07:00:00"
+        id: morning_check
+
+      # Disparar quando Solcast atualiza (pode ser 2x/dia)
+      - platform: state
+        entity_id: sensor.solcast_pv_forecast_forecast_today
+        id: solcast_update
+
+      # Disparar manualmente quando o toggle muda
+      - platform: state
+        entity_id: input_boolean.piscina_forecast_planning_enabled
+        to: "on"
+        id: manual_enable
+
+    condition:
+      # Só executar se o planeamento por previsão está ativado
+      - condition: state
+        entity_id: input_boolean.piscina_forecast_planning_enabled
+        state: "on"
+
+      # Só durante a manhã (07:00-12:00) para ser relevante
+      - condition: time
+        after: "06:30:00"
+        before: "12:00:00"
+
+    action:
+      - variables:
+          recommendation: "{{ state_attr('sensor.piscina_solar_forecast_analysis', 'recommendation_code') | default('unknown') }}"
+          best_window: "{{ state_attr('sensor.piscina_solar_forecast_analysis', 'best_window_minutes') | int(0) }}"
+          viable_hours: "{{ state_attr('sensor.piscina_solar_forecast_analysis', 'viable_hours') | int(0) }}"
+          viable_windows: "{{ state_attr('sensor.piscina_solar_forecast_analysis', 'viable_windows') | int(0) }}"
+          forecast_total: "{{ states('sensor.solcast_pv_forecast_forecast_today') | float(0) | round(1) }}"
+          peak_w: "{{ (states('sensor.solcast_pv_forecast_peak_forecast_today') | float(0) * 1000) | round(0) }}"
+
+      - choose:
+          # CENÁRIO 1: Dia SEM solar viável → Noite Coopernico
+          - conditions:
+              - condition: template
+                value_template: "{{ recommendation in ['noite_coopernico', 'unknown'] or best_window < 30 }}"
+            sequence:
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.piscina_prefer_night_filtering
+
+              - service: logbook.log
+                data:
+                  name: "Piscina Planeamento"
+                  message: >
+                    🌙 SEM SOLAR → Filtrar à noite Coopernico
+                    📊 {{ forecast_total }}kWh | Pico {{ peak_w }}W
+                    ⏱️ Melhor janela: {{ best_window }}min (mín 30)
+                    💡 Evitar cycling, noite é mais barato
+                  entity_id: input_boolean.piscina_prefer_night_filtering
+
+              - service: persistent_notification.create
+                data:
+                  title: "🏊 Piscina - Dia Sem Solar"
+                  message: >
+                    Previsão: **{{ forecast_total }}kWh** | Pico: **{{ peak_w }}W**
+                    Melhor janela: **{{ best_window }}min** (mín. 30min)
+                    ➡️ Filtragem à **noite** com Coopernico
+                  notification_id: piscina_forecast_planning
+
+          # CENÁRIO 2: Dia misto
+          - conditions:
+              - condition: template
+                value_template: "{{ recommendation in ['misto', 'pouco_solar'] and best_window >= 30 }}"
+            sequence:
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.piscina_prefer_night_filtering
+
+              - service: logbook.log
+                data:
+                  name: "Piscina Planeamento"
+                  message: >
+                    🌤️ MISTO → Solar quando possível + Noite complementa
+                    📊 {{ forecast_total }}kWh | Pico {{ peak_w }}W
+                    ⏱️ Janela: {{ best_window }}min | {{ viable_hours }}h viáveis
+                  entity_id: input_boolean.piscina_prefer_night_filtering
+
+          # CENÁRIO 3: Bom dia solar
+          - conditions:
+              - condition: template
+                value_template: "{{ recommendation == 'solar_diurno' }}"
+            sequence:
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.piscina_prefer_night_filtering
+
+              - service: logbook.log
+                data:
+                  name: "Piscina Planeamento"
+                  message: >
+                    ☀️ BOM SOLAR → Prioridade solar {{ viable_hours }}h
+                    📊 {{ forecast_total }}kWh | Pico {{ peak_w }}W
+                    ⏱️ Janela: {{ best_window }}min contínuos!
+                  entity_id: input_boolean.piscina_prefer_night_filtering
+
+        default:
+          - service: logbook.log
+            data:
+              name: "Piscina Planeamento"
+              message: >
+                ⚠️ Inconclusivo: {{ recommendation }} | Janela {{ best_window }}min
+              entity_id: input_boolean.piscina_prefer_night_filtering
+
+  # ────────────────────────────────────────────────────────────────
+  # 🔄 Re-análise ao meio-dia
+  # ────────────────────────────────────────────────────────────────
+  - id: piscina_forecast_midday_recheck
+    alias: "🏊 Piscina - Re-análise Solar Meio-Dia"
+    description: >
+      Re-analisa ao meio-dia. Se condições pioraram → modo noite.
+      Se estavam más e melhoraram → tentar solar.
+
+    trigger:
+      - platform: time
+        at: "12:00:00"
+
+    condition:
+      - condition: state
+        entity_id: input_boolean.piscina_forecast_planning_enabled
+        state: "on"
+
+    action:
+      - variables:
+          best_window: "{{ state_attr('sensor.piscina_solar_forecast_analysis', 'best_window_minutes') | int(0) }}"
+          was_night_mode: "{{ is_state('input_boolean.piscina_prefer_night_filtering', 'on') }}"
+          forecast_remaining: "{{ states('sensor.solcast_pv_forecast_forecast_remaining_today') | float(0) | round(1) }}"
+
+      - choose:
+          # Solar → Noite (piorou)
+          - conditions:
+              - condition: template
+                value_template: "{{ not was_night_mode and best_window < 30 }}"
+            sequence:
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.piscina_prefer_night_filtering
+              - service: logbook.log
+                data:
+                  name: "Piscina Re-análise"
+                  message: "🔄→🌙 Piorou! Restante {{ forecast_remaining }}kWh, janela {{ best_window }}min"
+                  entity_id: input_boolean.piscina_prefer_night_filtering
+
+          # Noite → Solar (melhorou)
+          - conditions:
+              - condition: template
+                value_template: "{{ was_night_mode and best_window >= 60 }}"
+            sequence:
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.piscina_prefer_night_filtering
+              - service: logbook.log
+                data:
+                  name: "Piscina Re-análise"
+                  message: "🔄→☀️ Melhorou! Restante {{ forecast_remaining }}kWh, janela {{ best_window }}min"
+                  entity_id: input_boolean.piscina_prefer_night_filtering
+
+  # ────────────────────────────────────────────────────────────────
+  # 🌅 Reset diário ao nascer do sol
+  # ────────────────────────────────────────────────────────────────
+  - id: piscina_forecast_daily_reset
+    alias: "🏊 Piscina - Reset Planeamento Diário"
+    description: "Limpa flag noturno ao nascer do sol"
+
+    trigger:
+      - platform: sun
+        event: sunrise
+        offset: "-01:00:00"
+
+    action:
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.piscina_prefer_night_filtering
+      - service: logbook.log
+        data:
+          name: "Piscina Reset"
+          message: "🌅 Flag noite resetado, análise às 07:00"
+          entity_id: input_boolean.piscina_prefer_night_filtering
