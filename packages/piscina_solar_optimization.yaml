@@ -139,7 +139,7 @@ automation:
           viable_hours: "{{ state_attr('sensor.piscina_solar_forecast_analysis', 'viable_hours') | int(0) }}"
           viable_windows: "{{ state_attr('sensor.piscina_solar_forecast_analysis', 'viable_windows') | int(0) }}"
           forecast_total: "{{ states('sensor.solcast_pv_forecast_forecast_today') | float(0) | round(1) }}"
-          peak_w: "{{ (states('sensor.solcast_pv_forecast_peak_forecast_today') | float(0) * 1000) | round(0) }}"
+          peak_w: "{{ states('sensor.solcast_pv_forecast_peak_forecast_today') | float(0) | round(0) }}"
 
       - choose:
           # CENÁRIO 1: Dia SEM solar viável → Noite Coopernico
