@@ -142,7 +142,8 @@ A previsão Solcast **não liga a bomba diretamente**. Funciona como **porteiro*
 | `use_dynamic_filtration_time` | boolean | `true` | Usa temperatura para calcular horas |
 | `dynamic_filtration_hours_sensor` | `sensor` | `{}` | Sensor horas recomendadas |
 | `min_daily_filtration_kwh` | number | `11` kWh | Energia fixa (se dinâmico OFF) |
-| `filtration_energy_today` | `sensor` | `{}` | Energia já consumida hoje |
+| `filtration_energy_today` | `sensor` | `{}` | Energia já consumida hoje (reset 00:00) |
+| `filtration_hours_today_sensor` | `sensor` | `{}` | ⭐ Horas ON no período 08-08 (prioridade sobre energia) |
 | `ignore_filtration_limit` | boolean | `false` | Permitir sobre-filtragem com excedente |
 | `min_night_deficit_kwh` | number | `2` kWh | Mínimo para ativar noite |
 
@@ -653,6 +654,7 @@ O sistema tem **3 camadas** de proteção contra cycling excessivo:
 | 3 | `sensors/piscina_solar_forecast_windows.yaml` | `forecast_next_hour_w` mesmo problema | Removido `* 1000` |
 | 4 | `sensors/piscina_solar_forecast_windows.yaml` | `peak_w` no sensor afternoon multiplicava por 1000 | Removido `* 1000` |
 | 5 | `packages/piscina_solar_optimization.yaml` | `peak_w` no planeamento matinal multiplicava por 1000 | Removido `* 1000` |
+| 6 | `piscina_solar_control_v6.yaml` | `energy_consumed` usava sensor 00-24 (incluía noite) → défice=0 → Coopernico fallback | Novo input `filtration_hours_today_sensor` (08-08), prioridade sobre energy_today |
 
 > **Nota:** A conversão `pv_estimate × 1000` no `detailedHourly` está **CORRETA** porque esse campo é em kWh (ex: 2.289 kWh → 2289 W médios nessa hora).
 
