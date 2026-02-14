@@ -2602,12 +2602,13 @@
       price_peak: 0.1537
       price_offpeak: 0.0929
       import_limit: 700
-      start_margin: 100
+      start_margin: 300
       import_limit_strategy: maior
       delay_on: 60
       delay_off: 90
-      min_on_time: 10
-      min_off_time: 5
+      min_on_time: 20
+      min_off_time: 15
+      max_daily_starts: 8
       sun_offset_start: 30
       sun_offset_end: -30
       override_manual: input_boolean.piscina_override_manual

@@ -457,13 +457,16 @@ blueprint:
     start_margin:
       name: 🚀 Margem Extra para Arranque (W) - Dia
       description: |
-        Margem extra exigida para ligar de dia.
-        **Recomendado:** 100W
-      default: 100
+        Margem extra de exportação exigida para ligar (além do import_limit).
+        Cria hysteresis assimétrica: mais difícil ligar que manter ligada.
+        **Indústria recomenda:** 200-400W (evita ligar "por pouco")
+        **Exemplo:** Com import_limit=700W e start_margin=300W,
+        a bomba só liga se import_predicted ≤ 400W (700-300).
+      default: 300
       selector:
         number:
           min: 0
-          max: 500
+          max: 1000
           step: 25
           unit_of_measurement: "W"
           mode: slider
@@ -523,9 +526,11 @@ blueprint:
     min_on_time:
       name: ⏰ Tempo Mínimo Ligada (minutos)
       description: |
-        Tempo mínimo após arranque (dia e noite).
-        **Recomendado:** 10-15min
-      default: 10
+        Tempo mínimo que a bomba fica ligada após arranque.
+        Protege contra cycling excessivo — nuvens passageiras (<5min) são absorvidas.
+        **Indústria recomenda:** 20-30min (Pentair/Hayward spec)
+        **Afectado pelo multiplicador meteo** (nublado → tempo × multiplier)
+      default: 20
       selector:
         number:
           min: 0
@@ -538,16 +543,33 @@ blueprint:
       name: ⏰ Tempo Mínimo Desligada (minutos)
       description: |
         Cooldown obrigatório após desligar antes de permitir religar.
-        Protege contra cycling excessivo em dias instáveis.
-        **Recomendado:** 5-10min
-        **0** = sem cooldown (comportamento anterior)
-      default: 5
+        Protege contra cycling excessivo e picos de inrush current.
+        **Indústria recomenda:** 15-20min para bombas de velocidade fixa
+        **Afectado pelo multiplicador meteo** (nublado → tempo × multiplier)
+        **0** = sem cooldown (não recomendado)
+      default: 15
+      selector:
+        number:
+          min: 0
+          max: 60
+          step: 1
+          unit_of_measurement: "min"
+          mode: slider
+
+    max_daily_starts:
+      name: 🔄 Máximo Arranques por Dia
+      description: |
+        Limite hard de quantas vezes a bomba pode ligar por dia (período 08-22h).
+        **Indústria recomenda:** 6-8 para bombas de velocidade fixa
+        Após atingir o limite, a bomba só religa na sessão noturna ou no dia seguinte.
+        **0** = sem limite (não recomendado, comportamento anterior)
+      default: 8
       selector:
         number:
           min: 0
           max: 30
           step: 1
-          unit_of_measurement: "min"
+          unit_of_measurement: "arranques"
           mode: slider
 
     delay_multiplier_sensor:
@@ -680,6 +702,7 @@ variables:
   delay_off_val: !input delay_off
   min_on_time_val: !input min_on_time
   min_off_time_val: !input min_off_time
+  max_daily_starts_val: !input max_daily_starts
   delay_mult_sensor: !input delay_multiplier_sensor
   
   # Sensores potência (hierarquia 6 níveis)
@@ -911,18 +934,28 @@ variables:
   has_deficit: >
     {{ deficit_kwh > 0.1 or ignore_limit }}
   
-  # Tempo mínimo ligada respeitado?
+  # Tempo mínimo ligada respeitado? (com multiplicador meteo)
   min_time_elapsed: >
     {% set last_changed = as_timestamp(states.switch[pump_entity.split('.')[1]].last_changed) %}
     {% set now_ts = as_timestamp(now()) %}
-    {{ (now_ts - last_changed) >= (min_on_time_val * 60) }}
+    {% set min_on_seconds = (min_on_time_val | float(0)) * 60 * (delay_multiplier | float(1.0)) %}
+    {{ (now_ts - last_changed) >= min_on_seconds }}
 
-  # Cooldown após desligar respeitado? (anti-cycling)
+  # Cooldown após desligar respeitado? (anti-cycling, com multiplicador meteo)
   min_off_time_elapsed: >
     {% set last_changed = as_timestamp(states.switch[pump_entity.split('.')[1]].last_changed) %}
     {% set now_ts = as_timestamp(now()) %}
     {% set min_off_seconds = (min_off_time_val | float(0)) * 60 * (delay_multiplier | float(1.0)) %}
     {{ not pump_is_on and (now_ts - last_changed) >= min_off_seconds or pump_is_on or min_off_time_val == 0 }}
+
+  # Contagem de arranques diurnos hoje (08:00-22:00)
+  # Conta transições OFF→ON no histórico do switch hoje
+  daily_starts_count: >
+    {{ states.counter.piscina_daily_starts.state | int(0) if states.counter.piscina_daily_starts is defined else 0 }}
+
+  # Limite de arranques diários respeitado?
+  daily_starts_ok: >
+    {{ max_daily_starts_val | int(0) == 0 or daily_starts_count < max_daily_starts_val | int(8) }}
 
   # Previsão solar bloqueia filtragem diurna?
   # Se input_boolean.piscina_prefer_night_filtering = ON,
@@ -1340,6 +1373,15 @@ action:
             target:
               entity_id: !input night_session_active_helper
           
+          # Reset contador de arranques diários
+          - if:
+              - condition: template
+                value_template: "{{ states.counter.piscina_daily_starts is defined }}"
+            then:
+              - service: counter.reset
+                target:
+                  entity_id: counter.piscina_daily_starts
+          
           - if:
               - condition: template
                 value_template: "{{ debug }}"
@@ -1404,6 +1446,8 @@ action:
                     value_template: "{{ min_off_time_elapsed }}"
                   - condition: template
                     value_template: "{{ forecast_allows_solar }}"
+                  - condition: template
+                    value_template: "{{ daily_starts_ok }}"
                 sequence:
                   # Delay antes de ligar
                   - delay:
@@ -1455,6 +1499,14 @@ action:
                           - service: switch.turn_on
                             target:
                               entity_id: !input pump_switch
+                          # Incrementar contador de arranques diários
+                          - if:
+                              - condition: template
+                                value_template: "{{ states.counter.piscina_daily_starts is defined }}"
+                            then:
+                              - service: counter.increment
+                                target:
+                                  entity_id: counter.piscina_daily_starts
                       
                       - if:
                           - condition: template
@@ -1470,6 +1522,7 @@ action:
                                 Limite: {{ final_import_limit }}W
                                 Défice: {{ deficit_kwh }}kWh
                                 Sensor: Nível {{ sensor_level }}
+                                Arranques hoje: {{ daily_starts_count + 1 }}/{{ max_daily_starts_val }}
                                 Delay ON: {{ final_delay_on }}s (base {{ delay_on_val }}s × {{ delay_multiplier }})
                                 {% if dry_run %}[DRY RUN]{% endif %}
                               entity_id: !input pump_switch
