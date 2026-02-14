@@ -655,6 +655,7 @@ O sistema tem **3 camadas** de proteção contra cycling excessivo:
 | 4 | `sensors/piscina_solar_forecast_windows.yaml` | `peak_w` no sensor afternoon multiplicava por 1000 | Removido `* 1000` |
 | 5 | `packages/piscina_solar_optimization.yaml` | `peak_w` no planeamento matinal multiplicava por 1000 | Removido `* 1000` |
 | 6 | `piscina_solar_control_v6.yaml` | `energy_consumed` usava sensor 00-24 (incluía noite) → défice=0 → Coopernico fallback | Novo input `filtration_hours_today_sensor` (08-08), prioridade sobre energy_today |
+| 7 | `piscina_solar_control_v6.yaml` | `coopernico_window_end` branch dependia de `is_state(session_helper, 'on')` — após restart HA o boolean reseta para OFF → bomba não desligou | Removida condição session_helper; adicionado input `night_session_done_helper`; `coopernico_window_end` e `night_end` agora são resistentes a restarts |
 
 > **Nota:** A conversão `pv_estimate × 1000` no `detailedHourly` está **CORRETA** porque esse campo é em kWh (ex: 2.289 kWh → 2289 W médios nessa hora).
 
