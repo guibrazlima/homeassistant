@@ -161,6 +161,16 @@ blueprint:
         entity:
           domain: input_boolean
 
+    night_session_done_helper:
+      name: ✅ Helper Sessão Noturna Completa
+      description: |
+        Input boolean para marcar sessão noturna como completa.
+        **Exemplo:** `input_boolean.piscina_night_session_done`
+      default: input_boolean.piscina_night_session_done
+      selector:
+        entity:
+          domain: input_boolean
+
     calculation_info_helper:
       name: 📊 Helper Info Cálculo (opcional)
       description: |
@@ -1246,13 +1256,19 @@ action:
       - conditions:
           - condition: trigger
             id: coopernico_window_end
-          - condition: template
-            value_template: "{{ is_state(session_helper, 'on') }}"
+          # Removida condição session_helper: após restart HA o boolean é
+          # resetado para OFF, mas a bomba continua ligada. Desligar sempre
+          # que o trigger dispara e a bomba está ON (resistente a restarts).
         sequence:
-          # Reset session lock
+          # Reset session lock (pode já estar off após restart)
           - service: input_boolean.turn_off
             target:
               entity_id: !input night_session_active_helper
+          
+          # Marcar sessão como completa
+          - service: input_boolean.turn_on
+            target:
+              entity_id: !input night_session_done_helper
           
           # Desligar bomba
           - if:
@@ -1287,6 +1303,11 @@ action:
           - service: input_boolean.turn_off
             target:
               entity_id: !input night_session_active_helper
+          
+          # Marcar sessão como completa (failsafe)
+          - service: input_boolean.turn_on
+            target:
+              entity_id: !input night_session_done_helper
           
           # Desligar bomba (failsafe)
           - if:

@@ -2578,6 +2578,7 @@
       cheapest_window_helper: input_datetime.piscina_hora_agendada_mais_barata
       coopernico_end_helper: input_datetime.piscina_fim_janela_coopernico
       night_session_active_helper: input_boolean.piscina_sessao_noturna_ativa
+      night_session_done_helper: input_boolean.piscina_night_session_done
       calculation_info_helper: input_text.piscina_ultima_janela_calculada
       calculation_time: '19:00:00'
       net_power_5min: sensor.import_export_5min_smooth
