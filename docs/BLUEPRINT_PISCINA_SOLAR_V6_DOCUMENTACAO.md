@@ -664,3 +664,55 @@ O sistema tem **3 camadas** de proteção contra cycling excessivo:
 - **Trigger `pump_state_change`:** Definido mas sem choice próprio. Isto é intencional — serve para registar mudanças de estado no logbook via default action quando debug está ativo. Não é um bug.
 - **`mode: single` + `max_exceeded: silent`:** Correto. Previne execuções paralelas e não gera avisos quando múltiplos triggers chegam durante uma execução.
 - **Fórmula break-even no blueprint vs template:** São complementares ($834W + 546W = 1380W$). O blueprint calcula o **limite de importação**, o template calcula o **solar mínimo necessário**.
+
+---
+
+### Bug #8: Flapping Diurno — Anti-Cycling Melhorado (2026-02-14)
+
+#### Problema
+Análise dos logs de 14 Fev 2026 (08:00-22:00) revelou **18 ciclos ON/OFF em ~7 horas**.
+A bomba ligava ~12 min, desligava ~10 min, num padrão repetitivo causado por:
+- Produção solar a oscilar em torno do limiar de decisão (nuvens passageiras)
+- `min_on_time=10min` e `min_off_time=5min` demasiado curtos
+- `start_margin=100W` demasiado pequena (ligava "por pouco")
+- Sem limite de ciclos diários
+
+#### Análise de Boas Práticas da Indústria
+
+| Prática | Fonte | Valor Recomendado |
+|---------|-------|-------------------|
+| Min ON time | Pentair/Hayward specs | 20-30 min |
+| Min OFF time | Grundfos/Pentair | 15-20 min |
+| Max arranques/dia | Fabricantes bombas velocidade fixa | 6-8 |
+| Hysteresis assimétrica | SMA/Fronius/Solar-Log | start_margin = 200-400W |
+| Delay multiplier em todos os timings | SMA Sunny Home Manager | ✅ |
+
+Justificação técnica:
+- Inrush current: 3-5× nominal durante 2-3s a cada arranque
+- Selo mecânico: vida útil reduz com arranques frequentes
+- Contactores/relés: 50k-100k ciclos de vida; 18/dia = 6500/ano (desgaste acelerado)
+
+#### Correção Aplicada
+
+**Fase 1 — Parâmetros (automação):**
+
+| Parâmetro | Antes | Depois |
+|-----------|:-----:|:------:|
+| `min_on_time` | 10 min | **20 min** |
+| `min_off_time` | 5 min | **15 min** |
+| `start_margin` | 100W | **300W** |
+
+**Fase 2 — Código (blueprint):**
+
+1. **`delay_multiplier` afecta `min_on_time`**: nublado (1.5×) → 20min × 1.5 = 30min ON mínimo
+2. **Novo input `max_daily_starts`** (default: 8): limite hard de arranques/dia
+3. **`counter.piscina_daily_starts`**: incrementa a cada arranque solar, reset no sunrise
+4. **`daily_starts_ok`**: condição de bloqueio — após 8 arranques, bomba não religa até dia seguinte
+5. **Defaults actualizados** nos inputs com descrições baseadas na indústria
+
+#### Estimativa de Impacto
+- **Antes:** 18 ciclos/dia, duty cycle 52%, sessões de 11-12 min
+- **Depois (estimado):** 6-8 ciclos/dia, sessões de 20-30 min, hard-limit garante máximo 8
+
+#### Helpers Criados
+- `counter.piscina_daily_starts` — contador com reset diário no sunrise
