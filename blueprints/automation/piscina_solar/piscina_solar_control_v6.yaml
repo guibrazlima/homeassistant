@@ -670,6 +670,7 @@ variables:
   cheapest_helper: !input cheapest_window_helper
   coopernico_end: !input coopernico_end_helper
   session_helper: !input night_session_active_helper
+  night_done_helper: !input night_session_done_helper
   info_helper: !input calculation_info_helper
   
   # Filtração
@@ -1372,6 +1373,11 @@ action:
           - service: input_boolean.turn_off
             target:
               entity_id: !input night_session_active_helper
+
+          # Reset night_session_done (Bug #9 fix)
+          - service: input_boolean.turn_off
+            target:
+              entity_id: !input night_session_done_helper
           
           # Reset contador de arranques diários
           - if:
@@ -1432,6 +1438,9 @@ action:
             value_template: "{{ current_mode == 'day' }}"
           - condition: template
             value_template: "{{ not is_state(session_helper, 'on') }}"
+          # Bloquear arranque solar entre coopernico_window_end e sunrise (fix anomalia alba - Bug #10)
+          - condition: template
+            value_template: "{{ not is_state(night_done_helper, 'on') }}"
         sequence:
           - choose:
               # ===== LIGAR BOMBA =====
