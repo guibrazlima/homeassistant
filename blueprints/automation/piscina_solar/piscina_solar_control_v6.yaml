@@ -1338,10 +1338,16 @@ action:
             target:
               entity_id: !input night_session_active_helper
           
-          # Marcar sessão como completa (failsafe)
-          - service: input_boolean.turn_on
-            target:
-              entity_id: !input night_session_done_helper
+          # Marcar sessão como completa (failsafe) — só se bomba estava ON
+          # (evita ligar night_session_done quando night_end dispara após sunrise
+          #  e a sessão já tinha terminado pelo coopernico_window_end - Bug #11)
+          - if:
+              - condition: template
+                value_template: "{{ pump_is_on }}"
+            then:
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: !input night_session_done_helper
           
           # Desligar bomba (failsafe)
           - if:
