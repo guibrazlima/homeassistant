@@ -67,8 +67,6 @@ views:
           custom_fields:
             bar:
               - width: 100%
-              - text-align: center
-              - justify-self: center
         custom_fields:
           bar: >
             [[[
@@ -218,8 +216,6 @@ views:
           custom_fields:
             origem:
               - width: 100%
-              - text-align: center
-              - justify-self: center
         custom_fields:
           origem: >
             [[[
@@ -321,7 +317,6 @@ views:
           custom_fields:
             plano:
               - width: 100%
-              - text-align: left
         custom_fields:
           plano: >
             [[[
@@ -338,7 +333,7 @@ views:
                 if (!s || s === 'unknown' || s === 'unavailable') return '—';
                 return s.substring(11,16);
               };
-              return '<div style="text-align:left">' +
+              return '<div style="width:100%;max-width:100%;margin:0 auto;text-align:left">' +
                 '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
                   '<div style="font-size:14px;font-weight:700;color:white;text-transform:uppercase;letter-spacing:1px">🗓️ Plano de Carregamento</div>' +
                   '<div style="background:' + statusColor + '22;border:1px solid ' + statusColor + '55;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;color:' + statusColor + '">' + statusText + '</div>' +
@@ -391,8 +386,6 @@ views:
           custom_fields:
             custos:
               - width: 100%
-              - text-align: center
-              - justify-self: center
         custom_fields:
           custos: >
             [[[
