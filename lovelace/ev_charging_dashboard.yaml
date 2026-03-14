@@ -67,6 +67,7 @@ views:
           custom_fields:
             bar:
               - width: 100%
+              - justify-self: stretch
         custom_fields:
           bar: >
             [[[
@@ -216,6 +217,7 @@ views:
           custom_fields:
             origem:
               - width: 100%
+              - justify-self: stretch
         custom_fields:
           origem: >
             [[[
@@ -317,6 +319,7 @@ views:
           custom_fields:
             plano:
               - width: 100%
+              - justify-self: stretch
         custom_fields:
           plano: >
             [[[
@@ -386,6 +389,7 @@ views:
           custom_fields:
             custos:
               - width: 100%
+              - justify-self: stretch
         custom_fields:
           custos: >
             [[[
