@@ -539,28 +539,60 @@ views:
                 entity_id: script.ev_desativar_regra_ev
 
       # ══════════════════════════════════════════════════════════════
+      # ══════════════════════════════════════════════════════════════
       # SECÇÃO 12 — DETALHES WALLBOX
       # ══════════════════════════════════════════════════════════════
-      - type: entities
-        title: "🔌 Wallbox — Detalhes"
-        icon: mdi:ev-station
-        show_header_toggle: false
-        entities:
-          - entity: sensor.wallbox_state
-            name: Estado (IEC 61851)
-          - entity: sensor.wallbox_charging_power
-            name: "⚡ Potência actual"
-          - entity: sensor.wallbox_current_l1
-            name: "〰️ Corrente L1"
-          - entity: sensor.wallbox_session_energy
-            name: "🔢 Energia sessão"
-          - entity: sensor.wallbox_used_phases
-            name: "〰️ Fases activas"
-          - entity: sensor.wallbox_cp_state
-            name: "🔗 Estado CP"
-          - entity: sensor.wallbox_pause_reason
-            name: "⏸️ Motivo pausa"
-          - entity: sensor.wallbox_total_charging_duration
-            name: "⏱️ Duração total"
-          - entity: number.wallbox_current_limit_override
-            name: "🎚️ Limite corrente"
+      - type: custom:button-card
+        color_type: card
+        styles:
+          card:
+            - background: "linear-gradient(135deg,#0f172a,#1e293b)"
+            - border-radius: 18px
+            - padding: 20px
+            - box-shadow: "0 4px 24px rgba(0,0,0,0.5)"
+          custom_fields:
+            wallbox_details:
+              - width: 100%
+        custom_fields:
+          wallbox_details: |
+            [[[
+              var ws   = (states['sensor.wallbox_state']             || {}).state || '—';
+              var pwr  = parseFloat((states['sensor.wallbox_charging_power'] || {}).state) || 0;
+              var cur  = parseFloat((states['sensor.wallbox_current_l1']    || {}).state) || 0;
+              var nrg  = parseFloat((states['sensor.wallbox_session_energy']|| {}).state) || 0;
+              var ph   = (states['sensor.wallbox_used_phases']        || {}).state || '—';
+              var cp   = (states['sensor.wallbox_cp_state']           || {}).state || '—';
+              var pr   = (states['sensor.wallbox_pause_reason']       || {}).state || '—';
+              var dur  = (states['sensor.wallbox_total_charging_duration'] || {}).state || '—';
+              var lim  = (states['number.wallbox_current_limit_override']  || {}).state || '—';
+              var wsColor = '#94a3b8';
+              if (ws.includes('3') || ws.toLowerCase().includes('charging')) wsColor = '#22c55e';
+              else if (ws.includes('2') || ws.toLowerCase().includes('connected')) wsColor = '#60a5fa';
+              function row(icon, label, val, unit, color) {
+                color = color || '#e2e8f0'; unit = unit || '';
+                return '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.05)">' +
+                  '<div style="display:flex;align-items:center;gap:8px">' +
+                    '<span style="font-size:17px">' + icon + '</span>' +
+                    '<span style="font-size:13px;color:#94a3b8">' + label + '</span>' +
+                  '</div>' +
+                  '<span style="font-size:14px;font-weight:700;color:' + color + '">' + val +
+                    (unit ? ' <span style="font-size:11px;font-weight:400;color:#64748b">' + unit + '</span>' : '') +
+                  '</span></div>';
+              }
+              return '<div style="width:100%;box-sizing:border-box">' +
+                '<div style="font-size:13px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.1)">🔌 Wallbox — Detalhes</div>' +
+                row('🚦','Estado IEC 61851', ws, '', wsColor) +
+                row('⚡','Potência',  (pwr/1000).toFixed(2), 'kW', pwr > 0 ? '#facc15' : '#94a3b8') +
+                row('〰️','Corrente L1', cur.toFixed(1), 'A', '#60a5fa') +
+                row('🔋','Energia sessão', nrg.toFixed(3), 'kWh', '#34d399') +
+                row('🔀','Fases activas', ph, '') +
+                row('🔗','Estado CP', cp, '') +
+                row('⏸️','Motivo pausa', (pr === 'none' || pr === '0' || pr === '') ? '—' : pr, '') +
+                row('⏱️','Duração total', dur, '') +
+                row('🎚️','Limite corrente', lim !== '—' ? parseFloat(lim).toFixed(0) : '—', 'A') +
+              '</div>';
+            ]]]
+        card_mod:
+          style: |
+            ha-card { background: transparent !important; }
+            ha-card #container { grid-template-columns: 1fr !important; grid-template-rows: auto !important; }
