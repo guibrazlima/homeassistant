@@ -77,7 +77,7 @@ views:
               var pct = Math.min(soc, 100);
               var isCharging = power > 100;
               var chargingBadge = isCharging ? '<span style="background:#4ade8033;border:1px solid #4ade8066;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:#4ade80;margin-left:8px">⚡ A CARREGAR</span>' : '';
-              return '<div style="color:white">' +
+              return '<div style="color:white;text-align:center">' +
                 '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
                   '<div><span style="font-size:36px;font-weight:900;color:' + color + '">' + Math.round(soc) + '%</span>' + chargingBadge + '</div>' +
                   '<div style="text-align:right"><div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px">Estado da Bateria</div>' +
@@ -226,7 +226,7 @@ views:
               var monthlyPct = monthlyTotal > 0 ? Math.round(monthlySolar / monthlyTotal * 100) : 0;
               return '<div>' +
                 '<div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">☀️ Origem da Energia</div>' +
-                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;text-align:center">' +
                   '<div style="background:#451a03aa;border:1px solid #92400e55;border-radius:12px;padding:12px;text-align:center">' +
                     '<div style="font-size:10px;color:#fde68a;font-weight:700;text-transform:uppercase">☀️ Solar agora</div>' +
                     '<div style="font-size:28px;font-weight:900;color:#fbbf24">' + solar.toFixed(0) + ' W</div>' +
@@ -322,7 +322,7 @@ views:
               var scheduled = (states['input_boolean.ev_charging_scheduled'] || {}).state === 'on';
               var startRaw = (states['input_datetime.ev_charging_start'] || {}).state || '';
               var endRaw = (states['input_datetime.ev_charging_end'] || {}).state || '';
-              var deadline = ((states['input_datetime.ev_charging_deadline'] || {}).state || '').substring(0,5);
+              var deadline = ((states['input_datetime.ev_charging_deadline'] || {}).state || '').substring(11,16);
               var kwh = parseFloat((states['sensor.ev_kwh_necessarios'] || {}).state) || 0;
               var cost = parseFloat((states['sensor.ev_previsao_custo_hoje'] || {}).state) || 0;
               var price = parseFloat((states['sensor.ev_custo_por_kwh_estimado'] || {}).state) || 0;
@@ -330,7 +330,7 @@ views:
               var statusText = scheduled ? '✅ Agendado' : '⏳ A calcular';
               var fmtTime = function(s) {
                 if (!s || s === 'unknown' || s === 'unavailable') return '—';
-                return s.substring(0,5);
+                return s.substring(11,16);
               };
               return '<div>' +
                 '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
@@ -355,11 +355,16 @@ views:
                     '<div style="font-size:20px;font-weight:800;color:#f87171">' + deadline + '</div>' +
                   '</div>' +
                 '</div>' +
-                '<div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">' +
-                  '<div><div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Previsão custo hoje</div>' +
-                    '<div style="font-size:24px;font-weight:900;color:#4ade80">' + cost.toFixed(3) + ' €</div></div>' +
-                  '<div style="text-align:right"><div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Preço médio</div>' +
-                    '<div style="font-size:16px;font-weight:700;color:#94a3b8">' + price.toFixed(4) + ' €/kWh</div></div>' +
+                '<div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px 14px">' +
+                  '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">' +
+                    '<div><div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Previsão custo hoje</div>' +
+                      '<div style="font-size:28px;font-weight:900;color:#4ade80">' + cost.toFixed(3) + ' €</div></div>' +
+                    '<div style="text-align:right"><div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Preço médio janela</div>' +
+                      '<div style="font-size:18px;font-weight:700;color:#94a3b8">' + price.toFixed(4) + ' €/kWh</div></div>' +
+                  '</div>' +
+                  '<div style="font-size:10px;color:#475569;background:#0f172a;border-radius:6px;padding:6px 8px">' +
+                    '📐 ' + kwh.toFixed(2) + ' kWh × preço médio da janela mais barata de hoje = custo estimado' +
+                  '</div>' +
                 '</div>' +
               '</div>';
             ]]]
@@ -403,7 +408,7 @@ views:
               };
               return '<div>' +
                 '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">💰 Energia &amp; Custos Acumulados</div>' +
-                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;text-align:center">' +
                   card('📅','Hoje', dk, de,'#1e3a8a44','#93c5fd') +
                   card('📆','Semana', wk, we,'#78350f44','#fde68a') +
                 '</div>' +
