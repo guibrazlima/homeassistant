@@ -6,6 +6,7 @@
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.1+-blue.svg)](https://www.home-assistant.io/)
 [![Maintenance](https://img.shields.io/badge/Maintained-Yes-green.svg)](https://github.com/guibrazlima/homeassistant)
 [![Blueprint](https://img.shields.io/badge/Blueprint-Piscina%20Solar%20v2.1-green.svg)](docs/OTIMIZACOES_RESUMO.md)
+[![EV Charging](https://img.shields.io/badge/EV%20Charging-BMW%20i4%20Smart-blue.svg)](packages/ev_charging_optimization.yaml)
 [![Optimized](https://img.shields.io/badge/Optimizations-v2.1-brightgreen.svg)](docs/PROXIMOS_PASSOS.md)
 
 ---
@@ -15,7 +16,7 @@
 ### Componentes Principais
 
 - **🤖 Automações:** 70+ automações organizadas em 13 categorias
-- **📦 Packages:** 8 packages modulares (AQS, Piscina, Climatização)
+- **📦 Packages:** 9 packages modulares (AQS, Piscina, Climatização, EV)
 - **🔌 Integrações:** 24+ integrações personalizadas
 - **☀️ Energia Solar:** Controlo automático de excesso PV com Solcast
 - **🏊 Piscina:** Gestão completa com Blueprint Solar v2 inteligente
@@ -141,6 +142,20 @@ homeassistant/
 - Cálculos de ponto de orvalho
 - Alertas de humidade ideal
 
+
+### 🔌 Carregamento Inteligente BMW i4
+- **Automação EV v2.0:** Carregamento otimizado por preço dinâmico Coopérnico
+  - Janela mais barata calculada em slots de 15min (OMIE bi-horário)
+  - SOC alvo configurável (padrão 80%)
+  - Hora-limite configurável (padrão 08:00)
+  - Safety net automático 45min antes do deadline
+  - Controlo 100% via regras cFos Powerbrain (sem switches)
+  - Regras solares (ex: pausa solar) ficam intactas
+- **Fork integração cFos Powerbrain:** [](https://github.com/guibrazlima/homeassistant-powerbrain)
+  - Novos sensores: sessão kWh, fases usadas, estado CP/PP, duração
+  - Novos serviços: , , , 
+  - Entidade  (1 fase / 3 fases via Modbus)
+
 ### 💧 Água Quente Sanitária (AQS)
 - Estimador térmico para bomba de calor HP90
 - Cálculo de perdas térmicas
@@ -200,7 +215,7 @@ Ver [SECURITY.md](docs/SECURITY.md) para detalhes completos.
 |-----------|------------|--------|
 | **Automações** | 70+ | ✅ 100% válidas |
 | **Blueprints** | 2 | ✅ Piscina Solar v1 e v2 |
-| **Packages** | 8 | ✅ 100% documentados |
+| **Packages** | 9 | ✅ 100% documentados |
 | **Integrações** | 24+ | ✅ Funcionais |
 | **Sensores** | 100+ | ✅ Monitorizados |
 | **Documentação** | 3500+ linhas | ✅ Consolidada |
@@ -216,6 +231,22 @@ Ver [SECURITY.md](docs/SECURITY.md) para detalhes completos.
 ---
 
 ## 🚀 Melhorias Recentes
+
+### Março 2026
+
+#### 🔌 Carregamento Inteligente BMW i4 (cFos Powerbrain)
+- ✅ **Novo:** Package  (v2.0)
+  - Cálculo automático da janela de preço mais barato (slots 15min Coopérnico)
+  - Controlo via regra wallbox  — sem switches
+  - Safety net 45min antes do deadline configurável
+  - 4 automações: calcular janela, SOC atingido, safety net, carro desligado
+- ✅ **Novo:** Fork integração cFos Powerbrain em 
+  - 8 novos sensores (sessão kWh, fases, CP/PP state, pausa, duração)
+  - Serviço  (patch de regra por label)
+  - Serviço  + entidade 
+  - Fix: leitura de modo de fase via registo Modbus 8044
+  - Fix: API correcta para regras ( / )
+  - PR #92 submetido ao upstream 
 
 ### Fevereiro 2026
 
@@ -308,6 +339,6 @@ Este projeto está sob licença MIT. Ver `LICENSE` para detalhes.
 
 ---
 
-**Última atualização:** 1 de fevereiro de 2026  
-**Versão:** 2.1.0  
+**Última atualização:** 14 de março de 2026  
+**Versão:** 2.2.0  
 **Manutenção:** Ativa ✅

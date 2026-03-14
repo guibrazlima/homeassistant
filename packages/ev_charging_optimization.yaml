@@ -1,0 +1,438 @@
+# ═══════════════════════════════════════════════════════════════════
+# PACKAGE: OTIMIZAÇÃO CARREGAMENTO BMW i4 (cFos Powerbrain)
+# ═══════════════════════════════════════════════════════════════════
+#
+# Carrega o BMW i4 na janela de energia mais barata do dia,
+# respeitando um SOC alvo e uma hora-limite de conclusão.
+#
+# Controlo via wallbox charging rule com label "EV Carregamento Nocturno".
+# A automação altera apenas time/dur dessa regra — as restantes
+# regras (ex: pausa solar) ficam intactas.
+#
+# Dependências:
+#   - sensor.battery_hv_state_of_charge (BMW CarData)
+#   - sensor.battery_ev_target_state_of_charge (BMW CarData)
+#   - sensor.coopernico_base_bi_horario_ciclo_diario_today_prices
+#   - powerbrain.update_charging_rule (cFos Powerbrain integration fork)
+#   - sensor.wallbox_state (cFos via HA)
+#
+# Versão: 2.0 — 2026-03-14 (controlo via regras wallbox)
+# ═══════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────
+# INPUT HELPERS
+# ─────────────────────────────────────────────────────────────────
+input_boolean:
+  ev_smart_charging_enabled:
+    name: "⚡ EV - Carregamento Inteligente"
+    icon: mdi:ev-station
+    initial: true
+
+  ev_charging_scheduled:
+    name: "⚡ EV - Carga Agendada"
+    icon: mdi:calendar-clock
+    initial: false
+
+input_datetime:
+  ev_charging_start:
+    name: "⚡ EV - Início da Janela Ótima"
+    has_date: true
+    has_time: true
+    icon: mdi:clock-start
+
+  ev_charging_end:
+    name: "⚡ EV - Fim da Janela Ótima"
+    has_date: true
+    has_time: true
+    icon: mdi:clock-end
+
+  ev_charging_deadline:
+    name: "⚡ EV - Hora Limite Carregado"
+    has_date: false
+    has_time: true
+    icon: mdi:clock-alert
+    initial: "08:00:00"
+
+input_number:
+  ev_battery_capacity_kwh:
+    name: "⚡ EV - Capacidade Útil (kWh)"
+    icon: mdi:battery
+    min: 10
+    max: 120
+    step: 0.1
+    unit_of_measurement: "kWh"
+    initial: 80.7
+
+  ev_charger_power_kw:
+    name: "⚡ EV - Potência Wallbox (kW)"
+    icon: mdi:flash
+    min: 1
+    max: 22
+    step: 0.1
+    unit_of_measurement: "kW"
+    initial: 7.4
+
+  ev_price_threshold_eur:
+    name: "⚡ EV - Preço Máximo (€/kWh)"
+    icon: mdi:currency-eur
+    min: 0.01
+    max: 0.50
+    step: 0.001
+    unit_of_measurement: "€/kWh"
+    initial: 0.15
+
+# ─────────────────────────────────────────────────────────────────
+# TEMPLATE SENSORS
+# ─────────────────────────────────────────────────────────────────
+template:
+  - sensor:
+      - name: "EV kWh Necessários"
+        unique_id: ev_kwh_needed
+        icon: mdi:battery-charging-50
+        unit_of_measurement: "kWh"
+        state_class: measurement
+        state: >
+          {% set current_soc = states('sensor.battery_hv_state_of_charge') | float(0) %}
+          {% set target_soc = states('sensor.battery_ev_target_state_of_charge') | float(80) %}
+          {% set capacity = states('input_number.ev_battery_capacity_kwh') | float(80.7) %}
+          {% if target_soc > current_soc %}
+            {{ ((target_soc - current_soc) / 100 * capacity) | round(2) }}
+          {% else %}
+            0
+          {% endif %}
+        attributes:
+          current_soc: "{{ states('sensor.battery_hv_state_of_charge') | float(0) }}"
+          target_soc: "{{ states('sensor.battery_ev_target_state_of_charge') | float(80) }}"
+
+      - name: "EV Horas de Carga Estimadas"
+        unique_id: ev_hours_needed
+        icon: mdi:clock-fast
+        unit_of_measurement: "h"
+        state_class: measurement
+        state: >
+          {% set kwh = states('sensor.ev_kwh_necessarios') | float(0) %}
+          {% set power_kw = states('input_number.ev_charger_power_kw') | float(7.4) %}
+          {% if power_kw > 0 %}
+            {{ (kwh / power_kw) | round(2) }}
+          {% else %}
+            0
+          {% endif %}
+
+      - name: "EV Slots 15min Necessários"
+        unique_id: ev_slots_needed
+        icon: mdi:timer-sand
+        unit_of_measurement: "slots"
+        state: >
+          {% set hours = states('sensor.ev_horas_de_carga_estimadas') | float(0) %}
+          {{ (hours * 4) | round(0, 'ceil') | int }}
+
+      - name: "EV Estado Carregamento"
+        unique_id: ev_charging_status
+        icon: mdi:car-electric
+        state: >
+          {% set ws = states('sensor.wallbox_state') %}
+          {% set scheduled = is_state('input_boolean.ev_charging_scheduled', 'on') %}
+          {% set smart_enabled = is_state('input_boolean.ev_smart_charging_enabled', 'on') %}
+          {% set current_soc = states('sensor.battery_hv_state_of_charge') | float(0) %}
+          {% set target_soc = states('sensor.battery_ev_target_state_of_charge') | float(80) %}
+          {% if '1:' in ws %}
+            Carro desligado
+          {% elif current_soc >= target_soc %}
+            Bateria cheia ({{ current_soc | int }}%)
+          {% elif '3:' in ws %}
+            A carregar — {{ current_soc | int }}% → {{ target_soc | int }}%
+          {% elif scheduled and smart_enabled %}
+            Agendado — aguarda janela ótima
+          {% elif not smart_enabled %}
+            Modo manual (inteligente desativado)
+          {% else %}
+            Carro ligado — a calcular janela
+          {% endif %}
+
+# ─────────────────────────────────────────────────────────────────
+# SCRIPTS
+# ─────────────────────────────────────────────────────────────────
+script:
+  ev_calcular_janela_otima:
+    alias: "⚡ EV - Calcular Janela Ótima"
+    icon: mdi:calculator
+    mode: single
+    sequence:
+      - variables:
+          slots_needed: "{{ states('sensor.ev_slots_15min_necessarios') | int(1) }}"
+          deadline_time: "{{ states('input_datetime.ev_charging_deadline') }}"
+          prices_attr: "{{ state_attr('sensor.coopernico_base_bi_horario_ciclo_diario_today_prices', 'prices') }}"
+          now_ts: "{{ now().timestamp() }}"
+
+      - variables:
+          deadline_ts: >
+            {% set d = deadline_time %}
+            {% set today = now().date() %}
+            {% set deadline_dt = today ~ ' ' ~ d %}
+            {% set ts = strptime(deadline_dt, '%Y-%m-%d %H:%M:%S').timestamp() %}
+            {% if ts <= now_ts %}
+              {% set tomorrow = (now().date() + timedelta(days=1)) | string %}
+              {% set deadline_dt = tomorrow ~ ' ' ~ d %}
+              {{ strptime(deadline_dt, '%Y-%m-%d %H:%M:%S').timestamp() }}
+            {% else %}
+              {{ ts }}
+            {% endif %}
+
+          available_slots: >
+            {% set prices = prices_attr if prices_attr else [] %}
+            {% set ns = namespace(slots=[]) %}
+            {% for p in prices %}
+              {% set slot_ts = as_timestamp(p.datetime) %}
+              {% if slot_ts >= now_ts and slot_ts < (deadline_ts - slots_needed * 900) %}
+                {% set ns.slots = ns.slots + [{'ts': slot_ts, 'price': p.price_w_vat, 'dt': p.datetime}] %}
+              {% endif %}
+            {% endfor %}
+            {{ ns.slots }}
+
+      - variables:
+          best_window: >
+            {% set slots = available_slots %}
+            {% set n = slots | length %}
+            {% set needed = slots_needed | int %}
+            {% if n < needed %}
+              {{ {'start': '', 'end': '', 'cost': 99999, 'valid': false} }}
+            {% else %}
+              {% set ns = namespace(best_cost=99999, best_start='', best_end='') %}
+              {% for i in range(n - needed + 1) %}
+                {% set window = slots[i:i+needed] %}
+                {% set cost = window | map(attribute='price') | sum %}
+                {% if cost < ns.best_cost %}
+                  {% set ns.best_cost = cost %}
+                  {% set ns.best_start = window[0].dt %}
+                  {% set ns.best_end = window[-1].dt %}
+                {% endif %}
+              {% endfor %}
+              {{ {'start': ns.best_start, 'end': ns.best_end, 'cost': ns.best_cost, 'valid': true} }}
+            {% endif %}
+
+      - if:
+          - condition: template
+            value_template: "{{ not best_window.valid }}"
+        then:
+          - action: notify.mobile_app_glphone
+            data:
+              title: "⚡ EV - Sem janela ótima"
+              message: "Não há slots suficientes antes das {{ deadline_time }}. A ativar safety net."
+          - action: script.ev_ativar_safety_net
+        else:
+          - variables:
+              start_minutes: >
+                {% set dt = as_datetime(best_window.start) | as_local %}
+                {{ dt.hour * 60 + dt.minute }}
+              dur_minutes: "{{ (slots_needed | int) * 15 }}"
+              end_ts: "{{ as_timestamp(best_window.end) + 900 }}"
+
+          - action: input_datetime.set_datetime
+            target:
+              entity_id: input_datetime.ev_charging_start
+            data:
+              datetime: "{{ best_window.start }}"
+
+          - action: input_datetime.set_datetime
+            target:
+              entity_id: input_datetime.ev_charging_end
+            data:
+              datetime: "{{ end_ts | timestamp_local }}"
+
+          # ── Atualizar regra "EV Carregamento Nocturno" na wallbox ──
+          # Altera apenas time e dur; todas as outras regras ficam intactas.
+          - action: powerbrain.update_charging_rule
+            data:
+              dev_id: E1
+              cmt: "EV Carregamento Nocturno"
+              time: "{{ start_minutes | int }}"
+              dur: "{{ dur_minutes | int }}"
+              ena: true
+
+          - action: input_boolean.turn_on
+            target:
+              entity_id: input_boolean.ev_charging_scheduled
+
+          - action: notify.mobile_app_glphone
+            data:
+              title: "⚡ EV - Carga Agendada"
+              message: >
+                Janela ótima: {{ as_timestamp(best_window.start) | timestamp_custom('%H:%M') }}
+                → {{ (as_timestamp(best_window.end) + 900) | timestamp_custom('%H:%M') }}
+                ({{ dur_minutes }}min, {{ states('sensor.ev_kwh_necessarios') }}kWh)
+                SOC: {{ states('sensor.battery_hv_state_of_charge') | int }}%
+                → {{ states('sensor.battery_ev_target_state_of_charge') | int }}%
+
+  ev_ativar_safety_net:
+    alias: "⚡ EV - Ativar Safety Net (carga imediata)"
+    icon: mdi:shield-alert
+    mode: single
+    description: >
+      Ativa carregamento imediato via regra wallbox — usado quando não há
+      slots disponíveis ou pelo safety net 45min antes do deadline.
+    sequence:
+      - variables:
+          now_minutes: "{{ now().hour * 60 + now().minute }}"
+          dur_minutes: >
+            {% set dl = states('input_datetime.ev_charging_deadline').split(':') %}
+            {% set dl_m = dl[0] | int * 60 + dl[1] | int %}
+            {% set now_m = now().hour * 60 + now().minute %}
+            {% set remaining = dl_m - now_m %}
+            {{ [remaining, 120] | min | max(15) }}
+
+      - action: powerbrain.update_charging_rule
+        data:
+          dev_id: E1
+          cmt: "EV Carregamento Nocturno"
+          time: "{{ now_minutes | int }}"
+          dur: "{{ dur_minutes | int }}"
+          ena: true
+
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.ev_charging_scheduled
+
+      - action: notify.mobile_app_glphone
+        data:
+          title: "⚡ EV - Safety Net Ativado"
+          message: >
+            Carregamento imediato via wallbox ({{ dur_minutes }}min).
+            SOC: {{ states('sensor.battery_hv_state_of_charge') | int }}%
+            → {{ states('sensor.battery_ev_target_state_of_charge') | int }}%
+
+  ev_desativar_regra_ev:
+    alias: "⚡ EV - Desativar Regra EV"
+    icon: mdi:stop-circle
+    mode: single
+    description: >
+      Desativa a regra "EV Carregamento Nocturno" (ena: false).
+      As outras regras (ex: pausa solar) ficam activas.
+    sequence:
+      - action: powerbrain.update_charging_rule
+        data:
+          dev_id: E1
+          cmt: "EV Carregamento Nocturno"
+          ena: false
+
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.ev_charging_scheduled
+
+# ─────────────────────────────────────────────────────────────────
+# AUTOMAÇÕES
+# ─────────────────────────────────────────────────────────────────
+automation:
+  # A1 — Calcular janela ótima (vários triggers)
+  - id: ev_carro_ligado_calcular
+    alias: "⚡ EV - Calcular Janela Ótima"
+    description: "Recalcula a janela ótima quando: carro ligado, preços atualizados, target SOC alterado, ou deadline alterado"
+    trigger:
+      - platform: state
+        entity_id: sensor.wallbox_state
+        to: "2: Car connected"
+        for: "00:00:30"
+        id: carro_ligado
+      - platform: state
+        entity_id: sensor.coopernico_base_bi_horario_ciclo_diario_today_prices
+        id: precos_atualizados
+      - platform: state
+        entity_id: sensor.battery_ev_target_state_of_charge
+        id: target_soc_alterado
+      - platform: state
+        entity_id: input_datetime.ev_charging_deadline
+        id: deadline_alterado
+    condition:
+      - condition: state
+        entity_id: input_boolean.ev_smart_charging_enabled
+        state: "on"
+      - condition: template
+        value_template: >
+          {{ 'connected' in states('sensor.wallbox_state') | lower or
+             trigger.id == 'carro_ligado' }}
+      - condition: template
+        value_template: >
+          {{ states('sensor.battery_hv_state_of_charge') | float(100) <
+             states('sensor.battery_ev_target_state_of_charge') | float(80) }}
+      - condition: template
+        value_template: "{{ '3:' not in states('sensor.wallbox_state') }}"
+    action:
+      - delay: "00:00:10"
+      - action: script.ev_calcular_janela_otima
+    mode: single
+
+  # A2 — SOC atingido → desativar regra
+  - id: ev_soc_atingido
+    alias: "⚡ EV - SOC Atingido → Desativar Regra"
+    trigger:
+      - platform: template
+        value_template: >
+          {{ states('sensor.battery_hv_state_of_charge') | float(0) >=
+             states('sensor.battery_ev_target_state_of_charge') | float(80) }}
+        for: "00:02:00"
+    condition:
+      - condition: state
+        entity_id: input_boolean.ev_charging_scheduled
+        state: "on"
+      - condition: template
+        value_template: "{{ 'connected' in states('sensor.wallbox_state') | lower }}"
+    action:
+      - action: script.ev_desativar_regra_ev
+      - action: notify.mobile_app_glphone
+        data:
+          title: "⚡ EV - Carregamento Concluído"
+          message: >
+            BMW i4 carregado!
+            SOC: {{ states('sensor.battery_hv_state_of_charge') | int }}%
+            (target: {{ states('sensor.battery_ev_target_state_of_charge') | int }}%)
+    mode: single
+
+  # A3 — Safety net: 45min antes do deadline
+  - id: ev_safety_net_deadline
+    alias: "⚡ EV - Safety Net Deadline"
+    description: "45min antes do deadline, força carregamento se o SOC não chegou ao alvo"
+    trigger:
+      - platform: template
+        value_template: >
+          {% set deadline = states('input_datetime.ev_charging_deadline') %}
+          {% if deadline not in ['unknown', 'unavailable', ''] %}
+            {% set deadline_today = today_at(deadline) %}
+            {{ now() >= (deadline_today - timedelta(minutes=45)) and
+               now() < deadline_today }}
+          {% else %}
+            false
+          {% endif %}
+    condition:
+      - condition: state
+        entity_id: input_boolean.ev_smart_charging_enabled
+        state: "on"
+      - condition: template
+        value_template: "{{ 'connected' in states('sensor.wallbox_state') | lower }}"
+      - condition: template
+        value_template: >
+          {{ states('sensor.battery_hv_state_of_charge') | float(100) <
+             states('sensor.battery_ev_target_state_of_charge') | float(80) }}
+      - condition: template
+        value_template: "{{ '3:' not in states('sensor.wallbox_state') }}"
+    action:
+      - action: script.ev_ativar_safety_net
+    mode: single
+
+  # A4 — Carro desligado → limpar estado
+  - id: ev_carro_desligado_limpar
+    alias: "⚡ EV - Carro Desligado → Limpar Estado"
+    trigger:
+      - platform: state
+        entity_id: sensor.wallbox_state
+        to: "1: No car"
+        for: "00:00:10"
+    action:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.ev_charging_scheduled
+      - action: notify.mobile_app_glphone
+        data:
+          title: "⚡ EV - Carro Desligado"
+          message: >
+            BMW i4 desligado da wallbox.
+            SOC final: {{ states('sensor.battery_hv_state_of_charge') | int }}%
+    mode: single
