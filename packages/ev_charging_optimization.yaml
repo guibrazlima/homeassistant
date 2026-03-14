@@ -252,7 +252,7 @@ template:
         state: >
           {# Calcula custo da janela ótima de hoje #}
           {% set slots_needed = states('sensor.ev_slots_15min_necessarios') | int(1) %}
-          {% set prices = state_attr('sensor.coopernico_base_bi_horario_ciclo_diario_today_prices', 'prices') or [] %}
+          {% set prices = state_attr('sensor.coopernico_base_bi_horario_ciclo_diario_all_prices', 'prices') or [] %}
           {% set now_ts = now().timestamp() %}
           {% set deadline_str = states('input_datetime.ev_charging_deadline') %}
           {% set dl_parts = deadline_str.split(':') %}
@@ -330,7 +330,7 @@ script:
           resultado: >
             {% set slots_needed = states('sensor.ev_slots_15min_necessarios') | int(1) %}
             {% set deadline_str = states('input_datetime.ev_charging_deadline') %}
-            {% set prices = state_attr('sensor.coopernico_base_bi_horario_ciclo_diario_today_prices', 'prices') or [] %}
+            {% set prices = state_attr('sensor.coopernico_base_bi_horario_ciclo_diario_all_prices', 'prices') or [] %}
             {% set now_ts = now().timestamp() %}
             {% set dl_parts = deadline_str.split(':') %}
             {% set dl_h = dl_parts[0] | int %}
@@ -484,7 +484,7 @@ automation:
         for: "00:00:30"
         id: carro_ligado
       - platform: state
-        entity_id: sensor.coopernico_base_bi_horario_ciclo_diario_today_prices
+        entity_id: sensor.coopernico_base_bi_horario_ciclo_diario_all_prices
         id: precos_atualizados
       - platform: state
         entity_id: sensor.battery_ev_target_state_of_charge
