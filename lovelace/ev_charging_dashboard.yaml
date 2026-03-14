@@ -338,7 +338,7 @@ views:
               var deadline = ((states['input_datetime.ev_charging_deadline'] || {}).state || '').substring(11,16);
               var kwh = parseFloat((states['sensor.ev_kwh_necessarios'] || {}).state) || 0;
               var cost = parseFloat((states['sensor.ev_previsao_custo_hoje'] || {}).state) || 0;
-              var price = parseFloat((states['sensor.ev_custo_por_kwh_estimado'] || {}).state) || 0;
+              var price = parseFloat((states['input_number.ev_window_avg_price'] || {}).state) || 0;
               var statusColor = scheduled ? '#4ade80' : '#fbbf24';
               var statusText = scheduled ? '✅ Agendado' : '⏳ A calcular';
               var fmtTime = function(s) {
