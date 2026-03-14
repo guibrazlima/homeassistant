@@ -113,109 +113,32 @@ views:
       # ══════════════════════════════════════════════════════════════
       - type: horizontal-stack
         cards:
-          - type: custom:button-card
-            entity: sensor.wallbox_charging_power
-            show_name: true
-            name: "⚡ Potência"
-            show_state: true
-            styles:
-              card:
-                - border-radius: 16px
-                - background: 'linear-gradient(135deg,#eff6ff,#dbeafe)'
-                - color: "#1e3a8a"
-                - padding: 16px 8px
-                - box-shadow: 0 2px 8px rgba(59,130,246,0.15)
-              state:
-                - font-size: 22px
-                - font-weight: 800
-                - color: '#1d4ed8'
-              name:
-                - font-size: 11px
-                - color: '#64748b'
-                - font-weight: 600
-                - text-transform: uppercase
-                - letter-spacing: 0.5px
-              icon:
-                - display: none
+          - type: custom:mushroom-template-card
+            primary: >
+              {% set p = states('sensor.wallbox_charging_power') | float(0) %}
+              {{ (p / 1000) | round(2) }} kW
+            secondary: "⚡ Potência"
+            icon: mdi:flash
+            icon_color: blue
 
-          - type: custom:button-card
-            entity: sensor.ev_tempo_restante_min
-            show_name: true
-            name: "⏱️ Restante"
-            show_state: true
-            styles:
-              card:
-                - border-radius: 16px
-                - background: 'linear-gradient(135deg,#fefce8,#fef9c3)'
-                - color: '#78350f'
-                - padding: 16px 8px
-                - box-shadow: 0 2px 8px rgba(234,179,8,0.15)
-              state:
-                - font-size: 22px
-                - font-weight: 800
-                - color: '#92400e'
-              name:
-                - font-size: 11px
-                - color: '#64748b'
-                - font-weight: 600
-                - text-transform: uppercase
-                - letter-spacing: 0.5px
-              icon:
-                - display: none
+          - type: custom:mushroom-template-card
+            primary: "{{ states('sensor.ev_tempo_restante_min') | int(0) }} min"
+            secondary: "⏱️ Restante"
+            icon: mdi:timer-outline
+            icon_color: orange
 
-          - type: custom:button-card
-            entity: sensor.ev_custo_sessao_estimado
-            show_name: true
-            name: "💶 Custo est."
-            show_state: true
-            styles:
-              card:
-                - border-radius: 16px
-                - background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)'
-                - color: '#14532d'
-                - padding: 16px 8px
-                - box-shadow: 0 2px 8px rgba(34,197,94,0.15)
-              state:
-                - font-size: 22px
-                - font-weight: 800
-                - color: '#15803d'
-              name:
-                - font-size: 11px
-                - color: '#64748b'
-                - font-weight: 600
-                - text-transform: uppercase
-                - letter-spacing: 0.5px
-              icon:
-                - display: none
+          - type: custom:mushroom-template-card
+            primary: "{{ states('sensor.ev_custo_sessao_estimado') | float(0) | round(3) }} €"
+            secondary: "💶 Custo est."
+            icon: mdi:currency-eur
+            icon_color: green
 
-          - type: custom:button-card
-            entity: sensor.ev_autonomia_estimada_km
-            show_name: true
-            name: "🛣️ Autonomia"
-            show_state: true
-            styles:
-              card:
-                - border-radius: 16px
-                - background: 'linear-gradient(135deg,#fdf4ff,#fae8ff)'
-                - color: '#581c87'
-                - padding: 16px 8px
-                - box-shadow: 0 2px 8px rgba(168,85,247,0.15)
-              state:
-                - font-size: 22px
-                - font-weight: 800
-                - color: '#7e22ce'
-              name:
-                - font-size: 11px
-                - color: '#64748b'
-                - font-weight: 600
-                - text-transform: uppercase
-                - letter-spacing: 0.5px
-              icon:
-                - display: none
+          - type: custom:mushroom-template-card
+            primary: "{{ states('sensor.ev_autonomia_estimada_km') | int(0) }} km"
+            secondary: "🛣️ Autonomia"
+            icon: mdi:map-marker-distance
+            icon_color: purple
 
-      # ══════════════════════════════════════════════════════════════
-      # SECÇÃO 4 — GRÁFICO POTÊNCIA (ApexCharts, área 12h)
-      # ══════════════════════════════════════════════════════════════
       - type: custom:apexcharts-card
         header:
           show: true
