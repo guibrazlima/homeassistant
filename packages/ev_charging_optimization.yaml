@@ -350,7 +350,7 @@ script:
             {% endfor %}
             {% set n = ns.slots | length %}
             {% if n < slots_needed %}
-              {{ {'valid': false, 'start': '', 'end': '', 'cost': 0, 'dur': 0, 'start_min': 0} }}
+              {{ {'valid': false, 'start': '', 'end': '', 'cost': 0, 'dur': 0, 'start_min': 0} | tojson }}
             {% else %}
               {% set ns2 = namespace(best_cost=99999, best_i=0) %}
               {% for i in range(n - slots_needed + 1) %}
@@ -369,7 +369,7 @@ script:
                 'cost': ns2.best_cost | round(4),
                 'dur': slots_needed * 15,
                 'start_min': start_dt.hour * 60 + start_dt.minute
-              } }}
+              } | tojson }}
             {% endif %}
 
       - if:
