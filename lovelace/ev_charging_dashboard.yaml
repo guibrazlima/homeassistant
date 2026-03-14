@@ -544,6 +544,9 @@ views:
       # ══════════════════════════════════════════════════════════════
       - type: custom:button-card
         color_type: card
+        show_name: false
+        show_icon: false
+        show_state: false
         styles:
           card:
             - background: "linear-gradient(135deg,#0f172a,#1e293b)"
