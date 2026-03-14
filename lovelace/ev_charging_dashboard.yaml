@@ -58,15 +58,15 @@ views:
         show_name: false
         show_icon: false
         show_state: false
-        card_mod:
-          style: |
-            ha-card { display: block !important; }
         styles:
           card:
             - padding: 20px 24px
             - border-radius: 16px
             - background: 'linear-gradient(135deg,#0f172a,#1e293b)'
             - box-shadow: 0 4px 16px rgba(0,0,0,0.25)
+          grid:
+            - grid-template-areas: '"cf-bar"'
+            - grid-template-columns: 1fr
           custom_fields:
             bar:
               - width: 100%
@@ -210,15 +210,15 @@ views:
         show_name: false
         show_icon: false
         show_state: false
-        card_mod:
-          style: |
-            ha-card { display: block !important; }
         styles:
           card:
             - padding: 20px 24px
             - border-radius: 16px
             - background: 'linear-gradient(135deg,#1c1209,#2d1f0a,#3d2b0d)'
             - box-shadow: 0 4px 16px rgba(0,0,0,0.25)
+          grid:
+            - grid-template-areas: '"cf-origem"'
+            - grid-template-columns: 1fr
           custom_fields:
             origem:
               - width: 100%
@@ -314,15 +314,15 @@ views:
         show_name: false
         show_icon: false
         show_state: false
-        card_mod:
-          style: |
-            ha-card { display: block !important; }
         styles:
           card:
             - padding: 20px 24px
             - border-radius: 16px
             - background: 'linear-gradient(135deg,#0f172a,#1e293b)'
             - box-shadow: 0 4px 16px rgba(0,0,0,0.25)
+          grid:
+            - grid-template-areas: '"cf-plano"'
+            - grid-template-columns: 1fr
           custom_fields:
             plano:
               - width: 100%
@@ -386,15 +386,15 @@ views:
         show_name: false
         show_icon: false
         show_state: false
-        card_mod:
-          style: |
-            ha-card { display: block !important; }
         styles:
           card:
             - padding: 20px 24px
             - border-radius: 16px
             - background: 'linear-gradient(135deg,#0a1628,#132342,#1a3a6b)'
             - box-shadow: 0 4px 16px rgba(0,0,0,0.25)
+          grid:
+            - grid-template-areas: '"cf-custos"'
+            - grid-template-columns: 1fr
           custom_fields:
             custos:
               - width: 100%
