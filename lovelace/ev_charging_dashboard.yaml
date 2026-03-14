@@ -80,7 +80,7 @@ views:
               var pct = Math.min(soc, 100);
               var isCharging = power > 100;
               var chargingBadge = isCharging ? '<span style="background:#4ade8033;border:1px solid #4ade8066;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:#4ade80;margin-left:8px">⚡ A CARREGAR</span>' : '';
-              return '<div style="color:white;text-align:center">' +
+              return '<div style="width:100%;color:white;text-align:center">' +
                 '<div style="text-align:center;margin-bottom:12px">' +
                   '<div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Estado da Bateria</div>' +
                   '<div><span style="font-size:48px;font-weight:900;color:' + color + '">' + Math.round(soc) + '%</span></div>' +
@@ -231,7 +231,7 @@ views:
               var monthlySolar = parseFloat((states['sensor.ev_energia_carregamento_solar_monthly'] || {}).state) || 0;
               var monthlyTotal = parseFloat((states['sensor.ev_energy_monthly'] || {}).state) || 0;
               var monthlyPct = monthlyTotal > 0 ? Math.round(monthlySolar / monthlyTotal * 100) : 0;
-              return '<div style="text-align:center">' +
+              return '<div style="width:100%;text-align:center">' +
                 '<div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;text-align:center">☀️ Origem da Energia</div>' +
                 '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;text-align:center">' +
                   '<div style="background:#451a03aa;border:1px solid #92400e55;border-radius:12px;padding:12px;text-align:center">' +
@@ -419,7 +419,7 @@ views:
                   '<div style="font-size:14px;font-weight:700;color:' + tc + 'bb">' + eur.toFixed(2) + ' €</div>' +
                 '</div>';
               };
-              return '<div style="text-align:center">' +
+              return '<div style="width:100%;text-align:center">' +
                 '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;text-align:center">💰 Energia &amp; Custos Acumulados</div>' +
                 '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;text-align:center">' +
                   card('📅','Hoje', dk, de,'#1e3a8a44','#93c5fd') +
