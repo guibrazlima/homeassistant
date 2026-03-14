@@ -59,18 +59,15 @@ views:
         show_icon: false
         show_state: false
 
-        card_mod:
-          style: |
-            ha-card #container {
-              grid-template-columns: 1fr !important;
-              grid-template-rows: auto !important;
-            }
         styles:
           card:
             - padding: 20px 24px
             - border-radius: 16px
             - background: 'linear-gradient(135deg,#0f172a,#1e293b)'
             - box-shadow: 0 4px 16px rgba(0,0,0,0.25)
+          grid:
+            - grid-template-areas: '"bar"'
+            - grid-template-columns: 1fr
           custom_fields:
             bar:
               - width: 100%
@@ -215,18 +212,15 @@ views:
         show_icon: false
         show_state: false
 
-        card_mod:
-          style: |
-            ha-card #container {
-              grid-template-columns: 1fr !important;
-              grid-template-rows: auto !important;
-            }
         styles:
           card:
             - padding: 20px 24px
             - border-radius: 16px
             - background: 'linear-gradient(135deg,#1c1209,#2d1f0a,#3d2b0d)'
             - box-shadow: 0 4px 16px rgba(0,0,0,0.25)
+          grid:
+            - grid-template-areas: '"origem"'
+            - grid-template-columns: 1fr
           custom_fields:
             origem:
               - width: 100%
@@ -323,18 +317,15 @@ views:
         show_icon: false
         show_state: false
 
-        card_mod:
-          style: |
-            ha-card #container {
-              grid-template-columns: 1fr !important;
-              grid-template-rows: auto !important;
-            }
         styles:
           card:
             - padding: 20px 24px
             - border-radius: 16px
             - background: 'linear-gradient(135deg,#0f172a,#1e293b)'
             - box-shadow: 0 4px 16px rgba(0,0,0,0.25)
+          grid:
+            - grid-template-areas: '"plano"'
+            - grid-template-columns: 1fr
           custom_fields:
             plano:
               - width: 100%
@@ -399,18 +390,15 @@ views:
         show_icon: false
         show_state: false
 
-        card_mod:
-          style: |
-            ha-card #container {
-              grid-template-columns: 1fr !important;
-              grid-template-rows: auto !important;
-            }
         styles:
           card:
             - padding: 20px 24px
             - border-radius: 16px
             - background: 'linear-gradient(135deg,#0a1628,#132342,#1a3a6b)'
             - box-shadow: 0 4px 16px rgba(0,0,0,0.25)
+          grid:
+            - grid-template-areas: '"custos"'
+            - grid-template-columns: 1fr
           custom_fields:
             custos:
               - width: 100%
