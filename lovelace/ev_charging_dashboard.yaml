@@ -599,3 +599,49 @@ views:
           style: |
             ha-card { background: transparent !important; }
             ha-card #container { grid-template-columns: 1fr !important; grid-template-rows: auto !important; }
+
+      # ══════════════════════════════════════════════════════════════
+      # SECÇÃO 13 — CONFIGURAÇÕES
+      # ══════════════════════════════════════════════════════════════
+      - type: custom:button-card
+        color_type: card
+        show_name: false
+        show_icon: false
+        show_state: false
+        styles:
+          card:
+            - background: "linear-gradient(135deg,#0f172a,#1e293b)"
+            - border-radius: 18px
+            - padding: 20px
+            - box-shadow: "0 4px 24px rgba(0,0,0,0.5)"
+          custom_fields:
+            config_header:
+              - width: 100%
+        custom_fields:
+          config_header: |
+            [[[
+              return '<div style="font-size:13px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px">⚙️ Configurações de Carregamento</div>';
+            ]]]
+        card_mod:
+          style: |
+            ha-card { background: transparent !important; }
+            ha-card #container { grid-template-columns: 1fr !important; grid-template-rows: auto !important; }
+
+      - type: entities
+        show_header_toggle: false
+        style: |
+          ha-card { background: rgba(15,23,42,0.8); border-radius: 14px; }
+        entities:
+          - entity: input_number.ev_charging_efficiency
+            name: "⚙️ Factor de Eficiência"
+            secondary_info: "0.70 = 70% da potência máx. (casa activa)"
+          - entity: input_number.ev_charger_power_kw
+            name: "⚡ Potência Wallbox (kW)"
+          - entity: input_number.ev_battery_capacity_kwh
+            name: "🔋 Capacidade Bateria (kWh)"
+          - entity: sensor.battery_ev_target_state_of_charge
+            name: "🎯 SOC Alvo BMW"
+          - entity: input_number.ev_price_threshold_eur
+            name: "💰 Preço Máximo (€/kWh)"
+          - entity: input_number.ev_window_avg_price
+            name: "📊 Preço Médio Janela Ótima"
