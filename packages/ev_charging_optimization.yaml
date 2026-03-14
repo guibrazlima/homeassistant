@@ -53,6 +53,15 @@ input_number:
     unit_of_measurement: "kW"
     initial: 7.4
 
+  ev_charging_efficiency:
+    name: "⚡ EV - Factor de Eficiência do Carregamento"
+    icon: mdi:percent
+    min: 0.30
+    max: 1.0
+    step: 0.05
+    unit_of_measurement: ""
+    initial: 0.70
+
   ev_price_threshold_eur:
     name: "⚡ EV - Preço Máximo (€/kWh)"
     icon: mdi:currency-eur
@@ -124,8 +133,9 @@ template:
         state: >
           {% set kwh = states('sensor.ev_kwh_necessarios') | float(0) %}
           {% set power_kw = states('input_number.ev_charger_power_kw') | float(7.4) %}
+          {% set efficiency = states('input_number.ev_charging_efficiency') | float(0.70) %}
           {% if power_kw > 0 and kwh > 0 %}
-            {{ (kwh / power_kw) | round(2) }}
+            {{ (kwh / (power_kw * efficiency)) | round(2) }}
           {% else %}
             0
           {% endif %}
@@ -407,7 +417,7 @@ script:
             data:
               value: >
                 {% set r = resultado | from_json %}
-                {% set slots_needed = (states('sensor.ev_kwh_necessarios') | float(1) / (states('input_number.ev_charger_power_kw') | float(7.4) / 4)) | round(0, 'ceil') | int %}
+                {% set slots_needed = (states('sensor.ev_kwh_necessarios') | float(1) / (states('input_number.ev_charger_power_kw') | float(7.4) * states('input_number.ev_charging_efficiency') | float(0.70) / 4)) | round(0, 'ceil') | int %}
                 {{ (r.cost / [slots_needed, 1] | max) | round(4) }}
           - action: input_boolean.turn_on
             target:
@@ -579,4 +589,48 @@ automation:
           title: "⚡ EV - Carro Desligado"
           message: >
             BMW i4 desligado. SOC final: {{ states('sensor.battery_hv_state_of_charge') | int }}%
+    mode: single
+
+  - id: ev_recalcular_periodico
+    alias: "⚡ EV - Recálculo Periódico (30min)"
+    description: >
+      A cada 30min enquanto o carro está a carregar, verifica se o SOC está
+      atrasado >15% face ao previsto. Se sim, recalcula a janela para alargar.
+    trigger:
+      - platform: time_pattern
+        minutes: "/30"
+    condition:
+      - condition: state
+        entity_id: sensor.wallbox_state
+        state: "3: Charging"
+      - condition: state
+        entity_id: input_boolean.ev_charging_scheduled
+        state: "on"
+      - condition: template
+        value_template: >
+          {#- Calcula SOC esperado neste momento e compara com real -#}
+          {% set start_ts = as_timestamp(states('input_datetime.ev_charging_start')) %}
+          {% set now_ts   = as_timestamp(now()) %}
+          {% set elapsed_h = ((now_ts - start_ts) / 3600) | float(0) %}
+          {% set power_kw  = states('input_number.ev_charger_power_kw') | float(7.4) %}
+          {% set efficiency = states('input_number.ev_charging_efficiency') | float(0.70) %}
+          {% set capacity  = states('input_number.ev_battery_capacity_kwh') | float(80.7) %}
+          {% set kwh_expected = (elapsed_h * power_kw * efficiency) | float(0) %}
+          {% set soc_expected_gain = (kwh_expected / capacity * 100) | float(0) %}
+          {% set soc_target = states('sensor.battery_ev_target_state_of_charge') | float(80) %}
+          {% set soc_current = states('sensor.battery_hv_state_of_charge') | float(0) %}
+          {% set soc_needed  = soc_target - soc_current %}
+          {#- Só recalcula se elapsed > 15min e atrasado >15% do objectivo -#}
+          {{ elapsed_h > 0.25 and soc_needed > 0 and soc_expected_gain < (soc_needed * 0.85) }}
+    action:
+      - action: script.ev_calcular_janela_otima
+      - action: notify.mobile_app_glphone
+        data:
+          title: "⚡ EV - Janela Recalculada"
+          message: >
+            Carregamento mais lento que previsto.
+            SOC actual: {{ states('sensor.battery_hv_state_of_charge') | int }}%
+            → {{ states('sensor.battery_ev_target_state_of_charge') | int }}%
+            Nova janela: {{ states('input_datetime.ev_charging_start')[11:16] }}
+            → {{ states('input_datetime.ev_charging_end')[11:16] }}
     mode: single
