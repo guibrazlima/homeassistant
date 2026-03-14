@@ -62,6 +62,15 @@ input_number:
     unit_of_measurement: "€/kWh"
     initial: 0.15
 
+  ev_window_avg_price:
+    name: "⚡ EV - Preço Médio Janela Ótima (€/kWh)"
+    icon: mdi:currency-eur
+    min: 0.001
+    max: 1.0
+    step: 0.0001
+    unit_of_measurement: "€/kWh"
+    initial: 0.09
+
 # ─────────────────────────────────────────────────────────────────
 # UTILITY METERS — energia acumulada
 # ─────────────────────────────────────────────────────────────────
@@ -303,9 +312,9 @@ template:
         unit_of_measurement: "€/100km"
         state_class: measurement
         state: >
-          {# Consumo médio BMW i4 ~18kWh/100km #}
+          {# Consumo médio BMW i4 ~18kWh/100km — usa preço médio da janela ótima agendada #}
           {% set consumption_per_100km = 18 %}
-          {% set price = states('sensor.ev_custo_por_kwh_estimado') | float(0.09) %}
+          {% set price = states('input_number.ev_window_avg_price') | float(0.09) %}
           {{ (consumption_per_100km * price) | round(2) }}
 
 # ─────────────────────────────────────────────────────────────────
@@ -392,6 +401,14 @@ script:
               time: "{{ r.start_min | int }}"
               dur: "{{ r.dur | int }}"
               ena: true
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.ev_window_avg_price
+            data:
+              value: >
+                {% set r = resultado | from_json %}
+                {% set slots_needed = (states('sensor.ev_kwh_necessarios') | float(1) / (states('input_number.ev_charger_power_kw') | float(7.4) / 4)) | round(0, 'ceil') | int %}
+                {{ (r.cost / [slots_needed, 1] | max) | round(4) }}
           - action: input_boolean.turn_on
             target:
               entity_id: input_boolean.ev_charging_scheduled
