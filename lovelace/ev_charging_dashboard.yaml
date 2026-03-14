@@ -37,27 +37,13 @@ views:
                   return '#94a3b8';
                 ]]]
             - width: 72px
-            - filter: >
-                [[[
-                  const ws = states['sensor.wallbox_state'].state;
-                  if (ws.includes('3:')) return 'drop-shadow(0 0 12px #4ade8088)';
-                  if (ws.includes('2:')) return 'drop-shadow(0 0 12px #60a5fa88)';
-                  return 'none';
-                ]]]
           name:
             - font-size: 24px
             - font-weight: 800
             - color: white
-            - letter-spacing: 0.5px
           state:
             - font-size: 15px
-            - color: >
-                [[[
-                  const ws = states['sensor.wallbox_state'].state;
-                  if (ws.includes('3:')) return '#86efac';
-                  if (ws.includes('2:')) return '#93c5fd';
-                  return '#94a3b8';
-                ]]]
+            - color: '#86efac'
             - font-weight: 600
             - margin-top: 4px
           label:
@@ -66,50 +52,47 @@ views:
             - margin-top: 8px
 
       # ══════════════════════════════════════════════════════════════
-      # SECÇÃO 2 — ESTADO DA BATERIA (barra + info)
+      # SECÇÃO 2 — BARRA DE PROGRESSO SOC
       # ══════════════════════════════════════════════════════════════
-      - type: horizontal-stack
-        cards:
-          - type: custom:mushroom-template-card
-            primary: "{{ states('sensor.battery_hv_state_of_charge') | int }}%"
-            secondary: "🔋 SOC Actual"
-            icon: mdi:battery-charging
-            icon_color: >
-              {% set s = states('sensor.battery_hv_state_of_charge') | int %}
-              {% if s >= 80 %}green{% elif s >= 50 %}orange{% else %}red{% endif %}
-            badge_icon: >
-              {% if '3:' in states('sensor.wallbox_state') %}mdi:flash{% endif %}
-            badge_color: amber
-            multiline_secondary: false
-
-          - type: custom:mushroom-template-card
-            primary: "{{ states('sensor.battery_ev_target_state_of_charge') | int }}%"
-            secondary: "🎯 SOC Alvo"
-            icon: mdi:battery-check
-            icon_color: blue
-
-          - type: custom:mushroom-template-card
-            primary: "{{ states('sensor.ev_autonomia_estimada_km') | int }} km"
-            secondary: "🛣️ Autonomia"
-            icon: mdi:map-marker-distance
-            icon_color: purple
-
-      - type: custom:mushroom-template-card
-        primary: >
-          {% set soc = states('sensor.battery_hv_state_of_charge') | int %}
-          {% set target = states('sensor.battery_ev_target_state_of_charge') | int %}
-          {% set pct = [(soc / target * 100), 100] | min | int if target > 0 else 0 %}
-          {{ soc }}% carregado — faltam {{ [target - soc, 0] | max }}% para o alvo ({{ target }}%)
-        secondary: >
-          {% set kwh = states('sensor.ev_kwh_necessarios') | float(0) %}
-          {% set mins = states('sensor.ev_tempo_restante_min') | int(0) %}
-          {% if kwh > 0 %}⚡ {{ kwh }} kWh necessários • ⏱️ ~{{ mins }} min{% else %}✅ Bateria no alvo{% endif %}
-        icon: mdi:battery-charging-80
-        icon_color: >
-          {% set soc = states('sensor.battery_hv_state_of_charge') | int %}
-          {% set target = states('sensor.battery_ev_target_state_of_charge') | int %}
-          {% if soc >= target %}green{% elif soc >= 60 %}orange{% else %}red{% endif %}
-        multiline_secondary: true
+      - type: custom:button-card
+        show_name: false
+        show_icon: false
+        show_state: false
+        styles:
+          card:
+            - padding: 20px 24px
+            - border-radius: 16px
+            - background: 'linear-gradient(135deg,#0f172a,#1e293b)'
+            - box-shadow: 0 4px 16px rgba(0,0,0,0.25)
+          custom_fields:
+            bar:
+              - width: 100%
+        custom_fields:
+          bar: >
+            [[[
+              var soc = parseFloat((states['sensor.battery_hv_state_of_charge'] || {}).state) || 0;
+              var target = parseFloat((states['sensor.battery_ev_target_state_of_charge'] || {}).state) || 80;
+              var power = parseFloat((states['sensor.wallbox_charging_power'] || {}).state) || 0;
+              var color = soc >= target ? '#4ade80' : soc >= 60 ? '#fbbf24' : '#f87171';
+              var pct = Math.min(soc, 100);
+              var isCharging = power > 100;
+              var chargingBadge = isCharging ? '<span style="background:#4ade8033;border:1px solid #4ade8066;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:#4ade80;margin-left:8px">⚡ A CARREGAR</span>' : '';
+              return '<div style="color:white">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
+                  '<div><span style="font-size:36px;font-weight:900;color:' + color + '">' + Math.round(soc) + '%</span>' + chargingBadge + '</div>' +
+                  '<div style="text-align:right"><div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px">Estado da Bateria</div>' +
+                    '<div style="font-size:16px;font-weight:700;color:#60a5fa">Alvo: ' + Math.round(target) + '%</div></div>' +
+                '</div>' +
+                '<div style="background:#1e3a5f;border-radius:99px;height:20px;position:relative;overflow:hidden">' +
+                  '<div style="width:' + pct + '%;height:100%;background:linear-gradient(90deg,' + color + ',' + color + 'bb);border-radius:99px"></div>' +
+                  '<div style="position:absolute;top:50%;left:' + Math.min(target,99) + '%;transform:translate(-50%,-50%);width:3px;height:26px;background:#60a5fa;border-radius:2px"></div>' +
+                  '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:11px;font-weight:700;color:white">' + Math.round(pct) + '%</div>' +
+                '</div>' +
+                '<div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:#64748b">' +
+                  '<span>0%</span><span style="color:#60a5fa">▲ alvo ' + Math.round(target) + '%</span><span>100%</span>' +
+                '</div>' +
+              '</div>';
+            ]]]
 
       # ══════════════════════════════════════════════════════════════
       # SECÇÃO 3 — 4 CHIPS PRINCIPAIS
@@ -219,34 +202,48 @@ views:
       # ══════════════════════════════════════════════════════════════
       # SECÇÃO 6 — ORIGEM DA ENERGIA
       # ══════════════════════════════════════════════════════════════
-      - type: entities
-        title: "☀️ Origem da Energia"
-        icon: mdi:solar-power
-        show_header_toggle: false
-        entities:
-          - type: custom:mushroom-template-card
-            primary: "{{ states('sensor.power_production_now') | int(0) }} W"
-            secondary: "☀️ Solar agora (Solcast)"
-            icon: mdi:solar-power-variant
-            icon_color: amber
-          - type: custom:mushroom-template-card
-            primary: "{{ states('sensor.solax_swr7gyllef_ac_power') | int(0) }} W"
-            secondary: "🔆 Inversor Solax AC"
-            icon: mdi:lightning-bolt
-            icon_color: yellow
-          - type: custom:mushroom-template-card
-            primary: >
-              {% set total = states('sensor.ev_energy_monthly') | float(0) %}
-              {% set solar = states('sensor.ev_energia_carregamento_solar_monthly') | float(0) %}
-              {% if total > 0 %}{{ (solar / total * 100) | round(1) }}%{% else %}—{% endif %}
-            secondary: "☀️ % Solar no carregamento (mês)"
-            icon: mdi:percent
-            icon_color: green
-          - type: custom:mushroom-template-card
-            primary: "{{ states('sensor.ev_energia_carregamento_solar_monthly') | float(0) | round(2) }} kWh"
-            secondary: "☀️ Solar carregado (mês)"
-            icon: mdi:counter
-            icon_color: orange
+      - type: custom:button-card
+        show_name: false
+        show_icon: false
+        show_state: false
+        styles:
+          card:
+            - padding: 20px 24px
+            - border-radius: 16px
+            - background: 'linear-gradient(135deg,#1c1209,#2d1f0a,#3d2b0d)'
+            - box-shadow: 0 4px 16px rgba(0,0,0,0.25)
+          custom_fields:
+            origem:
+              - width: 100%
+        custom_fields:
+          origem: >
+            [[[
+              var solar = parseFloat((states['sensor.power_production_now'] || {}).state) || 0;
+              var wallbox = parseFloat((states['sensor.wallbox_charging_power'] || {}).state) || 0;
+              var solarPct = wallbox > 0 ? Math.min(100, Math.round(solar / wallbox * 100)) : 0;
+              var monthlySolar = parseFloat((states['sensor.ev_energia_carregamento_solar_monthly'] || {}).state) || 0;
+              var monthlyTotal = parseFloat((states['sensor.ev_energy_monthly'] || {}).state) || 0;
+              var monthlyPct = monthlyTotal > 0 ? Math.round(monthlySolar / monthlyTotal * 100) : 0;
+              return '<div>' +
+                '<div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">☀️ Origem da Energia</div>' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">' +
+                  '<div style="background:#451a03aa;border:1px solid #92400e55;border-radius:12px;padding:12px;text-align:center">' +
+                    '<div style="font-size:10px;color:#fde68a;font-weight:700;text-transform:uppercase">☀️ Solar agora</div>' +
+                    '<div style="font-size:28px;font-weight:900;color:#fbbf24">' + solar.toFixed(0) + ' W</div>' +
+                    '<div style="font-size:11px;color:#d97706">' + solarPct + '% do carregamento</div>' +
+                  '</div>' +
+                  '<div style="background:#172554aa;border:1px solid #1e40af55;border-radius:12px;padding:12px;text-align:center">' +
+                    '<div style="font-size:10px;color:#93c5fd;font-weight:700;text-transform:uppercase">🔌 Wallbox</div>' +
+                    '<div style="font-size:28px;font-weight:900;color:#60a5fa">' + (wallbox/1000).toFixed(2) + ' kW</div>' +
+                    '<div style="font-size:11px;color:#3b82f6">potência actual</div>' +
+                  '</div>' +
+                '</div>' +
+                '<div style="background:#1c1c2eaa;border:1px solid #374151;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">' +
+                  '<span style="font-size:12px;color:#94a3b8;font-weight:600">☀️ Solar este mês</span>' +
+                  '<span style="font-size:16px;font-weight:800;color:#fbbf24">' + monthlySolar.toFixed(2) + ' kWh (' + monthlyPct + '%)</span>' +
+                '</div>' +
+              '</div>';
+            ]]]
 
       # ══════════════════════════════════════════════════════════════
       # SECÇÃO 7 — PREÇOS COOPÉRNICO
@@ -304,122 +301,125 @@ views:
               }));
 
       # ══════════════════════════════════════════════════════════════
-      # SECÇÃO 8 — PLANO DE CARREGAMENTO
+      # SECÇÃO 8 — PLANO DE CARREGAMENTO (dark)
       # ══════════════════════════════════════════════════════════════
-      - type: custom:mushroom-template-card
-        primary: >
-          {% set scheduled = is_state('input_boolean.ev_charging_scheduled', 'on') %}
-          {% if scheduled %}✅ Carga Agendada{% else %}⏳ A Calcular Janela{% endif %}
-        secondary: >
-          {% set start = states('input_datetime.ev_charging_start') %}
-          {% set end = states('input_datetime.ev_charging_end') %}
-          {% set kwh = states('sensor.ev_kwh_necessarios') | float(0) %}
-          {% set cost = states('sensor.ev_previsao_custo_hoje') | float(0) %}
-          {% if start not in ['unknown','unavailable',''] %}
-            🕐 {{ as_timestamp(start)|timestamp_custom('%H:%M') }} → {{ as_timestamp(end)|timestamp_custom('%H:%M') }}  •  ⚡ {{ kwh }} kWh  •  💶 ~{{ cost | round(3) }} €
-          {% else %}
-            Deadline: {{ states('input_datetime.ev_charging_deadline').split(':')[:2]|join(':') }}  •  ⚡ {{ kwh }} kWh necessários
-          {% endif %}
-        icon: mdi:calendar-clock
-        icon_color: >
-          {% if is_state('input_boolean.ev_charging_scheduled', 'on') %}green{% else %}orange{% endif %}
-        multiline_secondary: true
-
-      - type: horizontal-stack
-        cards:
-          - type: custom:mushroom-template-card
-            primary: >
-              {% set s = states('input_datetime.ev_charging_start') %}
-              {% if s not in ['unknown','unavailable',''] %}{{ as_timestamp(s)|timestamp_custom('%H:%M') }}{% else %}—{% endif %}
-            secondary: "🟢 Início"
-            icon: mdi:clock-start
-            icon_color: green
-
-          - type: custom:mushroom-template-card
-            primary: >
-              {% set e = states('input_datetime.ev_charging_end') %}
-              {% if e not in ['unknown','unavailable',''] %}{{ as_timestamp(e)|timestamp_custom('%H:%M') }}{% else %}—{% endif %}
-            secondary: "🔵 Fim"
-            icon: mdi:clock-end
-            icon_color: blue
-
-          - type: custom:mushroom-template-card
-            primary: "{{ states('sensor.ev_kwh_necessarios') }} kWh"
-            secondary: "⚡ Necessário"
-            icon: mdi:battery-charging-50
-            icon_color: orange
-
-          - type: custom:mushroom-template-card
-            primary: "{{ states('input_datetime.ev_charging_deadline').split(':')[:2]|join(':') }}"
-            secondary: "🔴 Deadline"
-            icon: mdi:clock-alert
-            icon_color: red
-
-      # ══════════════════════════════════════════════════════════════
-      # SECÇÃO 9 — ENERGIA ACUMULADA (kWh)
-      # ══════════════════════════════════════════════════════════════
-      - type: entities
-        title: "🔢 Energia Acumulada"
-        icon: mdi:counter
-        show_header_toggle: false
-        entities:
-          - type: custom:mushroom-template-card
-            primary: "{{ states('sensor.ev_energy_daily') | float(0) | round(3) }} kWh"
-            secondary: "📅 Hoje"
-            icon: mdi:calendar-today
-            icon_color: blue
-          - type: custom:mushroom-template-card
-            primary: "{{ states('sensor.ev_energy_weekly') | float(0) | round(2) }} kWh"
-            secondary: "📆 Esta semana"
-            icon: mdi:calendar-week
-            icon_color: amber
-          - type: custom:mushroom-template-card
-            primary: "{{ states('sensor.ev_energy_monthly') | float(0) | round(2) }} kWh"
-            secondary: "🗓️ Este mês"
-            icon: mdi:calendar-month
-            icon_color: green
-          - type: custom:mushroom-template-card
-            primary: "{{ states('sensor.ev_energy_yearly') | float(0) | round(1) }} kWh"
-            secondary: "📊 Este ano"
-            icon: mdi:chart-bar
-            icon_color: purple
+      - type: custom:button-card
+        show_name: false
+        show_icon: false
+        show_state: false
+        styles:
+          card:
+            - padding: 20px 24px
+            - border-radius: 16px
+            - background: 'linear-gradient(135deg,#0f172a,#1e293b)'
+            - box-shadow: 0 4px 16px rgba(0,0,0,0.25)
+          custom_fields:
+            plano:
+              - width: 100%
+        custom_fields:
+          plano: >
+            [[[
+              var scheduled = (states['input_boolean.ev_charging_scheduled'] || {}).state === 'on';
+              var startRaw = (states['input_datetime.ev_charging_start'] || {}).state || '';
+              var endRaw = (states['input_datetime.ev_charging_end'] || {}).state || '';
+              var deadline = ((states['input_datetime.ev_charging_deadline'] || {}).state || '').substring(0,5);
+              var kwh = parseFloat((states['sensor.ev_kwh_necessarios'] || {}).state) || 0;
+              var cost = parseFloat((states['sensor.ev_previsao_custo_hoje'] || {}).state) || 0;
+              var price = parseFloat((states['sensor.ev_custo_por_kwh_estimado'] || {}).state) || 0;
+              var statusColor = scheduled ? '#4ade80' : '#fbbf24';
+              var statusText = scheduled ? '✅ Agendado' : '⏳ A calcular';
+              var fmtTime = function(s) {
+                if (!s || s === 'unknown' || s === 'unavailable') return '—';
+                return s.substring(0,5);
+              };
+              return '<div>' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
+                  '<div style="font-size:14px;font-weight:700;color:white;text-transform:uppercase;letter-spacing:1px">🗓️ Plano de Carregamento</div>' +
+                  '<div style="background:' + statusColor + '22;border:1px solid ' + statusColor + '55;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;color:' + statusColor + '">' + statusText + '</div>' +
+                '</div>' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:14px">' +
+                  '<div style="text-align:center;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 4px">' +
+                    '<div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">Início</div>' +
+                    '<div style="font-size:20px;font-weight:800;color:#60a5fa">' + fmtTime(startRaw) + '</div>' +
+                  '</div>' +
+                  '<div style="text-align:center;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 4px">' +
+                    '<div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">Fim</div>' +
+                    '<div style="font-size:20px;font-weight:800;color:#a78bfa">' + fmtTime(endRaw) + '</div>' +
+                  '</div>' +
+                  '<div style="text-align:center;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 4px">' +
+                    '<div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">kWh</div>' +
+                    '<div style="font-size:20px;font-weight:800;color:#fbbf24">' + kwh.toFixed(1) + '</div>' +
+                  '</div>' +
+                  '<div style="text-align:center;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 4px">' +
+                    '<div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">Deadline</div>' +
+                    '<div style="font-size:20px;font-weight:800;color:#f87171">' + deadline + '</div>' +
+                  '</div>' +
+                '</div>' +
+                '<div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">' +
+                  '<div><div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Previsão custo hoje</div>' +
+                    '<div style="font-size:24px;font-weight:900;color:#4ade80">' + cost.toFixed(3) + ' €</div></div>' +
+                  '<div style="text-align:right"><div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Preço médio</div>' +
+                    '<div style="font-size:16px;font-weight:700;color:#94a3b8">' + price.toFixed(4) + ' €/kWh</div></div>' +
+                '</div>' +
+              '</div>';
+            ]]]
 
       # ══════════════════════════════════════════════════════════════
-      # SECÇÃO 10 — CUSTOS ACUMULADOS (€)
+      # SECÇÃO 9 — CUSTOS ACUMULADOS
       # ══════════════════════════════════════════════════════════════
-      - type: entities
-        title: "💰 Custos de Carregamento"
-        icon: mdi:currency-eur
-        show_header_toggle: false
-        entities:
-          - type: custom:mushroom-template-card
-            primary: "{{ states('sensor.ev_custo_diario_estimado') | float(0) | round(3) }} €"
-            secondary: "📅 Hoje  •  {{ states('sensor.ev_energy_daily') | float(0) | round(3) }} kWh"
-            icon: mdi:calendar-today
-            icon_color: blue
-          - type: custom:mushroom-template-card
-            primary: "{{ states('sensor.ev_custo_semanal_estimado') | float(0) | round(2) }} €"
-            secondary: "📆 Esta semana  •  {{ states('sensor.ev_energy_weekly') | float(0) | round(2) }} kWh"
-            icon: mdi:calendar-week
-            icon_color: amber
-          - type: custom:mushroom-template-card
-            primary: "{{ states('sensor.ev_custo_mensal_estimado') | float(0) | round(2) }} €"
-            secondary: "🗓️ Este mês  •  {{ states('sensor.ev_energy_monthly') | float(0) | round(2) }} kWh"
-            icon: mdi:calendar-month
-            icon_color: green
-          - type: custom:mushroom-template-card
-            primary: "{{ states('sensor.ev_custo_anual_estimado') | float(0) | round(2) }} €"
-            secondary: "📊 Este ano  •  {{ states('sensor.ev_energy_yearly') | float(0) | round(1) }} kWh"
-            icon: mdi:chart-bar
-            icon_color: purple
-          - type: custom:mushroom-template-card
-            primary: "{{ states('sensor.ev_custo_por_100km') | float(0) | round(2) }} €"
-            secondary: "🚗 Por 100 km  •  {{ states('sensor.ev_custo_por_kwh_estimado') | float(0) | round(4) }} €/kWh"
-            icon: mdi:road
-            icon_color: teal
+      - type: custom:button-card
+        show_name: false
+        show_icon: false
+        show_state: false
+        styles:
+          card:
+            - padding: 20px 24px
+            - border-radius: 16px
+            - background: 'linear-gradient(135deg,#0a1628,#132342,#1a3a6b)'
+            - box-shadow: 0 4px 16px rgba(0,0,0,0.25)
+          custom_fields:
+            custos:
+              - width: 100%
+        custom_fields:
+          custos: >
+            [[[
+              var g = function(e) { return parseFloat((states[e] || {}).state) || 0; };
+              var dk = g('sensor.ev_energy_daily');
+              var wk = g('sensor.ev_energy_weekly');
+              var mk = g('sensor.ev_energy_monthly');
+              var yk = g('sensor.ev_energy_yearly');
+              var de = g('sensor.ev_custo_diario_estimado');
+              var we = g('sensor.ev_custo_semanal_estimado');
+              var me = g('sensor.ev_custo_mensal_estimado');
+              var ye = g('sensor.ev_custo_anual_estimado');
+              var c100 = g('sensor.ev_custo_por_100km');
+              var card = function(icon, label, kwh, eur, bg, tc) {
+                return '<div style="background:' + bg + ';border-radius:12px;padding:12px 8px;text-align:center">' +
+                  '<div style="font-size:16px">' + icon + '</div>' +
+                  '<div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">' + label + '</div>' +
+                  '<div style="font-size:18px;font-weight:900;color:' + tc + ';margin-top:4px">' + kwh.toFixed(2) + ' kWh</div>' +
+                  '<div style="font-size:14px;font-weight:700;color:' + tc + 'bb">' + eur.toFixed(2) + ' €</div>' +
+                '</div>';
+              };
+              return '<div>' +
+                '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">💰 Energia &amp; Custos Acumulados</div>' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">' +
+                  card('📅','Hoje', dk, de,'#1e3a8a44','#93c5fd') +
+                  card('📆','Semana', wk, we,'#78350f44','#fde68a') +
+                '</div>' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">' +
+                  card('🗓️','Mês', mk, me,'#14532d44','#86efac') +
+                  card('📊','Ano', yk, ye,'#581c8744','#d8b4fe') +
+                '</div>' +
+                '<div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">' +
+                  '<span style="font-size:12px;color:#94a3b8;font-weight:600">🚗 Custo por 100 km</span>' +
+                  '<span style="font-size:18px;font-weight:800;color:#fbbf24">' + c100.toFixed(2) + ' €</span>' +
+                '</div>' +
+              '</div>';
+            ]]]
 
       # ══════════════════════════════════════════════════════════════
-      # SECÇÃO 11 — GRÁFICO CUSTO DIÁRIO
+      # SECÇÃO 10 — GRÁFICO CUSTO DIÁRIO
       # ══════════════════════════════════════════════════════════════
       - type: custom:mini-graph-card
         name: "💶 Custo Diário Estimado (30 dias)"
@@ -438,7 +438,7 @@ views:
           points: false
 
       # ══════════════════════════════════════════════════════════════
-      # SECÇÃO 12 — CONTROLOS
+      # SECÇÃO 11 — CONTROLOS
       # ══════════════════════════════════════════════════════════════
       - type: horizontal-stack
         cards:
@@ -470,10 +470,10 @@ views:
             styles:
               card:
                 - border-radius: 14px
-                - background: 'linear-gradient(135deg,#dbeafe,#bfdbfe)'
+                - background: 'linear-gradient(135deg,#1e3a8a,#2563eb)'
                 - padding: 14px
               name:
-                - color: '#1e40af'
+                - color: white
                 - font-weight: 700
                 - font-size: 13px
             tap_action:
@@ -487,10 +487,10 @@ views:
             styles:
               card:
                 - border-radius: 14px
-                - background: 'linear-gradient(135deg,#fef9c3,#fde68a)'
+                - background: 'linear-gradient(135deg,#78350f,#d97706)'
                 - padding: 14px
               name:
-                - color: '#78350f'
+                - color: white
                 - font-weight: 700
                 - font-size: 13px
             tap_action:
@@ -504,10 +504,10 @@ views:
             styles:
               card:
                 - border-radius: 14px
-                - background: 'linear-gradient(135deg,#fee2e2,#fecaca)'
+                - background: 'linear-gradient(135deg,#7f1d1d,#dc2626)'
                 - padding: 14px
               name:
-                - color: '#7f1d1d'
+                - color: white
                 - font-weight: 700
                 - font-size: 13px
             tap_action:
@@ -517,7 +517,7 @@ views:
                 entity_id: script.ev_desativar_regra_ev
 
       # ══════════════════════════════════════════════════════════════
-      # SECÇÃO 13 — DETALHES WALLBOX
+      # SECÇÃO 12 — DETALHES WALLBOX
       # ══════════════════════════════════════════════════════════════
       - type: entities
         title: "🔌 Wallbox — Detalhes"
