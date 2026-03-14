@@ -58,6 +58,9 @@ views:
         show_name: false
         show_icon: false
         show_state: false
+        card_mod:
+          style: |
+            #cf-bar { width: 100% !important; box-sizing: border-box !important; }
         styles:
           card:
             - padding: 20px 24px
@@ -67,7 +70,6 @@ views:
           custom_fields:
             bar:
               - width: 100%
-              - justify-self: stretch
         custom_fields:
           bar: >
             [[[
@@ -208,6 +210,9 @@ views:
         show_name: false
         show_icon: false
         show_state: false
+        card_mod:
+          style: |
+            #cf-origem { width: 100% !important; box-sizing: border-box !important; }
         styles:
           card:
             - padding: 20px 24px
@@ -217,7 +222,6 @@ views:
           custom_fields:
             origem:
               - width: 100%
-              - justify-self: stretch
         custom_fields:
           origem: >
             [[[
@@ -310,6 +314,9 @@ views:
         show_name: false
         show_icon: false
         show_state: false
+        card_mod:
+          style: |
+            #cf-plano { width: 100% !important; box-sizing: border-box !important; }
         styles:
           card:
             - padding: 20px 24px
@@ -319,7 +326,6 @@ views:
           custom_fields:
             plano:
               - width: 100%
-              - justify-self: stretch
         custom_fields:
           plano: >
             [[[
@@ -380,6 +386,9 @@ views:
         show_name: false
         show_icon: false
         show_state: false
+        card_mod:
+          style: |
+            #cf-custos { width: 100% !important; box-sizing: border-box !important; }
         styles:
           card:
             - padding: 20px 24px
@@ -389,7 +398,6 @@ views:
           custom_fields:
             custos:
               - width: 100%
-              - justify-self: stretch
         custom_fields:
           custos: >
             [[[
