@@ -78,10 +78,11 @@ views:
               var isCharging = power > 100;
               var chargingBadge = isCharging ? '<span style="background:#4ade8033;border:1px solid #4ade8066;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:#4ade80;margin-left:8px">⚡ A CARREGAR</span>' : '';
               return '<div style="color:white;text-align:center">' +
-                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
-                  '<div><span style="font-size:36px;font-weight:900;color:' + color + '">' + Math.round(soc) + '%</span>' + chargingBadge + '</div>' +
-                  '<div style="text-align:right"><div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px">Estado da Bateria</div>' +
-                    '<div style="font-size:16px;font-weight:700;color:#60a5fa">Alvo: ' + Math.round(target) + '%</div></div>' +
+                '<div style="text-align:center;margin-bottom:12px">' +
+                  '<div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Estado da Bateria</div>' +
+                  '<div><span style="font-size:48px;font-weight:900;color:' + color + '">' + Math.round(soc) + '%</span></div>' +
+                  chargingBadge +
+                  '<div style="font-size:16px;font-weight:700;color:#60a5fa;margin-top:4px">Alvo: ' + Math.round(target) + '%</div>' +
                 '</div>' +
                 '<div style="background:#1e3a5f;border-radius:99px;height:20px;position:relative;overflow:hidden">' +
                   '<div style="width:' + pct + '%;height:100%;background:linear-gradient(90deg,' + color + ',' + color + 'bb);border-radius:99px"></div>' +
@@ -224,8 +225,8 @@ views:
               var monthlySolar = parseFloat((states['sensor.ev_energia_carregamento_solar_monthly'] || {}).state) || 0;
               var monthlyTotal = parseFloat((states['sensor.ev_energy_monthly'] || {}).state) || 0;
               var monthlyPct = monthlyTotal > 0 ? Math.round(monthlySolar / monthlyTotal * 100) : 0;
-              return '<div>' +
-                '<div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">☀️ Origem da Energia</div>' +
+              return '<div style="text-align:center">' +
+                '<div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;text-align:center">☀️ Origem da Energia</div>' +
                 '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;text-align:center">' +
                   '<div style="background:#451a03aa;border:1px solid #92400e55;border-radius:12px;padding:12px;text-align:center">' +
                     '<div style="font-size:10px;color:#fde68a;font-weight:700;text-transform:uppercase">☀️ Solar agora</div>' +
@@ -332,7 +333,7 @@ views:
                 if (!s || s === 'unknown' || s === 'unavailable') return '—';
                 return s.substring(11,16);
               };
-              return '<div>' +
+              return '<div style="text-align:left">' +
                 '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
                   '<div style="font-size:14px;font-weight:700;color:white;text-transform:uppercase;letter-spacing:1px">🗓️ Plano de Carregamento</div>' +
                   '<div style="background:' + statusColor + '22;border:1px solid ' + statusColor + '55;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;color:' + statusColor + '">' + statusText + '</div>' +
@@ -406,8 +407,8 @@ views:
                   '<div style="font-size:14px;font-weight:700;color:' + tc + 'bb">' + eur.toFixed(2) + ' €</div>' +
                 '</div>';
               };
-              return '<div>' +
-                '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">💰 Energia &amp; Custos Acumulados</div>' +
+              return '<div style="text-align:center">' +
+                '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;text-align:center">💰 Energia &amp; Custos Acumulados</div>' +
                 '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;text-align:center">' +
                   card('📅','Hoje', dk, de,'#1e3a8a44','#93c5fd') +
                   card('📆','Semana', wk, we,'#78350f44','#fde68a') +
@@ -417,7 +418,7 @@ views:
                   card('📊','Ano', yk, ye,'#581c8744','#d8b4fe') +
                 '</div>' +
                 '<div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">' +
-                  '<span style="font-size:12px;color:#94a3b8;font-weight:600">🚗 Custo por 100 km</span>' +
+                  '<span style="font-size:12px;color:#94a3b8;font-weight:600;text-align:center">🚗 Custo por 100 km</span>' +
                   '<span style="font-size:18px;font-weight:800;color:#fbbf24">' + c100.toFixed(2) + ' €</span>' +
                 '</div>' +
               '</div>';
