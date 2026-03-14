@@ -11,6 +11,7 @@ homeassistant:
     piscina_cobertura: !include packages/piscina_cobertura.yaml
     piscina_ph: !include packages/piscina_ph.yaml
     piscina_solar_optimization: !include packages/piscina_solar_optimization.yaml
+    ev_charging_optimization: !include packages/ev_charging_optimization.yaml
     thermal_comfort: !include_dir_merge_named packages/thermal_comfort/
 
 
@@ -27,6 +28,12 @@ lovelace:
       icon: mdi:solar-power-variant
       show_in_sidebar: true
       filename: lovelace/piscina_solar_dashboard.yaml
+    ev-charging:
+      mode: yaml
+      title: "⚡ BMW i4"
+      icon: mdi:ev-station
+      show_in_sidebar: true
+      filename: lovelace/ev_charging_dashboard.yaml
 
 #auth_header:
 #  username_header: X-authentik-username
