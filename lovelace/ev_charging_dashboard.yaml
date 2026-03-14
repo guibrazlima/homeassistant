@@ -52,40 +52,57 @@ views:
             - margin-top: 8px
 
       # ══════════════════════════════════════════════════════════════
-      # ══════════════════════════════════════════════════════════════
       # SECÇÃO 2 — BARRA DE PROGRESSO SOC
       # ══════════════════════════════════════════════════════════════
-      - type: markdown
+      - type: custom:button-card
+        show_name: false
+        show_icon: false
+        show_state: false
+
         card_mod:
           style: |
-            ha-card {
-              background: linear-gradient(135deg,#0f172a,#1e293b) !important;
-              border-radius: 16px !important;
-              box-shadow: 0 4px 16px rgba(0,0,0,0.25) !important;
-              padding: 20px 24px !important;
+            ha-card #container {
+              grid-template-columns: 1fr !important;
+              grid-template-rows: auto !important;
             }
-        content: >
-          {% set soc = states('sensor.battery_hv_state_of_charge') | float(0) %}
-          {% set target = states('sensor.battery_ev_target_state_of_charge') | float(80) %}
-          {% set power = states('sensor.wallbox_charging_power') | float(0) %}
-          {% set color = '#4ade80' if soc >= target else '#fbbf24' if soc >= 60 else '#f87171' %}
-          {% set pct = [soc, 100] | min %}
-          {% set charging = power > 100 %}
-          <div style="text-align:center;color:white">
-            <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Estado da Bateria</div>
-            <div style="font-size:48px;font-weight:900;color:{{ color }};line-height:1">{{ soc | round(0) | int }}%</div>
-            {% if charging %}<span style="display:inline-block;background:#4ade8033;border:1px solid #4ade8066;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:#4ade80;margin-top:6px">⚡ A CARREGAR</span>{% endif %}
-            <div style="font-size:16px;font-weight:700;color:#60a5fa;margin-top:6px">Alvo: {{ target | round(0) | int }}%</div>
-            <div style="background:#1e3a5f;border-radius:99px;height:20px;position:relative;overflow:hidden;margin-top:12px">
-              <div style="width:{{ pct }}%;height:100%;background:linear-gradient(90deg,{{ color }},{{ color }}bb);border-radius:99px"></div>
-              <div style="position:absolute;top:50%;left:{{ [target,99] | min }}%;transform:translate(-50%,-50%);width:3px;height:26px;background:#60a5fa;border-radius:2px"></div>
-              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:11px;font-weight:700;color:white">{{ pct | round(0) | int }}%</div>
-            </div>
-            <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:#64748b">
-              <span>0%</span><span style="color:#60a5fa">▲ alvo {{ target | round(0) | int }}%</span><span>100%</span>
-            </div>
-          </div>
+        styles:
+          card:
+            - padding: 20px 24px
+            - border-radius: 16px
+            - background: 'linear-gradient(135deg,#0f172a,#1e293b)'
+            - box-shadow: 0 4px 16px rgba(0,0,0,0.25)
+          custom_fields:
+            bar:
+              - width: 100%
+        custom_fields:
+          bar: >
+            [[[
+              var soc = parseFloat((states['sensor.battery_hv_state_of_charge'] || {}).state) || 0;
+              var target = parseFloat((states['sensor.battery_ev_target_state_of_charge'] || {}).state) || 80;
+              var power = parseFloat((states['sensor.wallbox_charging_power'] || {}).state) || 0;
+              var color = soc >= target ? '#4ade80' : soc >= 60 ? '#fbbf24' : '#f87171';
+              var pct = Math.min(soc, 100);
+              var isCharging = power > 100;
+              var chargingBadge = isCharging ? '<span style="background:#4ade8033;border:1px solid #4ade8066;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:#4ade80;margin-left:8px">⚡ A CARREGAR</span>' : '';
+              return '<div style="color:white;text-align:center">' +
+                '<div style="text-align:center;margin-bottom:12px">' +
+                  '<div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Estado da Bateria</div>' +
+                  '<div><span style="font-size:48px;font-weight:900;color:' + color + '">' + Math.round(soc) + '%</span></div>' +
+                  chargingBadge +
+                  '<div style="font-size:16px;font-weight:700;color:#60a5fa;margin-top:4px">Alvo: ' + Math.round(target) + '%</div>' +
+                '</div>' +
+                '<div style="background:#1e3a5f;border-radius:99px;height:20px;position:relative;overflow:hidden">' +
+                  '<div style="width:' + pct + '%;height:100%;background:linear-gradient(90deg,' + color + ',' + color + 'bb);border-radius:99px"></div>' +
+                  '<div style="position:absolute;top:50%;left:' + Math.min(target,99) + '%;transform:translate(-50%,-50%);width:3px;height:26px;background:#60a5fa;border-radius:2px"></div>' +
+                  '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:11px;font-weight:700;color:white">' + Math.round(pct) + '%</div>' +
+                '</div>' +
+                '<div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:#64748b">' +
+                  '<span>0%</span><span style="color:#60a5fa">▲ alvo ' + Math.round(target) + '%</span><span>100%</span>' +
+                '</div>' +
+              '</div>';
+            ]]]
 
+      # ══════════════════════════════════════════════════════════════
       # SECÇÃO 3 — 4 CHIPS PRINCIPAIS
       # ══════════════════════════════════════════════════════════════
       - type: horizontal-stack
@@ -191,46 +208,59 @@ views:
           fill: fade
 
       # ══════════════════════════════════════════════════════════════
-      # ══════════════════════════════════════════════════════════════
       # SECÇÃO 6 — ORIGEM DA ENERGIA
       # ══════════════════════════════════════════════════════════════
-      - type: markdown
+      - type: custom:button-card
+        show_name: false
+        show_icon: false
+        show_state: false
+
         card_mod:
           style: |
-            ha-card {
-              background: linear-gradient(135deg,#1c1209,#2d1f0a,#3d2b0d) !important;
-              border-radius: 16px !important;
-              box-shadow: 0 4px 16px rgba(0,0,0,0.25) !important;
-              padding: 20px 24px !important;
+            ha-card #container {
+              grid-template-columns: 1fr !important;
+              grid-template-rows: auto !important;
             }
-        content: >
-          {% set solar = states('sensor.power_production_now') | float(0) %}
-          {% set wallbox = states('sensor.wallbox_charging_power') | float(0) %}
-          {% set solar_pct = ((solar / wallbox * 100) | round(0) | int) if wallbox > 0 else 0 %}
-          {% set solar_pct = [solar_pct, 100] | min %}
-          {% set m_solar = states('sensor.ev_energia_carregamento_solar_monthly') | float(0) %}
-          {% set m_total = states('sensor.ev_energy_monthly') | float(0) %}
-          {% set m_pct = ((m_solar / m_total * 100) | round(0) | int) if m_total > 0 else 0 %}
-          <div style="text-align:center;color:white">
-            <div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">☀️ Origem da Energia</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-              <div style="background:#451a03aa;border:1px solid #92400e55;border-radius:12px;padding:12px;text-align:center">
-                <div style="font-size:10px;color:#fde68a;font-weight:700;text-transform:uppercase">☀️ Solar agora</div>
-                <div style="font-size:28px;font-weight:900;color:#fbbf24">{{ solar | round(0) | int }} W</div>
-                <div style="font-size:11px;color:#d97706">{{ solar_pct }}% do carregamento</div>
-              </div>
-              <div style="background:#172554aa;border:1px solid #1e40af55;border-radius:12px;padding:12px;text-align:center">
-                <div style="font-size:10px;color:#93c5fd;font-weight:700;text-transform:uppercase">🔌 Wallbox</div>
-                <div style="font-size:28px;font-weight:900;color:#60a5fa">{{ (wallbox / 1000) | round(2) }} kW</div>
-                <div style="font-size:11px;color:#3b82f6">potência actual</div>
-              </div>
-            </div>
-            <div style="background:#1c1c2eaa;border:1px solid #374151;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
-              <span style="font-size:12px;color:#94a3b8;font-weight:600">☀️ Solar este mês</span>
-              <span style="font-size:16px;font-weight:800;color:#fbbf24">{{ m_solar | round(2) }} kWh ({{ m_pct }}%)</span>
-            </div>
-          </div>
+        styles:
+          card:
+            - padding: 20px 24px
+            - border-radius: 16px
+            - background: 'linear-gradient(135deg,#1c1209,#2d1f0a,#3d2b0d)'
+            - box-shadow: 0 4px 16px rgba(0,0,0,0.25)
+          custom_fields:
+            origem:
+              - width: 100%
+        custom_fields:
+          origem: >
+            [[[
+              var solar = parseFloat((states['sensor.power_production_now'] || {}).state) || 0;
+              var wallbox = parseFloat((states['sensor.wallbox_charging_power'] || {}).state) || 0;
+              var solarPct = wallbox > 0 ? Math.min(100, Math.round(solar / wallbox * 100)) : 0;
+              var monthlySolar = parseFloat((states['sensor.ev_energia_carregamento_solar_monthly'] || {}).state) || 0;
+              var monthlyTotal = parseFloat((states['sensor.ev_energy_monthly'] || {}).state) || 0;
+              var monthlyPct = monthlyTotal > 0 ? Math.round(monthlySolar / monthlyTotal * 100) : 0;
+              return '<div style="text-align:center">' +
+                '<div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;text-align:center">☀️ Origem da Energia</div>' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;text-align:center">' +
+                  '<div style="background:#451a03aa;border:1px solid #92400e55;border-radius:12px;padding:12px;text-align:center">' +
+                    '<div style="font-size:10px;color:#fde68a;font-weight:700;text-transform:uppercase">☀️ Solar agora</div>' +
+                    '<div style="font-size:28px;font-weight:900;color:#fbbf24">' + solar.toFixed(0) + ' W</div>' +
+                    '<div style="font-size:11px;color:#d97706">' + solarPct + '% do carregamento</div>' +
+                  '</div>' +
+                  '<div style="background:#172554aa;border:1px solid #1e40af55;border-radius:12px;padding:12px;text-align:center">' +
+                    '<div style="font-size:10px;color:#93c5fd;font-weight:700;text-transform:uppercase">🔌 Wallbox</div>' +
+                    '<div style="font-size:28px;font-weight:900;color:#60a5fa">' + (wallbox/1000).toFixed(2) + ' kW</div>' +
+                    '<div style="font-size:11px;color:#3b82f6">potência actual</div>' +
+                  '</div>' +
+                '</div>' +
+                '<div style="background:#1c1c2eaa;border:1px solid #374151;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">' +
+                  '<span style="font-size:12px;color:#94a3b8;font-weight:600">☀️ Solar este mês</span>' +
+                  '<span style="font-size:16px;font-weight:800;color:#fbbf24">' + monthlySolar.toFixed(2) + ' kWh (' + monthlyPct + '%)</span>' +
+                '</div>' +
+              '</div>';
+            ]]]
 
+      # ══════════════════════════════════════════════════════════════
       # SECÇÃO 7 — PREÇOS COOPÉRNICO
       # ══════════════════════════════════════════════════════════════
       - type: custom:apexcharts-card
@@ -286,123 +316,143 @@ views:
               }));
 
       # ══════════════════════════════════════════════════════════════
+      # SECÇÃO 8 — PLANO DE CARREGAMENTO (dark)
       # ══════════════════════════════════════════════════════════════
-      # SECÇÃO 8 — PLANO DE CARREGAMENTO
-      # ══════════════════════════════════════════════════════════════
-      - type: markdown
+      - type: custom:button-card
+        show_name: false
+        show_icon: false
+        show_state: false
+
         card_mod:
           style: |
-            ha-card {
-              background: linear-gradient(135deg,#0f172a,#1e293b) !important;
-              border-radius: 16px !important;
-              box-shadow: 0 4px 16px rgba(0,0,0,0.25) !important;
-              padding: 20px 24px !important;
+            ha-card #container {
+              grid-template-columns: 1fr !important;
+              grid-template-rows: auto !important;
             }
-        content: >
-          {% set scheduled = is_state('input_boolean.ev_charging_scheduled', 'on') %}
-          {% set start_raw = states('input_datetime.ev_charging_start') %}
-          {% set end_raw = states('input_datetime.ev_charging_end') %}
-          {% set deadline_raw = states('input_datetime.ev_charging_deadline') %}
-          {% set kwh = states('sensor.ev_kwh_necessarios') | float(0) %}
-          {% set cost = states('sensor.ev_previsao_custo_hoje') | float(0) %}
-          {% set price = states('sensor.ev_custo_por_kwh_estimado') | float(0) %}
-          {% macro fmt(s) %}{% if s in ['unknown','unavailable',''] %}—{% else %}{{ s[11:16] }}{% endif %}{% endmacro %}
-          {% set sc = '#4ade80' if scheduled else '#fbbf24' %}
-          {% set st = '✅ Agendado' if scheduled else '⏳ A calcular' %}
-          <div style="color:white">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-              <div style="font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:1px">🗓️ Plano de Carregamento</div>
-              <div style="background:{{ sc }}22;border:1px solid {{ sc }}55;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;color:{{ sc }}">{{ st }}</div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:14px">
-              <div style="text-align:center;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 4px">
-                <div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">Início</div>
-                <div style="font-size:20px;font-weight:800;color:#60a5fa">{{ fmt(start_raw) }}</div>
-              </div>
-              <div style="text-align:center;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 4px">
-                <div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">Fim</div>
-                <div style="font-size:20px;font-weight:800;color:#a78bfa">{{ fmt(end_raw) }}</div>
-              </div>
-              <div style="text-align:center;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 4px">
-                <div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">kWh</div>
-                <div style="font-size:20px;font-weight:800;color:#fbbf24">{{ kwh | round(1) }}</div>
-              </div>
-              <div style="text-align:center;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 4px">
-                <div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">Deadline</div>
-                <div style="font-size:20px;font-weight:800;color:#f87171">{{ fmt(deadline_raw) }}</div>
-              </div>
-            </div>
-            <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px 14px">
-              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-                <div><div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Previsão custo hoje</div>
-                  <div style="font-size:28px;font-weight:900;color:#4ade80">{{ cost | round(3) }} €</div></div>
-                <div style="text-align:right"><div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Preço médio janela</div>
-                  <div style="font-size:18px;font-weight:700;color:#94a3b8">{{ price | round(4) }} €/kWh</div></div>
-              </div>
-              <div style="font-size:10px;color:#475569;background:#0f172a;border-radius:6px;padding:6px 8px">
-                📐 {{ kwh | round(2) }} kWh × preço médio da janela mais barata = custo estimado
-              </div>
-            </div>
-          </div>
+        styles:
+          card:
+            - padding: 20px 24px
+            - border-radius: 16px
+            - background: 'linear-gradient(135deg,#0f172a,#1e293b)'
+            - box-shadow: 0 4px 16px rgba(0,0,0,0.25)
+          custom_fields:
+            plano:
+              - width: 100%
+        custom_fields:
+          plano: >
+            [[[
+              var scheduled = (states['input_boolean.ev_charging_scheduled'] || {}).state === 'on';
+              var startRaw = (states['input_datetime.ev_charging_start'] || {}).state || '';
+              var endRaw = (states['input_datetime.ev_charging_end'] || {}).state || '';
+              var deadline = ((states['input_datetime.ev_charging_deadline'] || {}).state || '').substring(11,16);
+              var kwh = parseFloat((states['sensor.ev_kwh_necessarios'] || {}).state) || 0;
+              var cost = parseFloat((states['sensor.ev_previsao_custo_hoje'] || {}).state) || 0;
+              var price = parseFloat((states['sensor.ev_custo_por_kwh_estimado'] || {}).state) || 0;
+              var statusColor = scheduled ? '#4ade80' : '#fbbf24';
+              var statusText = scheduled ? '✅ Agendado' : '⏳ A calcular';
+              var fmtTime = function(s) {
+                if (!s || s === 'unknown' || s === 'unavailable') return '—';
+                return s.substring(11,16);
+              };
+              return '<div style="width:100%;max-width:100%;margin:0 auto;text-align:left">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
+                  '<div style="font-size:14px;font-weight:700;color:white;text-transform:uppercase;letter-spacing:1px">🗓️ Plano de Carregamento</div>' +
+                  '<div style="background:' + statusColor + '22;border:1px solid ' + statusColor + '55;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;color:' + statusColor + '">' + statusText + '</div>' +
+                '</div>' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:14px">' +
+                  '<div style="text-align:center;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 4px">' +
+                    '<div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">Início</div>' +
+                    '<div style="font-size:20px;font-weight:800;color:#60a5fa">' + fmtTime(startRaw) + '</div>' +
+                  '</div>' +
+                  '<div style="text-align:center;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 4px">' +
+                    '<div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">Fim</div>' +
+                    '<div style="font-size:20px;font-weight:800;color:#a78bfa">' + fmtTime(endRaw) + '</div>' +
+                  '</div>' +
+                  '<div style="text-align:center;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 4px">' +
+                    '<div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">kWh</div>' +
+                    '<div style="font-size:20px;font-weight:800;color:#fbbf24">' + kwh.toFixed(1) + '</div>' +
+                  '</div>' +
+                  '<div style="text-align:center;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 4px">' +
+                    '<div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">Deadline</div>' +
+                    '<div style="font-size:20px;font-weight:800;color:#f87171">' + deadline + '</div>' +
+                  '</div>' +
+                '</div>' +
+                '<div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px 14px">' +
+                  '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">' +
+                    '<div><div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Previsão custo hoje</div>' +
+                      '<div style="font-size:28px;font-weight:900;color:#4ade80">' + cost.toFixed(3) + ' €</div></div>' +
+                    '<div style="text-align:right"><div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Preço médio janela</div>' +
+                      '<div style="font-size:18px;font-weight:700;color:#94a3b8">' + price.toFixed(4) + ' €/kWh</div></div>' +
+                  '</div>' +
+                  '<div style="font-size:10px;color:#475569;background:#0f172a;border-radius:6px;padding:6px 8px">' +
+                    '📐 ' + kwh.toFixed(2) + ' kWh × preço médio da janela mais barata de hoje = custo estimado' +
+                  '</div>' +
+                '</div>' +
+              '</div>';
+            ]]]
 
       # ══════════════════════════════════════════════════════════════
       # SECÇÃO 9 — CUSTOS ACUMULADOS
       # ══════════════════════════════════════════════════════════════
-      - type: markdown
+      - type: custom:button-card
+        show_name: false
+        show_icon: false
+        show_state: false
+
         card_mod:
           style: |
-            ha-card {
-              background: linear-gradient(135deg,#0a1628,#132342,#1a3a6b) !important;
-              border-radius: 16px !important;
-              box-shadow: 0 4px 16px rgba(0,0,0,0.25) !important;
-              padding: 20px 24px !important;
+            ha-card #container {
+              grid-template-columns: 1fr !important;
+              grid-template-rows: auto !important;
             }
-        content: >
-          {% set dk = states('sensor.ev_energy_daily') | float(0) %}
-          {% set wk = states('sensor.ev_energy_weekly') | float(0) %}
-          {% set mk = states('sensor.ev_energy_monthly') | float(0) %}
-          {% set yk = states('sensor.ev_energy_yearly') | float(0) %}
-          {% set de = states('sensor.ev_custo_diario_estimado') | float(0) %}
-          {% set we = states('sensor.ev_custo_semanal_estimado') | float(0) %}
-          {% set me = states('sensor.ev_custo_mensal_estimado') | float(0) %}
-          {% set ye = states('sensor.ev_custo_anual_estimado') | float(0) %}
-          {% set c100 = states('sensor.ev_custo_por_100km') | float(0) %}
-          <div style="text-align:center;color:white">
-            <div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">💰 Energia &amp; Custos Acumulados</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-              <div style="background:#1e3a8a44;border-radius:12px;padding:12px 8px;text-align:center">
-                <div style="font-size:16px">📅</div>
-                <div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;margin-top:2px">Hoje</div>
-                <div style="font-size:18px;font-weight:900;color:#93c5fd;margin-top:4px">{{ dk | round(2) }} kWh</div>
-                <div style="font-size:14px;font-weight:700;color:#93c5fdbb">{{ de | round(2) }} €</div>
-              </div>
-              <div style="background:#78350f44;border-radius:12px;padding:12px 8px;text-align:center">
-                <div style="font-size:16px">📆</div>
-                <div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;margin-top:2px">Semana</div>
-                <div style="font-size:18px;font-weight:900;color:#fde68a;margin-top:4px">{{ wk | round(2) }} kWh</div>
-                <div style="font-size:14px;font-weight:700;color:#fde68abb">{{ we | round(2) }} €</div>
-              </div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-              <div style="background:#14532d44;border-radius:12px;padding:12px 8px;text-align:center">
-                <div style="font-size:16px">🗓️</div>
-                <div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;margin-top:2px">Mês</div>
-                <div style="font-size:18px;font-weight:900;color:#86efac;margin-top:4px">{{ mk | round(2) }} kWh</div>
-                <div style="font-size:14px;font-weight:700;color:#86efacbb">{{ me | round(2) }} €</div>
-              </div>
-              <div style="background:#581c8744;border-radius:12px;padding:12px 8px;text-align:center">
-                <div style="font-size:16px">📊</div>
-                <div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;margin-top:2px">Ano</div>
-                <div style="font-size:18px;font-weight:900;color:#d8b4fe;margin-top:4px">{{ yk | round(2) }} kWh</div>
-                <div style="font-size:14px;font-weight:700;color:#d8b4febb">{{ ye | round(2) }} €</div>
-              </div>
-            </div>
-            <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
-              <span style="font-size:12px;color:#94a3b8;font-weight:600">🚗 Custo por 100 km</span>
-              <span style="font-size:18px;font-weight:800;color:#fbbf24">{{ c100 | round(2) }} €</span>
-            </div>
-          </div>
+        styles:
+          card:
+            - padding: 20px 24px
+            - border-radius: 16px
+            - background: 'linear-gradient(135deg,#0a1628,#132342,#1a3a6b)'
+            - box-shadow: 0 4px 16px rgba(0,0,0,0.25)
+          custom_fields:
+            custos:
+              - width: 100%
+        custom_fields:
+          custos: >
+            [[[
+              var g = function(e) { return parseFloat((states[e] || {}).state) || 0; };
+              var dk = g('sensor.ev_energy_daily');
+              var wk = g('sensor.ev_energy_weekly');
+              var mk = g('sensor.ev_energy_monthly');
+              var yk = g('sensor.ev_energy_yearly');
+              var de = g('sensor.ev_custo_diario_estimado');
+              var we = g('sensor.ev_custo_semanal_estimado');
+              var me = g('sensor.ev_custo_mensal_estimado');
+              var ye = g('sensor.ev_custo_anual_estimado');
+              var c100 = g('sensor.ev_custo_por_100km');
+              var card = function(icon, label, kwh, eur, bg, tc) {
+                return '<div style="background:' + bg + ';border-radius:12px;padding:12px 8px;text-align:center">' +
+                  '<div style="font-size:16px">' + icon + '</div>' +
+                  '<div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">' + label + '</div>' +
+                  '<div style="font-size:18px;font-weight:900;color:' + tc + ';margin-top:4px">' + kwh.toFixed(2) + ' kWh</div>' +
+                  '<div style="font-size:14px;font-weight:700;color:' + tc + 'bb">' + eur.toFixed(2) + ' €</div>' +
+                '</div>';
+              };
+              return '<div style="text-align:center">' +
+                '<div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;text-align:center">💰 Energia &amp; Custos Acumulados</div>' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;text-align:center">' +
+                  card('📅','Hoje', dk, de,'#1e3a8a44','#93c5fd') +
+                  card('📆','Semana', wk, we,'#78350f44','#fde68a') +
+                '</div>' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">' +
+                  card('🗓️','Mês', mk, me,'#14532d44','#86efac') +
+                  card('📊','Ano', yk, ye,'#581c8744','#d8b4fe') +
+                '</div>' +
+                '<div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">' +
+                  '<span style="font-size:12px;color:#94a3b8;font-weight:600;text-align:center">🚗 Custo por 100 km</span>' +
+                  '<span style="font-size:18px;font-weight:800;color:#fbbf24">' + c100.toFixed(2) + ' €</span>' +
+                '</div>' +
+              '</div>';
+            ]]]
 
+      # ══════════════════════════════════════════════════════════════
       # SECÇÃO 10 — GRÁFICO CUSTO DIÁRIO
       # ══════════════════════════════════════════════════════════════
       - type: custom:mini-graph-card
