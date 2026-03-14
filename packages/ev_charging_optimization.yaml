@@ -16,7 +16,7 @@
 #   - powerbrain.update_charging_rule (cFos Powerbrain integration fork)
 #   - sensor.wallbox_state (cFos via HA)
 #
-# Versão: 2.0 — 2026-03-14 (controlo via regras wallbox)
+# Versão: 2.1 — 2026-03-14 (fix scripts + sensores de custo)
 # ═══════════════════════════════════════════════════════════════════
 
 # ─────────────────────────────────────────────────────────────────
@@ -82,6 +82,30 @@ input_number:
     initial: 0.15
 
 # ─────────────────────────────────────────────────────────────────
+# UTILITY METERS — para acumulação de energia de carregamento
+# ─────────────────────────────────────────────────────────────────
+utility_meter:
+  ev_energy_daily:
+    name: "⚡ EV - Energia Diária"
+    source: sensor.wallbox_session_energy
+    cycle: daily
+
+  ev_energy_weekly:
+    name: "⚡ EV - Energia Semanal"
+    source: sensor.wallbox_session_energy
+    cycle: weekly
+
+  ev_energy_monthly:
+    name: "⚡ EV - Energia Mensal"
+    source: sensor.wallbox_session_energy
+    cycle: monthly
+
+  ev_energy_yearly:
+    name: "⚡ EV - Energia Anual"
+    source: sensor.wallbox_session_energy
+    cycle: yearly
+
+# ─────────────────────────────────────────────────────────────────
 # TEMPLATE SENSORS
 # ─────────────────────────────────────────────────────────────────
 template:
@@ -100,9 +124,6 @@ template:
           {% else %}
             0
           {% endif %}
-        attributes:
-          current_soc: "{{ states('sensor.battery_hv_state_of_charge') | float(0) }}"
-          target_soc: "{{ states('sensor.battery_ev_target_state_of_charge') | float(80) }}"
 
       - name: "EV Horas de Carga Estimadas"
         unique_id: ev_hours_needed
@@ -149,6 +170,65 @@ template:
             Carro ligado — a calcular janela
           {% endif %}
 
+      # ── Sensores de custo (baseados no preço médio Coopérnico actual) ──
+      - name: "EV Custo por kWh Estimado"
+        unique_id: ev_cost_per_kwh
+        icon: mdi:currency-eur
+        unit_of_measurement: "€/kWh"
+        state_class: measurement
+        state: >
+          {{ states('sensor.coopernico_prices_ciclo_semanal_simples') | float(0.09) | round(4) }}
+
+      - name: "EV Custo Sessão Estimado"
+        unique_id: ev_session_cost
+        icon: mdi:currency-eur
+        unit_of_measurement: "€"
+        state_class: measurement
+        state: >
+          {% set kwh = states('sensor.ev_kwh_necessarios') | float(0) %}
+          {% set price = states('sensor.ev_custo_por_kwh_estimado') | float(0.09) %}
+          {{ (kwh * price) | round(3) }}
+
+      - name: "EV Custo Diário Estimado"
+        unique_id: ev_cost_daily
+        icon: mdi:currency-eur
+        unit_of_measurement: "€"
+        state_class: measurement
+        state: >
+          {% set kwh = states('sensor.ev_energy_daily') | float(0) %}
+          {% set price = states('sensor.ev_custo_por_kwh_estimado') | float(0.09) %}
+          {{ (kwh * price) | round(3) }}
+
+      - name: "EV Custo Semanal Estimado"
+        unique_id: ev_cost_weekly
+        icon: mdi:currency-eur
+        unit_of_measurement: "€"
+        state_class: measurement
+        state: >
+          {% set kwh = states('sensor.ev_energy_weekly') | float(0) %}
+          {% set price = states('sensor.ev_custo_por_kwh_estimado') | float(0.09) %}
+          {{ (kwh * price) | round(2) }}
+
+      - name: "EV Custo Mensal Estimado"
+        unique_id: ev_cost_monthly
+        icon: mdi:currency-eur
+        unit_of_measurement: "€"
+        state_class: measurement
+        state: >
+          {% set kwh = states('sensor.ev_energy_monthly') | float(0) %}
+          {% set price = states('sensor.ev_custo_por_kwh_estimado') | float(0.09) %}
+          {{ (kwh * price) | round(2) }}
+
+      - name: "EV Custo Anual Estimado"
+        unique_id: ev_cost_yearly
+        icon: mdi:currency-eur
+        unit_of_measurement: "€"
+        state_class: measurement
+        state: >
+          {% set kwh = states('sensor.ev_energy_yearly') | float(0) %}
+          {% set price = states('sensor.ev_custo_por_kwh_estimado') | float(0.09) %}
+          {{ (kwh * price) | round(2) }}
+
 # ─────────────────────────────────────────────────────────────────
 # SCRIPTS
 # ─────────────────────────────────────────────────────────────────
@@ -158,95 +238,92 @@ script:
     icon: mdi:calculator
     mode: single
     sequence:
+      # Um único bloco de variáveis com toda a lógica — evita problemas
+      # de passagem de listas entre blocos em Jinja2
       - variables:
-          slots_needed: "{{ states('sensor.ev_slots_15min_necessarios') | int(1) }}"
-          deadline_time: "{{ states('input_datetime.ev_charging_deadline') }}"
-          prices_attr: "{{ state_attr('sensor.coopernico_base_bi_horario_ciclo_diario_today_prices', 'prices') }}"
-          now_ts: "{{ now().timestamp() }}"
+          resultado: >
+            {% set slots_needed = states('sensor.ev_slots_15min_necessarios') | int(1) %}
+            {% set deadline_str = states('input_datetime.ev_charging_deadline') %}
+            {% set prices = state_attr('sensor.coopernico_base_bi_horario_ciclo_diario_today_prices', 'prices') or [] %}
+            {% set now_ts = now().timestamp() %}
 
-      - variables:
-          deadline_ts: >
-            {% set d = deadline_time %}
+            {# Calcular timestamp do deadline (hoje ou amanhã se já passou) #}
+            {% set dl_parts = deadline_str.split(':') %}
+            {% set dl_h = dl_parts[0] | int %}
+            {% set dl_m = dl_parts[1] | int %}
             {% set today = now().date() %}
-            {% set deadline_dt = today ~ ' ' ~ d %}
-            {% set ts = strptime(deadline_dt, '%Y-%m-%d %H:%M:%S').timestamp() %}
-            {% if ts <= now_ts %}
-              {% set tomorrow = (now().date() + timedelta(days=1)) | string %}
-              {% set deadline_dt = tomorrow ~ ' ' ~ d %}
-              {{ strptime(deadline_dt, '%Y-%m-%d %H:%M:%S').timestamp() }}
-            {% else %}
-              {{ ts }}
+            {% set dl_ts = strptime(today ~ ' ' ~ dl_h ~ ':' ~ dl_m ~ ':00', '%Y-%m-%d %H:%M:%S').timestamp() %}
+            {% if dl_ts <= now_ts %}
+              {% set tomorrow = (now() + timedelta(days=1)).date() %}
+              {% set dl_ts = strptime(tomorrow ~ ' ' ~ dl_h ~ ':' ~ dl_m ~ ':00', '%Y-%m-%d %H:%M:%S').timestamp() %}
             {% endif %}
 
-          available_slots: >
-            {% set prices = prices_attr if prices_attr else [] %}
+            {# Filtrar slots futuros com margem suficiente para completar #}
             {% set ns = namespace(slots=[]) %}
             {% for p in prices %}
               {% set slot_ts = as_timestamp(p.datetime) %}
-              {% if slot_ts >= now_ts and slot_ts < (deadline_ts - slots_needed * 900) %}
+              {% if slot_ts >= now_ts and slot_ts <= (dl_ts - slots_needed * 900) %}
                 {% set ns.slots = ns.slots + [{'ts': slot_ts, 'price': p.price_w_vat, 'dt': p.datetime}] %}
               {% endif %}
             {% endfor %}
-            {{ ns.slots }}
 
-      - variables:
-          best_window: >
-            {% set slots = available_slots %}
-            {% set n = slots | length %}
-            {% set needed = slots_needed | int %}
+            {# Encontrar janela contígua mais barata #}
+            {% set n = ns.slots | length %}
+            {% set needed = slots_needed %}
             {% if n < needed %}
-              {{ {'start': '', 'end': '', 'cost': 99999, 'valid': false} }}
+              {{ {'valid': false, 'start': '', 'end': '', 'cost': 0, 'dur': 0, 'start_min': 0} }}
             {% else %}
-              {% set ns = namespace(best_cost=99999, best_start='', best_end='') %}
+              {% set ns2 = namespace(best_cost=99999, best_i=0) %}
               {% for i in range(n - needed + 1) %}
-                {% set window = slots[i:i+needed] %}
-                {% set cost = window | map(attribute='price') | sum %}
-                {% if cost < ns.best_cost %}
-                  {% set ns.best_cost = cost %}
-                  {% set ns.best_start = window[0].dt %}
-                  {% set ns.best_end = window[-1].dt %}
+                {% set window_cost = ns.slots[i:i+needed] | map(attribute='price') | sum %}
+                {% if window_cost < ns2.best_cost %}
+                  {% set ns2.best_cost = window_cost %}
+                  {% set ns2.best_i = i %}
                 {% endif %}
               {% endfor %}
-              {{ {'start': ns.best_start, 'end': ns.best_end, 'cost': ns.best_cost, 'valid': true} }}
+              {% set best = ns.slots[ns2.best_i:ns2.best_i+needed] %}
+              {% set start_dt = as_datetime(best[0].dt) | as_local %}
+              {{ {
+                'valid': true,
+                'start': best[0].dt,
+                'end': best[-1].dt,
+                'cost': ns2.best_cost | round(4),
+                'dur': needed * 15,
+                'start_min': start_dt.hour * 60 + start_dt.minute
+              } }}
             {% endif %}
 
       - if:
           - condition: template
-            value_template: "{{ not best_window.valid }}"
+            value_template: "{{ not (resultado | from_json).valid }}"
         then:
           - action: notify.mobile_app_glphone
             data:
               title: "⚡ EV - Sem janela ótima"
-              message: "Não há slots suficientes antes das {{ deadline_time }}. A ativar safety net."
+              message: "Não há slots suficientes antes do deadline. A ativar safety net."
           - action: script.ev_ativar_safety_net
         else:
           - variables:
-              start_minutes: >
-                {% set dt = as_datetime(best_window.start) | as_local %}
-                {{ dt.hour * 60 + dt.minute }}
-              dur_minutes: "{{ (slots_needed | int) * 15 }}"
-              end_ts: "{{ as_timestamp(best_window.end) + 900 }}"
+              r: "{{ resultado | from_json }}"
 
           - action: input_datetime.set_datetime
             target:
               entity_id: input_datetime.ev_charging_start
             data:
-              datetime: "{{ best_window.start }}"
+              datetime: "{{ r.start }}"
 
           - action: input_datetime.set_datetime
             target:
               entity_id: input_datetime.ev_charging_end
             data:
-              datetime: "{{ end_ts | timestamp_local }}"
+              datetime: "{{ (as_timestamp(r.end) + 900) | timestamp_local }}"
 
-          # ── Atualizar regra "EV Carregamento Nocturno" na wallbox ──
-          # Altera apenas time e dur; todas as outras regras ficam intactas.
           - action: powerbrain.update_charging_rule
             data:
               dev_id: E1
               cmt: "EV Carregamento Nocturno"
-              time: "{{ start_minutes | int }}"
-              dur: "{{ dur_minutes | int }}"
+              time: "{{ r.start_min | int }}"
+              dur: "{{ r.dur | int }}"
               ena: true
 
           - action: input_boolean.turn_on
@@ -257,9 +334,10 @@ script:
             data:
               title: "⚡ EV - Carga Agendada"
               message: >
-                Janela ótima: {{ as_timestamp(best_window.start) | timestamp_custom('%H:%M') }}
-                → {{ (as_timestamp(best_window.end) + 900) | timestamp_custom('%H:%M') }}
-                ({{ dur_minutes }}min, {{ states('sensor.ev_kwh_necessarios') }}kWh)
+                {% set r = resultado | from_json %}
+                Janela ótima: {{ as_timestamp(r.start) | timestamp_custom('%H:%M') }}
+                → {{ (as_timestamp(r.end) + 900) | timestamp_custom('%H:%M') }}
+                ({{ r.dur }}min, {{ states('sensor.ev_kwh_necessarios') }}kWh, ~{{ r.cost | round(3) }}€)
                 SOC: {{ states('sensor.battery_hv_state_of_charge') | int }}%
                 → {{ states('sensor.battery_ev_target_state_of_charge') | int }}%
 
@@ -267,18 +345,17 @@ script:
     alias: "⚡ EV - Ativar Safety Net (carga imediata)"
     icon: mdi:shield-alert
     mode: single
-    description: >
-      Ativa carregamento imediato via regra wallbox — usado quando não há
-      slots disponíveis ou pelo safety net 45min antes do deadline.
     sequence:
       - variables:
           now_minutes: "{{ now().hour * 60 + now().minute }}"
           dur_minutes: >
-            {% set dl = states('input_datetime.ev_charging_deadline').split(':') %}
-            {% set dl_m = dl[0] | int * 60 + dl[1] | int %}
+            {% set deadline = states('input_datetime.ev_charging_deadline') %}
+            {% set parts = deadline.split(':') %}
+            {% set dl_m = parts[0] | int * 60 + parts[1] | int %}
             {% set now_m = now().hour * 60 + now().minute %}
             {% set remaining = dl_m - now_m %}
-            {{ [remaining, 120] | min | max(15) }}
+            {% set capped = [remaining, 120] | min %}
+            {{ [capped, 15] | max }}
 
       - action: powerbrain.update_charging_rule
         data:
@@ -304,9 +381,6 @@ script:
     alias: "⚡ EV - Desativar Regra EV"
     icon: mdi:stop-circle
     mode: single
-    description: >
-      Desativa a regra "EV Carregamento Nocturno" (ena: false).
-      As outras regras (ex: pausa solar) ficam activas.
     sequence:
       - action: powerbrain.update_charging_rule
         data:
