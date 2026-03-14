@@ -67,6 +67,8 @@ views:
           custom_fields:
             bar:
               - width: 100%
+              - text-align: center
+              - justify-self: center
         custom_fields:
           bar: >
             [[[
@@ -216,6 +218,8 @@ views:
           custom_fields:
             origem:
               - width: 100%
+              - text-align: center
+              - justify-self: center
         custom_fields:
           origem: >
             [[[
@@ -317,6 +321,7 @@ views:
           custom_fields:
             plano:
               - width: 100%
+              - text-align: left
         custom_fields:
           plano: >
             [[[
@@ -386,6 +391,8 @@ views:
           custom_fields:
             custos:
               - width: 100%
+              - text-align: center
+              - justify-self: center
         custom_fields:
           custos: >
             [[[
