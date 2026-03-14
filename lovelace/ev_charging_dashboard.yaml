@@ -5,191 +5,384 @@ views:
     type: masonry
     cards:
 
-      # ══════════════════════════════════════════════════════
-      # HERO — Estado do carro
-      # ══════════════════════════════════════════════════════
+      # ══════════════════════════════════════════════════════════════
+      # SECÇÃO 1 — HERO STATUS
+      # ══════════════════════════════════════════════════════════════
       - type: custom:button-card
         entity: sensor.ev_estado_carregamento
         name: BMW i4 eDrive40
         icon: mdi:car-electric
         show_label: true
-        label: >
-          [[[ return `SOC: ${states['sensor.battery_hv_state_of_charge'].state}% → ${states['sensor.battery_ev_target_state_of_charge'].state}%` ]]]
         show_state: true
+        label: >
+          [[[ return `🔋 ${states['sensor.battery_hv_state_of_charge'].state}%  →  🎯 ${states['sensor.battery_ev_target_state_of_charge'].state}%   •   🛣️ ${states['sensor.ev_autonomia_estimada_km'].state} km` ]]]
         styles:
           card:
             - background: >
                 [[[
                   const ws = states['sensor.wallbox_state'].state;
-                  if (ws.includes('3:')) return 'linear-gradient(135deg, #1a472a 0%, #2d6a4f 100%)';
-                  if (ws.includes('2:')) return 'linear-gradient(135deg, #1a3a5c 0%, #2b6cb0 100%)';
-                  return 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)';
+                  if (ws.includes('3:')) return 'linear-gradient(135deg,#0a2e1a 0%,#1a5c35 60%,#22863a 100%)';
+                  if (ws.includes('2:')) return 'linear-gradient(135deg,#0a1628 0%,#1a3a6b 60%,#2563be 100%)';
+                  return 'linear-gradient(135deg,#0f0f1a 0%,#1a1a2e 60%,#24243e 100%)';
                 ]]]
-            - border-radius: 16px
-            - padding: 24px
-            - color: white
+            - border-radius: 20px
+            - padding: 28px 24px
+            - box-shadow: 0 8px 32px rgba(0,0,0,0.35)
           icon:
             - color: >
                 [[[
                   const ws = states['sensor.wallbox_state'].state;
-                  if (ws.includes('3:')) return '#68d391';
-                  if (ws.includes('2:')) return '#63b3ed';
-                  return '#a0aec0';
+                  if (ws.includes('3:')) return '#4ade80';
+                  if (ws.includes('2:')) return '#60a5fa';
+                  return '#94a3b8';
                 ]]]
-            - width: 64px
+            - width: 72px
+            - filter: >
+                [[[
+                  const ws = states['sensor.wallbox_state'].state;
+                  if (ws.includes('3:')) return 'drop-shadow(0 0 12px #4ade8088)';
+                  if (ws.includes('2:')) return 'drop-shadow(0 0 12px #60a5fa88)';
+                  return 'none';
+                ]]]
           name:
-            - font-size: 22px
-            - font-weight: 700
+            - font-size: 24px
+            - font-weight: 800
             - color: white
+            - letter-spacing: 0.5px
           state:
-            - font-size: 14px
-            - color: "#a0d8ef"
-          label:
-            - font-size: 16px
-            - color: "#e2e8f0"
+            - font-size: 15px
+            - color: >
+                [[[
+                  const ws = states['sensor.wallbox_state'].state;
+                  if (ws.includes('3:')) return '#86efac';
+                  if (ws.includes('2:')) return '#93c5fd';
+                  return '#94a3b8';
+                ]]]
             - font-weight: 600
+            - margin-top: 4px
+          label:
+            - font-size: 14px
+            - color: '#cbd5e1'
+            - margin-top: 8px
 
-      # ══════════════════════════════════════════════════════
-      # CHIPS — SOC, potência, sessão
-      # ══════════════════════════════════════════════════════
-      - type: horizontal-stack
-        cards:
-          - type: custom:mushroom-template-card
-            primary: "{{ states('sensor.battery_hv_state_of_charge') | int }}%"
-            secondary: SOC Actual
-            icon: mdi:battery-charging
-            icon_color: >
-              {% set s = states('sensor.battery_hv_state_of_charge') | int %}
-              {% if s >= 80 %}green{% elif s >= 50 %}orange{% else %}red{% endif %}
-
-          - type: custom:mushroom-template-card
-            primary: "{{ states('sensor.battery_ev_target_state_of_charge') | int }}%"
-            secondary: SOC Alvo
-            icon: mdi:battery-check
-            icon_color: blue
-
-          - type: custom:mushroom-template-card
-            primary: >
-              {{ (states('sensor.wallbox_charging_power') | float(0) / 1000) | round(1) }} kW
-            secondary: Potência
-            icon: mdi:flash
-            icon_color: >
-              {% if states('sensor.wallbox_charging_power') | float(0) > 100 %}amber{% else %}grey{% endif %}
-
-          - type: custom:mushroom-template-card
-            primary: "{{ states('sensor.wallbox_session_energy') | float(0) | round(2) }} kWh"
-            secondary: Sessão
-            icon: mdi:counter
-            icon_color: teal
-
-      # ══════════════════════════════════════════════════════
-      # BARRA DE PROGRESSO SOC
-      # ══════════════════════════════════════════════════════
+      # ══════════════════════════════════════════════════════════════
+      # SECÇÃO 2 — BARRA DE PROGRESSO SOC
+      # ══════════════════════════════════════════════════════════════
       - type: custom:button-card
         show_name: false
         show_icon: false
         show_state: false
         styles:
           card:
-            - padding: 16px 20px
-            - border-radius: 12px
+            - padding: 20px 24px
+            - border-radius: 16px
+            - background: '#f8fafc'
+            - box-shadow: 0 2px 12px rgba(0,0,0,0.08)
         custom_fields:
           bar: >
             [[[
-              const soc = parseFloat(states['sensor.battery_hv_state_of_charge'].state) || 0;
-              const target = parseFloat(states['sensor.battery_ev_target_state_of_charge'].state) || 80;
-              const color = soc >= target ? '#68d391' : soc >= 50 ? '#f6ad55' : '#fc8181';
+              const soc = parseFloat(states['sensor.battery_hv_state_of_charge']?.state) || 0;
+              const target = parseFloat(states['sensor.battery_ev_target_state_of_charge']?.state) || 80;
+              const power = parseFloat(states['sensor.wallbox_charging_power']?.state) || 0;
+              const color = soc >= target ? '#22c55e' : soc >= 60 ? '#f59e0b' : '#ef4444';
+              const glowColor = soc >= target ? '#22c55e44' : soc >= 60 ? '#f59e0b44' : '#ef444444';
+              const isCharging = power > 100;
+              const pct = Math.min(soc, 100);
+              const animDots = isCharging ? '⚡' : '';
               return `
-                <div style="display:flex;justify-content:space-between;font-size:12px;color:#718096;margin-bottom:6px">
-                  <span>0%</span>
-                  <b style="font-size:14px;color:#2d3748">Bateria: ${Math.round(soc)}% / Alvo: ${Math.round(target)}%</b>
-                  <span>100%</span>
-                </div>
-                <div style="background:#e2e8f0;border-radius:8px;height:22px;position:relative;overflow:hidden">
-                  <div style="width:${Math.min(soc,100)}%;height:100%;background:${color};border-radius:8px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px">
-                    <span style="font-size:11px;font-weight:700;color:white">${Math.round(soc)}%</span>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                  <span style="font-size:28px;font-weight:900;color:${color}">${Math.round(soc)}%</span>
+                  <div style="text-align:center">
+                    <div style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:1px">Estado da Bateria</div>
+                    ${isCharging ? '<div style="font-size:12px;color:#22c55e;font-weight:700">● A CARREGAR</div>' : ''}
                   </div>
-                  <div style="position:absolute;top:0;left:${target}%;width:2px;height:100%;background:#3182ce"></div>
+                  <span style="font-size:14px;color:#3b82f6;font-weight:700">Alvo ${Math.round(target)}%</span>
                 </div>
-                <div style="text-align:right;font-size:11px;color:#3182ce;margin-top:3px">↑ alvo ${Math.round(target)}%</div>`;
+                <div style="background:#e2e8f0;border-radius:99px;height:24px;position:relative;overflow:hidden;box-shadow:inset 0 2px 4px rgba(0,0,0,0.1)">
+                  <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,${color},${color}cc);border-radius:99px;transition:width 1.5s ease;box-shadow:0 0 12px ${glowColor}"></div>
+                  <div style="position:absolute;top:50%;left:${Math.min(target,99)}%;transform:translate(-50%,-50%);width:3px;height:32px;background:#3b82f6;border-radius:2px;box-shadow:0 0 8px #3b82f688"></div>
+                  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:11px;font-weight:700;color:white;text-shadow:0 1px 3px rgba(0,0,0,0.5)">${Math.round(pct)}%</div>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:#94a3b8">
+                  <span>0%</span><span style="color:#3b82f6">▲ alvo ${Math.round(target)}%</span><span>100%</span>
+                </div>`;
             ]]]
 
-      # ══════════════════════════════════════════════════════
-      # GRÁFICO — Potência de carregamento 12h
-      # ══════════════════════════════════════════════════════
+      # ══════════════════════════════════════════════════════════════
+      # SECÇÃO 3 — 4 CHIPS PRINCIPAIS (números grandes)
+      # ══════════════════════════════════════════════════════════════
+      - type: horizontal-stack
+        cards:
+          - type: custom:button-card
+            entity: sensor.wallbox_charging_power
+            show_name: true
+            name: "⚡ Potência"
+            show_state: true
+            styles:
+              card:
+                - border-radius: 16px
+                - background: 'linear-gradient(135deg,#eff6ff,#dbeafe)'
+                - padding: 16px 8px
+                - box-shadow: 0 2px 8px rgba(59,130,246,0.15)
+              state:
+                - font-size: 22px
+                - font-weight: 800
+                - color: '#1d4ed8'
+              name:
+                - font-size: 11px
+                - color: '#64748b'
+                - font-weight: 600
+                - text-transform: uppercase
+                - letter-spacing: 0.5px
+              icon:
+                - display: none
+
+          - type: custom:button-card
+            entity: sensor.ev_tempo_restante_min
+            show_name: true
+            name: "⏱️ Restante"
+            show_state: true
+            styles:
+              card:
+                - border-radius: 16px
+                - background: 'linear-gradient(135deg,#fefce8,#fef9c3)'
+                - padding: 16px 8px
+                - box-shadow: 0 2px 8px rgba(234,179,8,0.15)
+              state:
+                - font-size: 22px
+                - font-weight: 800
+                - color: '#92400e'
+              name:
+                - font-size: 11px
+                - color: '#64748b'
+                - font-weight: 600
+                - text-transform: uppercase
+                - letter-spacing: 0.5px
+              icon:
+                - display: none
+
+          - type: custom:button-card
+            entity: sensor.ev_custo_sessao_estimado
+            show_name: true
+            name: "💶 Custo est."
+            show_state: true
+            styles:
+              card:
+                - border-radius: 16px
+                - background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)'
+                - padding: 16px 8px
+                - box-shadow: 0 2px 8px rgba(34,197,94,0.15)
+              state:
+                - font-size: 22px
+                - font-weight: 800
+                - color: '#15803d'
+              name:
+                - font-size: 11px
+                - color: '#64748b'
+                - font-weight: 600
+                - text-transform: uppercase
+                - letter-spacing: 0.5px
+              icon:
+                - display: none
+
+          - type: custom:button-card
+            entity: sensor.ev_autonomia_estimada_km
+            show_name: true
+            name: "🛣️ Autonomia"
+            show_state: true
+            styles:
+              card:
+                - border-radius: 16px
+                - background: 'linear-gradient(135deg,#fdf4ff,#fae8ff)'
+                - padding: 16px 8px
+                - box-shadow: 0 2px 8px rgba(168,85,247,0.15)
+              state:
+                - font-size: 22px
+                - font-weight: 800
+                - color: '#7e22ce'
+              name:
+                - font-size: 11px
+                - color: '#64748b'
+                - font-weight: 600
+                - text-transform: uppercase
+                - letter-spacing: 0.5px
+              icon:
+                - display: none
+
+      # ══════════════════════════════════════════════════════════════
+      # SECÇÃO 4 — GRÁFICO POTÊNCIA (ApexCharts, área 12h)
+      # ══════════════════════════════════════════════════════════════
       - type: custom:apexcharts-card
         header:
           show: true
-          title: ⚡ Potência de Carregamento (12h)
+          title: "⚡ Potência de Carregamento"
           show_states: true
           colorize_states: true
         graph_span: 12h
         span:
           start: hour
           offset: "-11h"
+        now:
+          show: true
+          label: agora
+          color: "#94a3b8"
         apex_config:
           chart:
             type: area
-            height: 160
+            height: 170
             toolbar:
               show: false
+            background: transparent
           fill:
             type: gradient
             gradient:
-              opacityFrom: 0.6
-              opacityTo: 0.05
+              shadeIntensity: 1
+              opacityFrom: 0.55
+              opacityTo: 0.02
+              stops: [0, 95, 100]
           stroke:
             curve: smooth
-            width: 2
+            width: 2.5
           dataLabels:
             enabled: false
           grid:
-            borderColor: "#e2e8f0"
+            borderColor: "#f1f5f9"
+            strokeDashArray: 3
           xaxis:
             labels:
               format: "HH:mm"
+              style:
+                colors: "#94a3b8"
+                fontSize: "11px"
           yaxis:
             labels:
-              formatter: "EVAL:function(v){return (v/1000).toFixed(1)+'kW'}"
+              formatter: "EVAL:function(v){return (v).toFixed(1)+' kW'}"
+              style:
+                colors: "#94a3b8"
             min: 0
+          tooltip:
+            theme: light
         series:
           - entity: sensor.wallbox_charging_power
-            name: Potência
-            color: "#3182ce"
+            name: "Potência wallbox"
+            color: "#3b82f6"
             extend_to: now
             transform: "return x / 1000"
             unit: kW
 
-      # ══════════════════════════════════════════════════════
-      # GRÁFICO — SOC 24h
-      # ══════════════════════════════════════════════════════
-      - type: custom:mini-graph-card
-        name: "🔋 SOC Bateria (24h)"
-        icon: mdi:battery-charging-80
-        entities:
-          - entity: sensor.battery_hv_state_of_charge
-            name: SOC Actual
-            color: "#38a169"
-          - entity: sensor.battery_ev_target_state_of_charge
-            name: SOC Alvo
-            color: "#3182ce"
-            show_fill: false
-            show_points: false
-        hours_to_show: 24
-        points_per_hour: 4
-        line_width: 2
-        hour24: true
-        show:
-          legend: true
-          fill: fade
-
-      # ══════════════════════════════════════════════════════
-      # GRÁFICO — Preços Coopérnico hoje
-      # ══════════════════════════════════════════════════════
+      # ══════════════════════════════════════════════════════════════
+      # SECÇÃO 5 — GRÁFICO SOC + ENERGIA SESSÃO
+      # ══════════════════════════════════════════════════════════════
       - type: custom:apexcharts-card
         header:
           show: true
-          title: 💶 Preços Energia — Hoje
+          title: "🔋 Bateria & Energia Carregada (24h)"
+          show_states: true
+          colorize_states: true
+        graph_span: 24h
+        span:
+          start: hour
+          offset: "-23h"
+        apex_config:
+          chart:
+            type: line
+            height: 180
+            toolbar:
+              show: false
+            background: transparent
+          stroke:
+            curve: smooth
+            width: [2.5, 2]
+            dashArray: [0, 5]
+          dataLabels:
+            enabled: false
+          grid:
+            borderColor: "#f1f5f9"
+            strokeDashArray: 3
+          xaxis:
+            labels:
+              format: "HH:mm"
+              style:
+                colors: "#94a3b8"
+                fontSize: "11px"
+          yaxis:
+            - id: soc
+              labels:
+                formatter: "EVAL:function(v){return v.toFixed(0)+'%'}"
+                style:
+                  colors: "#22c55e"
+              min: 0
+              max: 100
+            - id: energy
+              opposite: true
+              labels:
+                formatter: "EVAL:function(v){return v.toFixed(1)+' kWh'}"
+                style:
+                  colors: "#f59e0b"
+              min: 0
+          tooltip:
+            theme: light
+        series:
+          - entity: sensor.battery_hv_state_of_charge
+            name: "SOC"
+            color: "#22c55e"
+            yaxis_id: soc
+            extend_to: now
+          - entity: sensor.wallbox_session_energy
+            name: "Energia sessão"
+            color: "#f59e0b"
+            yaxis_id: energy
+            extend_to: now
+
+      # ══════════════════════════════════════════════════════════════
+      # SECÇÃO 6 — ORIGEM DA ENERGIA (Solar vs Rede)
+      # ══════════════════════════════════════════════════════════════
+      - type: custom:button-card
+        show_name: false
+        show_icon: false
+        show_state: false
+        styles:
+          card:
+            - padding: 20px 24px
+            - border-radius: 16px
+            - background: '#f8fafc'
+        custom_fields:
+          origem: >
+            [[[
+              const solar = parseFloat(states['sensor.power_production_now']?.state) || 0;
+              const wallbox = parseFloat(states['sensor.wallbox_charging_power']?.state) || 0;
+              const solarPct = wallbox > 0 ? Math.min(100, Math.round(solar / wallbox * 100)) : 0;
+              const gridPct = 100 - solarPct;
+              const monthlySolar = parseFloat(states['sensor.ev_energia_carregamento_solar_monthly']?.state) || 0;
+              const monthlyTotal = parseFloat(states['sensor.ev_energy_monthly']?.state) || 0;
+              const monthlyPct = monthlyTotal > 0 ? Math.round(monthlySolar / monthlyTotal * 100) : 0;
+              return `
+                <div style="font-size:13px;font-weight:700;color:#334155;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">☀️ Origem da Energia</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+                  <div style="background:linear-gradient(135deg,#fef9c3,#fef3c7);border-radius:12px;padding:12px;text-align:center">
+                    <div style="font-size:10px;color:#92400e;font-weight:700;text-transform:uppercase">☀️ Solar agora</div>
+                    <div style="font-size:28px;font-weight:900;color:#d97706">${solar.toFixed(0)}W</div>
+                    <div style="font-size:11px;color:#78716c">${solarPct}% do carregamento</div>
+                  </div>
+                  <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border-radius:12px;padding:12px;text-align:center">
+                    <div style="font-size:10px;color:#1e40af;font-weight:700;text-transform:uppercase">🏠 Rede agora</div>
+                    <div style="font-size:28px;font-weight:900;color:#1d4ed8">${(wallbox/1000).toFixed(1)} kW</div>
+                    <div style="font-size:11px;color:#78716c">total carregamento</div>
+                  </div>
+                </div>
+                <div style="background:#f1f5f9;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
+                  <span style="font-size:12px;color:#64748b;font-weight:600">☀️ Solar este mês</span>
+                  <span style="font-size:16px;font-weight:800;color:#d97706">${monthlySolar.toFixed(2)} kWh (${monthlyPct}%)</span>
+                </div>`;
+            ]]]
+
+      # ══════════════════════════════════════════════════════════════
+      # SECÇÃO 7 — PREÇOS COOPÉRNICO HOJE
+      # ══════════════════════════════════════════════════════════════
+      - type: custom:apexcharts-card
+        header:
+          show: true
+          title: "💶 Preços Energia — Hoje (Coopérnico)"
           show_states: true
           colorize_states: true
         graph_span: 24h
@@ -198,158 +391,238 @@ views:
         now:
           show: true
           label: Agora
-          color: "#e53e3e"
+          color: "#ef4444"
         apex_config:
           chart:
             type: bar
-            height: 180
+            height: 190
             toolbar:
               show: false
+            background: transparent
           plotOptions:
             bar:
-              borderRadius: 2
+              borderRadius: 3
               columnWidth: 95%
           dataLabels:
             enabled: false
           grid:
-            borderColor: "#e2e8f0"
+            borderColor: "#f1f5f9"
+            strokeDashArray: 3
           xaxis:
             labels:
               format: "HH:mm"
               rotate: -45
+              style:
+                colors: "#94a3b8"
+                fontSize: "10px"
           yaxis:
             labels:
               formatter: "EVAL:function(v){return v.toFixed(3)+'€'}"
+              style:
+                colors: "#94a3b8"
             min: 0
           tooltip:
+            theme: light
             y:
               formatter: "EVAL:function(v){return v.toFixed(4)+' €/kWh'}"
         series:
           - entity: sensor.coopernico_base_bi_horario_ciclo_diario_today_prices
-            name: Preço c/IVA
+            name: "€/kWh c/IVA"
             color: |
-              EVAL:function(v){return v<0.09?'#38a169':v<0.12?'#d69e2e':'#e53e3e'}
+              EVAL:function(v){return v<0.09?'#22c55e':v<0.12?'#f59e0b':'#ef4444'}
             data_generator: |
               return entity.attributes.prices.map(p=>({
                 x: new Date(p.datetime).getTime(),
                 y: p.price_w_vat
               }));
 
-      # ══════════════════════════════════════════════════════
-      # JANELA AGENDADA
-      # ══════════════════════════════════════════════════════
-      - type: horizontal-stack
-        cards:
-          - type: custom:mushroom-template-card
-            primary: >
-              {% set s = states('input_datetime.ev_charging_start') %}
-              {% if s not in ['unknown','unavailable',''] %}{{ as_timestamp(s)|timestamp_custom('%H:%M') }}{% else %}—{% endif %}
-            secondary: Início agendado
-            icon: mdi:clock-start
-            icon_color: "{% if is_state('input_boolean.ev_charging_scheduled','on') %}green{% else %}grey{% endif %}"
-
-          - type: custom:mushroom-template-card
-            primary: >
-              {% set e = states('input_datetime.ev_charging_end') %}
-              {% if e not in ['unknown','unavailable',''] %}{{ as_timestamp(e)|timestamp_custom('%H:%M') }}{% else %}—{% endif %}
-            secondary: Fim previsto
-            icon: mdi:clock-end
-            icon_color: blue
-
-          - type: custom:mushroom-template-card
-            primary: "{{ states('sensor.ev_kwh_necessarios') }} kWh"
-            secondary: Necessário
-            icon: mdi:battery-charging-50
-            icon_color: orange
-
-          - type: custom:mushroom-template-card
-            primary: "{{ states('input_datetime.ev_charging_deadline').split(':')[:2]|join(':') }}"
-            secondary: Deadline
-            icon: mdi:clock-alert
-            icon_color: red
-
-      # ══════════════════════════════════════════════════════
-      # CUSTOS DE CARREGAMENTO
-      # ══════════════════════════════════════════════════════
+      # ══════════════════════════════════════════════════════════════
+      # SECÇÃO 8 — PREVISÃO E AGENDAMENTO
+      # ══════════════════════════════════════════════════════════════
       - type: custom:button-card
         show_name: false
         show_icon: false
         show_state: false
         styles:
           card:
-            - padding: 16px 20px
-            - border-radius: 12px
+            - padding: 20px 24px
+            - border-radius: 16px
+            - background: 'linear-gradient(135deg,#0f172a,#1e293b)'
         custom_fields:
-          custos: >
+          previsao: >
             [[[
-              const daily = parseFloat(states['sensor.ev_custo_diario_estimado']?.state) || 0;
-              const weekly = parseFloat(states['sensor.ev_custo_semanal_estimado']?.state) || 0;
-              const monthly = parseFloat(states['sensor.ev_custo_mensal_estimado']?.state) || 0;
-              const yearly = parseFloat(states['sensor.ev_custo_anual_estimado']?.state) || 0;
-              const session = parseFloat(states['sensor.ev_custo_sessao_estimado']?.state) || 0;
+              const kwh = parseFloat(states['sensor.ev_kwh_necessarios']?.state) || 0;
+              const cost = parseFloat(states['sensor.ev_previsao_custo_hoje']?.state) || 0;
+              const start = states['input_datetime.ev_charging_start']?.state;
+              const end = states['input_datetime.ev_charging_end']?.state;
+              const deadline = states['input_datetime.ev_charging_deadline']?.state;
+              const scheduled = states['input_boolean.ev_charging_scheduled']?.state === 'on';
               const price = parseFloat(states['sensor.ev_custo_por_kwh_estimado']?.state) || 0;
-              const fmt = (v,d=2) => v.toFixed(d) + ' €';
+
+              const fmtTime = (s) => {
+                if (!s || s === 'unknown' || s === 'unavailable') return '—';
+                const d = new Date(s);
+                if (isNaN(d)) return s.substring(0,5);
+                return d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
+              };
+
+              const statusColor = scheduled ? '#4ade80' : '#f59e0b';
+              const statusText = scheduled ? '✅ Agendado' : '⏳ A calcular';
+
               return `
-                <div style="font-size:15px;font-weight:700;color:#2d3748;margin-bottom:12px">💰 Custos de Carregamento</div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                  <div style="background:#f0fff4;border-radius:10px;padding:12px;text-align:center">
-                    <div style="font-size:11px;color:#276749;font-weight:600">SESSÃO ACTUAL</div>
-                    <div style="font-size:22px;font-weight:800;color:#276749">${fmt(session,3)}</div>
-                    <div style="font-size:10px;color:#68d391">${price.toFixed(4)} €/kWh</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                  <div style="font-size:14px;font-weight:700;color:white;text-transform:uppercase;letter-spacing:1px">🗓️ Plano de Carregamento</div>
+                  <div style="background:${statusColor}22;border:1px solid ${statusColor}55;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;color:${statusColor}">${statusText}</div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+                  <div style="text-align:center;background:#1e293b;border-radius:10px;padding:10px 4px">
+                    <div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">Início</div>
+                    <div style="font-size:18px;font-weight:800;color:#60a5fa">${fmtTime(start)}</div>
                   </div>
-                  <div style="background:#ebf8ff;border-radius:10px;padding:12px;text-align:center">
-                    <div style="font-size:11px;color:#2c5282;font-weight:600">HOJE</div>
-                    <div style="font-size:22px;font-weight:800;color:#2c5282">${fmt(daily,3)}</div>
-                    <div style="font-size:10px;color:#63b3ed">acumulado hoje</div>
+                  <div style="text-align:center;background:#1e293b;border-radius:10px;padding:10px 4px">
+                    <div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">Fim</div>
+                    <div style="font-size:18px;font-weight:800;color:#a78bfa">${fmtTime(end)}</div>
                   </div>
-                  <div style="background:#fffff0;border-radius:10px;padding:12px;text-align:center">
-                    <div style="font-size:11px;color:#744210;font-weight:600">ESTA SEMANA</div>
-                    <div style="font-size:22px;font-weight:800;color:#744210">${fmt(weekly)}</div>
+                  <div style="text-align:center;background:#1e293b;border-radius:10px;padding:10px 4px">
+                    <div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">kWh</div>
+                    <div style="font-size:18px;font-weight:800;color:#fbbf24">${kwh.toFixed(1)}</div>
                   </div>
-                  <div style="background:#fff5f5;border-radius:10px;padding:12px;text-align:center">
-                    <div style="font-size:11px;color:#742a2a;font-weight:600">ESTE MÊS</div>
-                    <div style="font-size:22px;font-weight:800;color:#742a2a">${fmt(monthly)}</div>
+                  <div style="text-align:center;background:#1e293b;border-radius:10px;padding:10px 4px">
+                    <div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">Deadline</div>
+                    <div style="font-size:18px;font-weight:800;color:#f87171">${deadline ? deadline.substring(0,5) : '—'}</div>
                   </div>
                 </div>
-                <div style="background:#f7fafc;border-radius:10px;padding:12px;text-align:center;margin-top:10px">
-                  <div style="font-size:11px;color:#4a5568;font-weight:600">ESTE ANO</div>
-                  <div style="font-size:26px;font-weight:800;color:#2d3748">${fmt(yearly)}</div>
+                <div style="background:#1e293b;border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
+                  <div>
+                    <div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Previsão custo hoje</div>
+                    <div style="font-size:22px;font-weight:900;color:#4ade80">${cost.toFixed(3)} €</div>
+                  </div>
+                  <div style="text-align:right">
+                    <div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Preço médio</div>
+                    <div style="font-size:18px;font-weight:700;color:#94a3b8">${price.toFixed(4)} €/kWh</div>
+                  </div>
                 </div>`;
             ]]]
 
-      # ══════════════════════════════════════════════════════
-      # CONTROLOS
-      # ══════════════════════════════════════════════════════
+      # ══════════════════════════════════════════════════════════════
+      # SECÇÃO 9 — CUSTOS ACUMULADOS
+      # ══════════════════════════════════════════════════════════════
+      - type: custom:button-card
+        show_name: false
+        show_icon: false
+        show_state: false
+        styles:
+          card:
+            - padding: 20px 24px
+            - border-radius: 16px
+            - background: '#f8fafc'
+        custom_fields:
+          custos: >
+            [[[
+              const get = (e,d=0) => parseFloat(states[e]?.state) || d;
+              const daily_kwh = get('sensor.ev_energy_daily');
+              const weekly_kwh = get('sensor.ev_energy_weekly');
+              const monthly_kwh = get('sensor.ev_energy_monthly');
+              const yearly_kwh = get('sensor.ev_energy_yearly');
+              const daily_eur = get('sensor.ev_custo_diario_estimado');
+              const weekly_eur = get('sensor.ev_custo_semanal_estimado');
+              const monthly_eur = get('sensor.ev_custo_mensal_estimado');
+              const yearly_eur = get('sensor.ev_custo_anual_estimado');
+              const cper100 = get('sensor.ev_custo_por_100km');
+
+              const card = (icon, label, kwh, eur, bg, textC) => `
+                <div style="background:${bg};border-radius:12px;padding:14px 10px;text-align:center">
+                  <div style="font-size:18px">${icon}</div>
+                  <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">${label}</div>
+                  <div style="font-size:20px;font-weight:900;color:${textC};margin-top:4px">${kwh.toFixed(2)} kWh</div>
+                  <div style="font-size:15px;font-weight:700;color:${textC}aa">${eur.toFixed(2)} €</div>
+                </div>`;
+
+              return `
+                <div style="font-size:13px;font-weight:700;color:#334155;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">💰 Energia & Custos Acumulados</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+                  ${card('📅','Hoje', daily_kwh, daily_eur,'#eff6ff','#1d4ed8')}
+                  ${card('📆','Semana', weekly_kwh, weekly_eur,'#fefce8','#92400e')}
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+                  ${card('🗓️','Mês', monthly_kwh, monthly_eur,'#f0fdf4','#15803d')}
+                  ${card('📊','Ano', yearly_kwh, yearly_eur,'#fdf4ff','#7e22ce')}
+                </div>
+                <div style="background:#f1f5f9;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
+                  <span style="font-size:12px;color:#64748b;font-weight:600">🚗 Custo por 100 km (est.)</span>
+                  <span style="font-size:18px;font-weight:800;color:#334155">${cper100.toFixed(2)} €</span>
+                </div>`;
+            ]]]
+
+      # ══════════════════════════════════════════════════════════════
+      # SECÇÃO 10 — GRÁFICO CUSTO ACUMULADO (mini-graph)
+      # ══════════════════════════════════════════════════════════════
+      - type: custom:mini-graph-card
+        name: "💶 Custo Diário Estimado (30 dias)"
+        icon: mdi:chart-line
+        entities:
+          - entity: sensor.ev_custo_diario_estimado
+            name: Custo diário
+            color: "#22c55e"
+        hours_to_show: 720
+        points_per_hour: 0.04
+        line_width: 2
+        hour24: true
+        show:
+          legend: false
+          fill: fade
+          points: false
+          graph: true
+
+      # ══════════════════════════════════════════════════════════════
+      # SECÇÃO 11 — CONTROLOS
+      # ══════════════════════════════════════════════════════════════
       - type: horizontal-stack
         cards:
           - type: custom:mushroom-entity-card
             entity: input_boolean.ev_smart_charging_enabled
-            name: Inteligente
+            name: "Inteligente"
             icon: mdi:brain
             tap_action:
               action: toggle
+            card_mod:
+              style: |
+                ha-card { border-radius: 14px; }
+
+          - type: custom:mushroom-entity-card
+            entity: input_datetime.ev_charging_deadline
+            name: "Deadline"
+            icon: mdi:clock-alert
+            tap_action:
+              action: more-info
+            card_mod:
+              style: |
+                ha-card { border-radius: 14px; }
 
           - type: custom:mushroom-entity-card
             entity: select.wallbox_phase_mode
-            name: Fases
+            name: "Fases"
             icon: mdi:sine-wave
             tap_action:
               action: more-info
+            card_mod:
+              style: |
+                ha-card { border-radius: 14px; }
 
       - type: horizontal-stack
         cards:
           - type: custom:button-card
-            name: Calcular Janela
-            icon: mdi:calculator
+            name: "🔍 Calcular Janela"
             styles:
               card:
-                - border-radius: 10px
-                - background: "#ebf8ff"
+                - border-radius: 14px
+                - background: 'linear-gradient(135deg,#dbeafe,#bfdbfe)'
+                - padding: 14px
+                - box-shadow: 0 2px 8px rgba(59,130,246,0.2)
               name:
-                - color: "#2b6cb0"
-                - font-weight: 600
-              icon:
-                - color: "#2b6cb0"
+                - color: '#1e40af'
+                - font-weight: 700
+                - font-size: 13px
             tap_action:
               action: call-service
               service: script.turn_on
@@ -357,17 +630,17 @@ views:
                 entity_id: script.ev_calcular_janela_otima
 
           - type: custom:button-card
-            name: Safety Net
-            icon: mdi:shield-alert
+            name: "⚡ Safety Net"
             styles:
               card:
-                - border-radius: 10px
-                - background: "#fffff0"
+                - border-radius: 14px
+                - background: 'linear-gradient(135deg,#fef9c3,#fde68a)'
+                - padding: 14px
+                - box-shadow: 0 2px 8px rgba(245,158,11,0.2)
               name:
-                - color: "#b7791f"
-                - font-weight: 600
-              icon:
-                - color: "#b7791f"
+                - color: '#78350f'
+                - font-weight: 700
+                - font-size: 13px
             tap_action:
               action: call-service
               service: script.turn_on
@@ -375,44 +648,49 @@ views:
                 entity_id: script.ev_ativar_safety_net
 
           - type: custom:button-card
-            name: Parar Regra
-            icon: mdi:stop-circle
+            name: "⏹️ Parar Regra"
             styles:
               card:
-                - border-radius: 10px
-                - background: "#fff5f5"
+                - border-radius: 14px
+                - background: 'linear-gradient(135deg,#fee2e2,#fecaca)'
+                - padding: 14px
+                - box-shadow: 0 2px 8px rgba(239,68,68,0.2)
               name:
-                - color: "#c53030"
-                - font-weight: 600
-              icon:
-                - color: "#c53030"
+                - color: '#7f1d1d'
+                - font-weight: 700
+                - font-size: 13px
             tap_action:
               action: call-service
               service: script.turn_on
               service_data:
                 entity_id: script.ev_desativar_regra_ev
 
-      # ══════════════════════════════════════════════════════
-      # DETALHES WALLBOX
-      # ══════════════════════════════════════════════════════
+      # ══════════════════════════════════════════════════════════════
+      # SECÇÃO 12 — DETALHES WALLBOX
+      # ══════════════════════════════════════════════════════════════
       - type: entities
-        title: 🔌 Detalhes Wallbox
+        title: "🔌 Wallbox — Detalhes"
         icon: mdi:ev-station
         show_header_toggle: false
+        card_mod:
+          style: |
+            ha-card { border-radius: 16px; }
         entities:
           - entity: sensor.wallbox_state
-            name: Estado
+            name: Estado (IEC 61851)
           - entity: sensor.wallbox_charging_power
-            name: Potência actual
+            name: "⚡ Potência actual"
           - entity: sensor.wallbox_current_l1
-            name: Corrente L1
+            name: "〰️ Corrente L1"
           - entity: sensor.wallbox_session_energy
-            name: Energia sessão
+            name: "🔢 Energia sessão"
           - entity: sensor.wallbox_used_phases
-            name: Fases activas
+            name: "〰️ Fases activas"
           - entity: sensor.wallbox_cp_state
-            name: Estado CP
+            name: "🔗 Estado CP"
           - entity: sensor.wallbox_pause_reason
-            name: Motivo pausa
+            name: "⏸️ Motivo pausa"
+          - entity: sensor.wallbox_total_charging_duration
+            name: "⏱️ Duração total"
           - entity: number.wallbox_current_limit_override
-            name: Limite corrente
+            name: "🎚️ Limite corrente"
